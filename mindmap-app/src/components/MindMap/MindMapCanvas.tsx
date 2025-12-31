@@ -3,6 +3,16 @@ import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { useDocumentStore } from '../../store';
 import type { Node, NodeMap } from '../../types';
 
+// Editing state for overlay input
+interface EditingState {
+  nodeId: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text: string;
+}
+
 // Node dimensions
 const NODE_PADDING_X = 16;
 const NODE_MIN_WIDTH = 80;
@@ -102,13 +112,20 @@ function MindMapCanvas() {
   const appRef = useRef<Application | null>(null);
   const nodesContainerRef = useRef<Container | null>(null);
   const edgesContainerRef = useRef<Container | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isReady, setIsReady] = useState(false);
+  const [editing, setEditing] = useState<EditingState | null>(null);
+  const layoutsRef = useRef<Map<string, NodeLayout>>(new Map());
+  // Track click times per node for double-click detection (persists across re-renders)
+  const clickTimesRef = useRef<Map<string, number>>(new Map());
 
   const nodes = useDocumentStore((state) => state.nodes);
   const rootId = useDocumentStore((state) => state.rootId);
   const selectedNodeId = useDocumentStore((state) => state.selectedNodeId);
   const selectNode = useDocumentStore((state) => state.selectNode);
-  const startEditing = useDocumentStore((state) => state.startEditing);
+  const updateNodeText = useDocumentStore((state) => state.updateNodeText);
+  const createChildNode = useDocumentStore((state) => state.createChildNode);
+  const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
 
   // Initialize PixiJS
   useEffect(() => {
@@ -212,6 +229,134 @@ function MindMapCanvas() {
     };
   }, []);
 
+  // Start editing a node in-place
+  const startEditingNode = useCallback((nodeId: string, retryCount = 0) => {
+    // Get fresh state from the store (important for newly created nodes)
+    const currentNodes = useDocumentStore.getState().nodes;
+    const node = currentNodes[nodeId];
+    const layout = layoutsRef.current.get(nodeId);
+
+    if (!node || !layout) {
+      // Retry a few times for newly created nodes (state may not be ready yet)
+      if (retryCount < 5) {
+        setTimeout(() => startEditingNode(nodeId, retryCount + 1), 50);
+      }
+      return;
+    }
+
+    const app = appRef.current;
+    if (!app) return;
+
+    // Calculate screen position based on stage transform
+    const screenX = layout.x * app.stage.scale.x + app.stage.x;
+    const screenY = layout.y * app.stage.scale.y + app.stage.y;
+    const screenWidth = layout.width * app.stage.scale.x;
+    const screenHeight = layout.height * app.stage.scale.y;
+
+    const text = node.content.type === 'text' ? node.content.text : '';
+
+    setEditing({
+      nodeId,
+      x: screenX,
+      y: screenY,
+      width: screenWidth,
+      height: screenHeight,
+      text,
+    });
+
+    selectNode(nodeId);
+  }, [selectNode]);
+
+  // Handle editing input changes
+  const handleEditChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditing(prev => prev ? { ...prev, text: e.target.value } : null);
+  }, []);
+
+  // Handle editing keyboard events
+  const handleEditKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!editing) return;
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // Save the current text
+      updateNodeText(editing.nodeId, editing.text);
+
+      // Create sibling if not root
+      const node = nodes[editing.nodeId];
+      if (node?.parentId) {
+        createSiblingNode(editing.nodeId);
+        // After creating sibling, start editing the new node
+        // The new node will be selected, we need to wait for the state update
+        setEditing(null);
+        // Use setTimeout to let the state update, then start editing the new selected node
+        setTimeout(() => {
+          const newSelectedId = useDocumentStore.getState().selectedNodeId;
+          if (newSelectedId && newSelectedId !== editing.nodeId) {
+            startEditingNode(newSelectedId);
+          }
+        }, 0);
+      } else {
+        setEditing(null);
+      }
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      // Save the current text
+      updateNodeText(editing.nodeId, editing.text);
+      // Create child node
+      createChildNode(editing.nodeId);
+      setEditing(null);
+      // Start editing the new child
+      setTimeout(() => {
+        const newSelectedId = useDocumentStore.getState().selectedNodeId;
+        if (newSelectedId && newSelectedId !== editing.nodeId) {
+          startEditingNode(newSelectedId);
+        }
+      }, 0);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      // Cancel editing (don't save)
+      setEditing(null);
+    }
+  }, [editing, nodes, updateNodeText, createSiblingNode, createChildNode, startEditingNode]);
+
+  // Track when editing started to prevent immediate blur
+  const editingStartTimeRef = useRef<number>(0);
+
+  // Handle blur - save on blur (but not if editing just started)
+  const handleEditBlur = useCallback(() => {
+    if (editing) {
+      // Prevent blur if editing just started (within 100ms)
+      const timeSinceStart = Date.now() - editingStartTimeRef.current;
+      if (timeSinceStart < 100) {
+        // Re-focus the input
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 0);
+        return;
+      }
+      updateNodeText(editing.nodeId, editing.text);
+      setEditing(null);
+    }
+  }, [editing, updateNodeText]);
+
+  // Track the nodeId being edited to detect when we start editing a NEW node
+  const editingNodeIdRef = useRef<string | null>(null);
+
+  // Focus input when editing starts (only on initial edit, not on text changes)
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      // Only focus and select if we started editing a different node
+      if (editingNodeIdRef.current !== editing.nodeId) {
+        editingStartTimeRef.current = Date.now();
+        editingNodeIdRef.current = editing.nodeId;
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
+    } else {
+      editingNodeIdRef.current = null;
+    }
+  }, [editing]);
+
   // Render nodes and edges
   const render = useCallback(() => {
     const nodesContainer = nodesContainerRef.current;
@@ -222,8 +367,9 @@ function MindMapCanvas() {
     nodesContainer.removeChildren();
     edgesContainer.removeChildren();
 
-    // Calculate layout
+    // Calculate layout and store in ref for editing overlay positioning
     const layouts = calculateLayout(nodes, rootId);
+    layoutsRef.current = layouts;
 
     // Draw edges first
     const drawEdges = (nodeId: string) => {
@@ -305,21 +451,21 @@ function MindMapCanvas() {
       container.addChild(textObj);
 
       // Click handler with double-click detection
-      let lastClickTime = 0;
       container.on('pointerdown', (e) => {
         e.stopPropagation();
         const now = Date.now();
+        const lastClickTime = clickTimesRef.current.get(nodeId) || 0;
         const timeDiff = now - lastClickTime;
 
-        if (timeDiff < 300) {
-          // Double-click: switch to outline mode and start editing
-          startEditing(nodeId);
+        if (timeDiff < 300 && timeDiff > 0) {
+          // Double-click: start in-place editing
+          startEditingNode(nodeId);
+          clickTimesRef.current.set(nodeId, 0); // Reset to prevent triple-click
         } else {
           // Single click: select node
           selectNode(nodeId);
+          clickTimesRef.current.set(nodeId, now);
         }
-
-        lastClickTime = now;
       });
 
       nodesContainer.addChild(container);
@@ -333,7 +479,7 @@ function MindMapCanvas() {
     };
 
     drawNodes(rootId);
-  }, [nodes, rootId, selectedNodeId, selectNode, startEditing]);
+  }, [nodes, rootId, selectedNodeId, selectNode, startEditingNode]);
 
   // Re-render when data changes or app becomes ready
   useEffect(() => {
@@ -343,11 +489,35 @@ function MindMapCanvas() {
   }, [isReady, render]);
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full"
-      style={{ touchAction: 'none' }}
-    />
+    <div className="relative w-full h-full">
+      {/* PixiJS Canvas */}
+      <div
+        ref={containerRef}
+        className="w-full h-full"
+        style={{ touchAction: 'none' }}
+      />
+
+      {/* Editing overlay */}
+      {editing && (
+        <input
+          ref={inputRef}
+          type="text"
+          value={editing.text}
+          onChange={handleEditChange}
+          onKeyDown={handleEditKeyDown}
+          onBlur={handleEditBlur}
+          className="absolute bg-[#16213e] text-white border-2 border-blue-400 rounded px-2 outline-none"
+          style={{
+            left: editing.x,
+            top: editing.y,
+            width: Math.max(editing.width, 100),
+            height: editing.height,
+            fontSize: `${14 * (appRef.current?.stage.scale.x || 1)}px`,
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+          }}
+        />
+      )}
+    </div>
   );
 }
 

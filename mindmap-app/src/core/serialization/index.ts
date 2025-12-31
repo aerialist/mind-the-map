@@ -1,6 +1,6 @@
 // Serialization utilities for saving/loading documents
 
-import type { Node, NodeMap } from '../../types';
+import type { NodeMap } from '../../types';
 
 // File format version for future compatibility
 const FILE_VERSION = '1.0.0';

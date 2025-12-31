@@ -114,8 +114,7 @@ export const useDocumentStore = create<DocumentState>()(
       set((state) => {
         state.editingNodeId = nodeId;
         state.selectedNodeId = nodeId;
-        // Switch to outline mode for editing (editing in mindmap mode not yet supported)
-        state.viewMode = 'outline';
+        // Note: MindMap mode now has its own in-place editing, so we don't switch modes
       }),
 
     stopEditing: () =>
