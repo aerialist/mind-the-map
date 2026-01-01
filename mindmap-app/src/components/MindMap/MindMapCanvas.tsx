@@ -32,6 +32,8 @@ const COLORS = {
   nodeSelectedBorder: 0x63b3ed,
   text: 0xffffff,
   edge: 0x4a5568,
+  collapseIndicator: 0x63b3ed,
+  collapseIndicatorBg: 0x16213e,
 };
 
 interface NodeLayout {
@@ -157,6 +159,7 @@ function MindMapCanvas() {
   const updateNodeText = useDocumentStore((state) => state.updateNodeText);
   const createChildNode = useDocumentStore((state) => state.createChildNode);
   const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
+  const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
 
   // Initialize PixiJS
   useEffect(() => {
@@ -502,6 +505,56 @@ function MindMapCanvas() {
       textObj.y = (layout.height - textObj.height) / 2;
       container.addChild(textObj);
 
+      // Collapse/expand indicator for nodes with children
+      if (node.childIds.length > 0) {
+        const indicatorRadius = 8;
+        const indicatorX = layout.width + indicatorRadius + 4;
+        const indicatorY = layout.height / 2;
+
+        // Create a container for the indicator to handle clicks separately
+        const indicatorContainer = new Container();
+        indicatorContainer.x = indicatorX;
+        indicatorContainer.y = indicatorY;
+        indicatorContainer.eventMode = 'static';
+        indicatorContainer.cursor = 'pointer';
+
+        const indicator = new Graphics();
+
+        // Circle background (centered at 0,0 since container is positioned)
+        indicator.circle(0, 0, indicatorRadius);
+        indicator.fill(COLORS.collapseIndicatorBg);
+        indicator.stroke({ width: 1.5, color: COLORS.collapseIndicator });
+
+        const iconSize = 5;
+        if (node.isCollapsed) {
+          // Plus sign for collapsed nodes
+          // Horizontal line
+          indicator.moveTo(-iconSize, 0);
+          indicator.lineTo(iconSize, 0);
+          indicator.stroke({ width: 2, color: COLORS.collapseIndicator });
+          // Vertical line
+          indicator.moveTo(0, -iconSize);
+          indicator.lineTo(0, iconSize);
+          indicator.stroke({ width: 2, color: COLORS.collapseIndicator });
+        } else {
+          // Minus sign for expanded nodes
+          // Horizontal line only
+          indicator.moveTo(-iconSize, 0);
+          indicator.lineTo(iconSize, 0);
+          indicator.stroke({ width: 2, color: COLORS.collapseIndicator });
+        }
+
+        indicatorContainer.addChild(indicator);
+
+        // Click handler to toggle collapse/expand
+        indicatorContainer.on('pointerdown', (e) => {
+          e.stopPropagation();
+          toggleCollapse(nodeId);
+        });
+
+        container.addChild(indicatorContainer);
+      }
+
       // Click handler with double-click detection
       container.on('pointerdown', (e) => {
         e.stopPropagation();
@@ -531,7 +584,7 @@ function MindMapCanvas() {
     };
 
     drawNodes(rootId);
-  }, [nodes, rootId, selectedNodeId, selectNode, startEditingNode]);
+  }, [nodes, rootId, selectedNodeId, selectNode, startEditingNode, toggleCollapse]);
 
   // Re-render when data changes or app becomes ready
   useEffect(() => {
