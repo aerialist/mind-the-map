@@ -106,6 +106,7 @@ interface DocumentState {
   createSiblingNode: (siblingId: string) => void;
   deleteNode: (nodeId: string) => void;
   toggleCollapse: (nodeId: string) => void;
+  moveNode: (nodeId: string, newParentId: string, insertIndex: number) => void;
 
   // File actions
   setFilePath: (path: string | null) => void;
@@ -329,6 +330,58 @@ export const useDocumentStore = create<DocumentState>()(
         if (node.childIds.length > 0) {
           node.isCollapsed = !node.isCollapsed;
         }
+      }),
+
+    moveNode: (nodeId, newParentId, insertIndex) =>
+      set((state) => {
+        const node = state.nodes[nodeId];
+        if (!node) return;
+
+        // Can't move root node
+        if (!node.parentId) return;
+
+        // Can't move a node to itself or its descendants
+        const isDescendant = (ancestorId: string, descendantId: string): boolean => {
+          let currentId: string | null = descendantId;
+          while (currentId) {
+            if (currentId === ancestorId) return true;
+            const currentNode: Node | undefined = state.nodes[currentId];
+            currentId = currentNode?.parentId ?? null;
+          }
+          return false;
+        };
+
+        if (nodeId === newParentId || isDescendant(nodeId, newParentId)) return;
+
+        const oldParent = state.nodes[node.parentId];
+        const newParent = state.nodes[newParentId];
+        if (!oldParent || !newParent) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        // Remove from old parent
+        const oldIndex = oldParent.childIds.indexOf(nodeId);
+        if (oldIndex !== -1) {
+          oldParent.childIds.splice(oldIndex, 1);
+        }
+
+        // Adjust insert index if moving within the same parent
+        let adjustedIndex = insertIndex;
+        if (node.parentId === newParentId && oldIndex < insertIndex) {
+          adjustedIndex = insertIndex - 1;
+        }
+
+        // Add to new parent at the specified index
+        newParent.childIds.splice(adjustedIndex, 0, nodeId);
+
+        // Update node's parent reference
+        node.parentId = newParentId;
+
+        // Expand new parent if collapsed
+        newParent.isCollapsed = false;
+
+        state.isDirty = true;
       }),
 
     // File actions

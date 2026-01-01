@@ -13,6 +13,23 @@ interface EditingState {
   text: string;
 }
 
+// Drag state for node dragging
+interface DragState {
+  nodeId: string;
+  startWorldX: number;
+  startWorldY: number;
+  currentWorldX: number;
+  currentWorldY: number;
+}
+
+// Drop target state - where the dragged node will be inserted
+interface DropTargetState {
+  parentId: string;      // The parent node where the dragged node will be inserted
+  insertIndex: number;   // The index in the parent's childIds where to insert
+  indicatorY: number;    // Y position for the drop indicator (world coords)
+  indicatorX: number;    // X position for the drop indicator (world coords)
+}
+
 // Node dimensions
 const NODE_PADDING_X = 16;
 const NODE_MIN_WIDTH = 80;
@@ -143,6 +160,8 @@ function MindMapCanvas() {
   const appRef = useRef<Application | null>(null);
   const nodesContainerRef = useRef<Container | null>(null);
   const edgesContainerRef = useRef<Container | null>(null);
+  const dropIndicatorRef = useRef<Graphics | null>(null);
+  const dragGhostRef = useRef<Container | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [isReady, setIsReady] = useState(false);
   const [editing, setEditing] = useState<EditingState | null>(null);
@@ -151,6 +170,9 @@ function MindMapCanvas() {
   const clickTimesRef = useRef<Map<string, number>>(new Map());
   // Track IME composition state for Japanese input
   const isComposingRef = useRef(false);
+  // Drag state for node dragging
+  const dragStateRef = useRef<DragState | null>(null);
+  const dropTargetRef = useRef<DropTargetState | null>(null);
 
   const nodes = useDocumentStore((state) => state.nodes);
   const rootId = useDocumentStore((state) => state.rootId);
@@ -161,6 +183,178 @@ function MindMapCanvas() {
   const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
   const stopEditing = useDocumentStore((state) => state.stopEditing);
+  const moveNode = useDocumentStore((state) => state.moveNode);
+
+  // Check if ancestorId is an ancestor of descendantId
+  const isAncestor = useCallback((ancestorId: string, descendantId: string): boolean => {
+    let currentId: string | null = descendantId;
+    while (currentId) {
+      if (currentId === ancestorId) return true;
+      currentId = nodes[currentId]?.parentId ?? null;
+    }
+    return false;
+  }, [nodes]);
+
+  // Update drop indicator graphics
+  const updateDropIndicator = useCallback((dropTarget: DropTargetState | null) => {
+    const app = appRef.current;
+    if (!app) return;
+
+    // Remove existing indicator
+    if (dropIndicatorRef.current) {
+      dropIndicatorRef.current.destroy();
+      dropIndicatorRef.current = null;
+    }
+
+    if (!dropTarget) return;
+
+    // Create new indicator
+    const indicator = new Graphics();
+    const targetLayout = layoutsRef.current.get(dropTarget.parentId);
+    if (!targetLayout) return;
+
+    // Draw a horizontal line at the drop position
+    const lineX = dropTarget.indicatorX;
+    const lineY = dropTarget.indicatorY;
+    const lineWidth = 100;
+
+    indicator.moveTo(lineX, lineY);
+    indicator.lineTo(lineX + lineWidth, lineY);
+    indicator.stroke({ width: 3, color: 0x63b3ed });
+
+    // Add a small circle at the start
+    indicator.circle(lineX, lineY, 4);
+    indicator.fill(0x63b3ed);
+
+    app.stage.addChild(indicator);
+    dropIndicatorRef.current = indicator;
+  }, []);
+
+  // Update drag ghost position
+  const updateDragGhost = useCallback((dragState: DragState | null) => {
+    const app = appRef.current;
+    if (!app) return;
+
+    // Remove existing ghost
+    if (dragGhostRef.current) {
+      dragGhostRef.current.destroy();
+      dragGhostRef.current = null;
+    }
+
+    if (!dragState) return;
+
+    const node = nodes[dragState.nodeId];
+    const layout = layoutsRef.current.get(dragState.nodeId);
+    if (!node || !layout) return;
+
+    // Create ghost container
+    const ghost = new Container();
+    ghost.alpha = 0.6;
+    ghost.x = dragState.currentWorldX - layout.width / 2;
+    ghost.y = dragState.currentWorldY - layout.height / 2;
+
+    // Draw ghost node
+    const bg = new Graphics();
+    bg.roundRect(0, 0, layout.width, layout.height, NODE_RADIUS);
+    bg.fill(COLORS.nodeSelected);
+    bg.stroke({ width: 2, color: COLORS.nodeSelectedBorder });
+    ghost.addChild(bg);
+
+    // Ghost text
+    const text = node.content.type === 'text' ? node.content.text : '[image]';
+    const textStyle = new TextStyle({
+      fontSize: 14,
+      fill: COLORS.text,
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    });
+    const textObj = new Text({ text: text || '(empty)', style: textStyle });
+    textObj.x = NODE_PADDING_X;
+    textObj.y = (layout.height - textObj.height) / 2;
+    ghost.addChild(textObj);
+
+    app.stage.addChild(ghost);
+    dragGhostRef.current = ghost;
+  }, [nodes]);
+
+  // Calculate drop target based on current drag position
+  const calculateDropTarget = useCallback((worldX: number, worldY: number, draggedNodeId: string): DropTargetState | null => {
+    const layouts = layoutsRef.current;
+
+    // Find the closest node to the cursor using array iteration
+    const entries = Array.from(layouts.entries());
+    let closestId: string | null = null;
+    let closestDistance = Infinity;
+    let closestLayout: NodeLayout | null = null;
+
+    for (const [nodeId, layout] of entries) {
+      // Skip the dragged node and its descendants
+      if (nodeId === draggedNodeId || isAncestor(draggedNodeId, nodeId)) continue;
+
+      // Skip root node (can't reorder around root)
+      if (!nodes[nodeId]?.parentId) continue;
+
+      const nodeCenterX = layout.x + layout.width / 2;
+      const nodeCenterY = layout.y + layout.height / 2;
+      const distance = Math.sqrt(
+        Math.pow(worldX - nodeCenterX, 2) + Math.pow(worldY - nodeCenterY, 2)
+      );
+
+      if (distance < closestDistance) {
+        closestId = nodeId;
+        closestDistance = distance;
+        closestLayout = layout;
+      }
+    }
+
+    if (!closestId || !closestLayout || closestDistance > 150) return null;
+
+    const targetNode = nodes[closestId];
+    if (!targetNode || !targetNode.parentId) return null;
+
+    const layout = closestLayout;
+    const targetId = closestId;
+    const relativeY = worldY - layout.y;
+    const nodeHeight = layout.height;
+    const third = nodeHeight / 3;
+
+    let parentId: string;
+    let insertIndex: number;
+    let indicatorY: number;
+    let indicatorX: number;
+
+    if (relativeY < third) {
+      // Top third: insert before this node (as sibling)
+      parentId = targetNode.parentId;
+      const parent = nodes[parentId];
+      insertIndex = parent?.childIds.indexOf(targetId) ?? 0;
+      indicatorY = layout.y;
+      indicatorX = layout.x;
+    } else if (relativeY > nodeHeight - third) {
+      // Bottom third: insert after this node
+      if (!targetNode.isCollapsed && targetNode.childIds.length > 0) {
+        // Insert as first child
+        parentId = targetId;
+        insertIndex = 0;
+        indicatorY = layout.y + layout.height + VERTICAL_GAP / 2;
+        indicatorX = layout.x + HORIZONTAL_GAP;
+      } else {
+        // Insert as sibling after this node
+        parentId = targetNode.parentId;
+        const parent = nodes[parentId];
+        insertIndex = (parent?.childIds.indexOf(targetId) ?? 0) + 1;
+        indicatorY = layout.y + layout.height;
+        indicatorX = layout.x;
+      }
+    } else {
+      // Middle third: insert as child of this node
+      parentId = targetId;
+      insertIndex = targetNode.childIds.length;
+      indicatorY = layout.y + layout.height / 2;
+      indicatorX = layout.x + layout.width + HORIZONTAL_GAP / 2;
+    }
+
+    return { parentId, insertIndex, indicatorY, indicatorX };
+  }, [nodes, isAncestor]);
 
   // Initialize PixiJS
   useEffect(() => {
@@ -201,15 +395,18 @@ function MindMapCanvas() {
       let stageStart = { x: 0, y: 0 };
 
       app.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
-        if (e.button === 0 || e.button === 1) {
+        // Only start panning if not dragging a node and using left or middle button
+        if ((e.button === 0 || e.button === 1) && !potentialDragRef.current) {
           isDragging = true;
+          isPanningRef.current = true;
           dragStart = { x: e.clientX, y: e.clientY };
           stageStart = { x: app.stage.x, y: app.stage.y };
         }
       });
 
       app.canvas.addEventListener('pointermove', (e: PointerEvent) => {
-        if (isDragging) {
+        // Only pan if we're in panning mode and not dragging a node
+        if (isDragging && !isDraggingNodeRef.current && !potentialDragRef.current) {
           const dx = e.clientX - dragStart.x;
           const dy = e.clientY - dragStart.y;
           app.stage.x = stageStart.x + dx;
@@ -219,10 +416,12 @@ function MindMapCanvas() {
 
       app.canvas.addEventListener('pointerup', () => {
         isDragging = false;
+        isPanningRef.current = false;
       });
 
       app.canvas.addEventListener('pointerleave', () => {
         isDragging = false;
+        isPanningRef.current = false;
       });
 
       // Enable zoom
@@ -402,6 +601,18 @@ function MindMapCanvas() {
   // Track the nodeId being edited to detect when we start editing a NEW node
   const editingNodeIdRef = useRef<string | null>(null);
 
+  // Track potential drag start for nodes
+  const potentialDragRef = useRef<{
+    nodeId: string;
+    startScreenX: number;
+    startScreenY: number;
+    startWorldX: number;
+    startWorldY: number;
+  } | null>(null);
+  const isDraggingNodeRef = useRef(false);
+  // Track canvas panning state (for coordination with node dragging)
+  const isPanningRef = useRef(false);
+
   // Focus input when editing starts (only on initial edit, not on text changes)
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -416,6 +627,90 @@ function MindMapCanvas() {
       editingNodeIdRef.current = null;
     }
   }, [editing]);
+
+  // Handle node dragging with document-level event listeners
+  useEffect(() => {
+    const DRAG_THRESHOLD = 5; // Pixels to move before starting drag
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const app = appRef.current;
+      if (!app || !potentialDragRef.current) return;
+
+      const { nodeId, startScreenX, startScreenY } = potentialDragRef.current;
+
+      // Check if we've moved beyond the threshold to start dragging
+      const dx = e.clientX - startScreenX;
+      const dy = e.clientY - startScreenY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (!isDraggingNodeRef.current && distance >= DRAG_THRESHOLD) {
+        // Start dragging - check if this is a non-root node
+        const node = nodes[nodeId];
+        if (!node || !node.parentId) {
+          // Can't drag root node
+          potentialDragRef.current = null;
+          return;
+        }
+        isDraggingNodeRef.current = true;
+      }
+
+      if (isDraggingNodeRef.current) {
+        // Convert screen position to world position
+        const rect = app.canvas.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+        const worldX = (screenX - app.stage.x) / app.stage.scale.x;
+        const worldY = (screenY - app.stage.y) / app.stage.scale.y;
+
+        // Update drag state
+        const dragState: DragState = {
+          nodeId,
+          startWorldX: potentialDragRef.current.startWorldX,
+          startWorldY: potentialDragRef.current.startWorldY,
+          currentWorldX: worldX,
+          currentWorldY: worldY,
+        };
+        dragStateRef.current = dragState;
+
+        // Calculate and update drop target
+        const dropTarget = calculateDropTarget(worldX, worldY, nodeId);
+        dropTargetRef.current = dropTarget;
+
+        // Update visual feedback
+        updateDragGhost(dragState);
+        updateDropIndicator(dropTarget);
+      }
+    };
+
+    const handlePointerUp = () => {
+      if (isDraggingNodeRef.current && dragStateRef.current && dropTargetRef.current) {
+        // Execute the move
+        moveNode(
+          dragStateRef.current.nodeId,
+          dropTargetRef.current.parentId,
+          dropTargetRef.current.insertIndex
+        );
+      }
+
+      // Clean up drag state
+      potentialDragRef.current = null;
+      isDraggingNodeRef.current = false;
+      dragStateRef.current = null;
+      dropTargetRef.current = null;
+
+      // Clean up visual feedback
+      updateDragGhost(null);
+      updateDropIndicator(null);
+    };
+
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [nodes, calculateDropTarget, updateDragGhost, updateDropIndicator, moveNode]);
 
   // Render nodes and edges
   const render = useCallback(() => {
@@ -560,7 +855,7 @@ function MindMapCanvas() {
         container.addChild(indicatorContainer);
       }
 
-      // Click handler with double-click detection
+      // Click handler with double-click detection and drag initiation
       container.on('pointerdown', (e) => {
         e.stopPropagation();
         const now = Date.now();
@@ -571,10 +866,29 @@ function MindMapCanvas() {
           // Double-click: start in-place editing
           startEditingNode(nodeId);
           clickTimesRef.current.set(nodeId, 0); // Reset to prevent triple-click
+          potentialDragRef.current = null; // Cancel any potential drag
         } else {
-          // Single click: select node
+          // Single click: select node and prepare for potential drag
           selectNode(nodeId);
           clickTimesRef.current.set(nodeId, now);
+
+          // Set up potential drag (only for non-root nodes)
+          const app = appRef.current;
+          if (app && node.parentId) {
+            const rect = app.canvas.getBoundingClientRect();
+            const screenX = (e as unknown as PointerEvent).clientX ?? e.global.x + rect.left;
+            const screenY = (e as unknown as PointerEvent).clientY ?? e.global.y + rect.top;
+            const worldX = (screenX - rect.left - app.stage.x) / app.stage.scale.x;
+            const worldY = (screenY - rect.top - app.stage.y) / app.stage.scale.y;
+
+            potentialDragRef.current = {
+              nodeId,
+              startScreenX: screenX,
+              startScreenY: screenY,
+              startWorldX: worldX,
+              startWorldY: worldY,
+            };
+          }
         }
       });
 

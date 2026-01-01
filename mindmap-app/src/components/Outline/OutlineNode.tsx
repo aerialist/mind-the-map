@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { useDocumentStore } from '../../store';
+import { useDragContext } from './OutlineView';
 
 interface OutlineNodeProps {
   nodeId: string;
@@ -18,6 +19,8 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   const createChildNode = useDocumentStore((state) => state.createChildNode);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
 
+  const { draggedNodeId, startDrag } = useDragContext();
+
   const inputRef = useRef<HTMLInputElement>(null);
   const [editText, setEditText] = useState('');
   const prevEditingRef = useRef(false);
@@ -25,6 +28,8 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
 
   const isSelected = selectedNodeId === nodeId;
   const isEditing = editingNodeId === nodeId;
+  const isDragging = draggedNodeId === nodeId;
+  const isRoot = !node?.parentId;
 
   // Initialize edit text and focus when starting to edit
   useEffect(() => {
@@ -117,21 +122,41 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
     stopEditing();
   };
 
+  // Mouse down to start drag
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Only start drag with left mouse button, and not on root or during editing
+    if (e.button !== 0 || isRoot || isEditing) return;
+
+    // Don't start drag if clicking on collapse button
+    if ((e.target as HTMLElement).closest('[data-collapse-button]')) return;
+
+    // Prevent text selection during drag
+    e.preventDefault();
+
+    // Start drag
+    startDrag(nodeId);
+  };
+
   return (
     <div className="select-none">
       {/* Node row */}
       <div
+        data-node-id={nodeId}
+        data-depth={depth}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
+        onMouseDown={handleMouseDown}
         className={`flex items-center py-1 px-2 rounded cursor-pointer
           ${isSelected
             ? 'bg-blue-100 dark:bg-blue-900'
             : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-          }`}
+          }
+          ${isDragging ? 'opacity-50' : ''}`}
         style={{ paddingLeft: `${depth * 24 + 8}px` }}
       >
         {/* Collapse/expand indicator */}
         <span
+          data-collapse-button
           onClick={handleCollapseClick}
           className={`w-4 h-4 flex items-center justify-center mr-1 text-gray-400 ${
             hasChildren ? 'cursor-pointer hover:text-gray-600 dark:hover:text-gray-300' : ''
