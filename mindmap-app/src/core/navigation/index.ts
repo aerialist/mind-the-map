@@ -90,3 +90,109 @@ export const getFirstChildNodeId = (
   }
   return node.childIds[0];
 };
+
+/**
+ * Get the next sibling node ID
+ */
+export const getNextSiblingNodeId = (
+  nodes: NodeMap,
+  currentNodeId: string
+): string | null => {
+  const node = nodes[currentNodeId];
+  if (!node || !node.parentId) {
+    return null;
+  }
+
+  const parent = nodes[node.parentId];
+  if (!parent) {
+    return null;
+  }
+
+  const currentIndex = parent.childIds.indexOf(currentNodeId);
+  if (currentIndex === -1 || currentIndex === parent.childIds.length - 1) {
+    return null;
+  }
+
+  return parent.childIds[currentIndex + 1];
+};
+
+/**
+ * Get the previous sibling node ID
+ */
+export const getPreviousSiblingNodeId = (
+  nodes: NodeMap,
+  currentNodeId: string
+): string | null => {
+  const node = nodes[currentNodeId];
+  if (!node || !node.parentId) {
+    return null;
+  }
+
+  const parent = nodes[node.parentId];
+  if (!parent) {
+    return null;
+  }
+
+  const currentIndex = parent.childIds.indexOf(currentNodeId);
+  if (currentIndex <= 0) {
+    return null;
+  }
+
+  return parent.childIds[currentIndex - 1];
+};
+
+/**
+ * Get the next node for down arrow navigation
+ * Priority: next sibling > first child (if expanded) > parent's next sibling (recursively)
+ */
+export const getDownNodeId = (
+  nodes: NodeMap,
+  currentNodeId: string
+): string | null => {
+  // First try next sibling
+  const nextSibling = getNextSiblingNodeId(nodes, currentNodeId);
+  if (nextSibling) {
+    return nextSibling;
+  }
+
+  // If no next sibling, try first child (if expanded)
+  const firstChild = getFirstChildNodeId(nodes, currentNodeId);
+  if (firstChild) {
+    return firstChild;
+  }
+
+  // If no next sibling and no children, try parent's next sibling (recursively)
+  let ancestorId = getParentNodeId(nodes, currentNodeId);
+  while (ancestorId) {
+    const ancestorNextSibling = getNextSiblingNodeId(nodes, ancestorId);
+    if (ancestorNextSibling) {
+      return ancestorNextSibling;
+    }
+    ancestorId = getParentNodeId(nodes, ancestorId);
+  }
+
+  return null;
+};
+
+/**
+ * Get the previous node for up arrow navigation
+ * Priority: previous sibling > parent (if no previous sibling)
+ */
+export const getUpNodeId = (
+  nodes: NodeMap,
+  currentNodeId: string
+): string | null => {
+  // First try previous sibling
+  const prevSibling = getPreviousSiblingNodeId(nodes, currentNodeId);
+  if (prevSibling) {
+    return prevSibling;
+  }
+
+  // If no previous sibling, go to parent
+  const parent = getParentNodeId(nodes, currentNodeId);
+  if (parent) {
+    return parent;
+  }
+
+  return null;
+};

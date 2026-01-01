@@ -1,15 +1,14 @@
 import { useEffect } from 'react';
 import { useDocumentStore } from '../store';
 import {
-  getNextNodeId,
-  getPreviousNodeId,
+  getUpNodeId,
+  getDownNodeId,
   getParentNodeId,
   getFirstChildNodeId,
 } from '../core/navigation';
 
 export const useKeyboardNavigation = () => {
   const nodes = useDocumentStore((state) => state.nodes);
-  const rootId = useDocumentStore((state) => state.rootId);
   const selectedNodeId = useDocumentStore((state) => state.selectedNodeId);
   const editingNodeId = useDocumentStore((state) => state.editingNodeId);
   const selectNode = useDocumentStore((state) => state.selectNode);
@@ -60,12 +59,12 @@ export const useKeyboardNavigation = () => {
       switch (e.key) {
         case 'ArrowUp':
           e.preventDefault();
-          nextNodeId = getPreviousNodeId(nodes, rootId, selectedNodeId);
+          nextNodeId = getUpNodeId(nodes, selectedNodeId);
           break;
 
         case 'ArrowDown':
           e.preventDefault();
-          nextNodeId = getNextNodeId(nodes, rootId, selectedNodeId);
+          nextNodeId = getDownNodeId(nodes, selectedNodeId);
           break;
 
         case 'ArrowLeft':
@@ -121,5 +120,5 @@ export const useKeyboardNavigation = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nodes, rootId, selectedNodeId, editingNodeId, selectNode, startEditing, createChildNode, createSiblingNode, deleteNode, toggleCollapse, undo, redo]);
+  }, [nodes, selectedNodeId, editingNodeId, selectNode, startEditing, createChildNode, createSiblingNode, deleteNode, toggleCollapse, undo, redo]);
 };

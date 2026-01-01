@@ -160,6 +160,7 @@ function MindMapCanvas() {
   const createChildNode = useDocumentStore((state) => state.createChildNode);
   const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
+  const stopEditing = useDocumentStore((state) => state.stopEditing);
 
   // Initialize PixiJS
   useEffect(() => {
@@ -337,6 +338,7 @@ function MindMapCanvas() {
         }, 0);
       } else {
         setEditing(null);
+        stopEditing();
       }
     } else if (e.key === 'Tab') {
       e.preventDefault();
@@ -357,13 +359,15 @@ function MindMapCanvas() {
       if (e.ctrlKey) {
         // Ctrl+Escape: Cancel editing (don't save)
         setEditing(null);
+        stopEditing();
       } else {
         // Escape: Save and exit editing mode
         updateNodeText(editing.nodeId, editing.text);
         setEditing(null);
+        stopEditing();
       }
     }
-  }, [editing, nodes, updateNodeText, createSiblingNode, createChildNode, startEditingNode]);
+  }, [editing, nodes, updateNodeText, createSiblingNode, createChildNode, startEditingNode, stopEditing]);
 
   // Handle IME composition events
   const handleCompositionStart = useCallback(() => {
@@ -391,8 +395,9 @@ function MindMapCanvas() {
       }
       updateNodeText(editing.nodeId, editing.text);
       setEditing(null);
+      stopEditing();
     }
-  }, [editing, updateNodeText]);
+  }, [editing, updateNodeText, stopEditing]);
 
   // Track the nodeId being edited to detect when we start editing a NEW node
   const editingNodeIdRef = useRef<string | null>(null);
@@ -643,10 +648,13 @@ function MindMapCanvas() {
     }
   }, [editing]);
 
-  // Focus wrapper when PixiJS is ready to ensure keyboard events work
+  // Focus wrapper when PixiJS is ready or when editing ends to ensure keyboard events work
   useEffect(() => {
     if (isReady && wrapperRef.current && !editing) {
-      wrapperRef.current.focus();
+      // Use setTimeout to ensure the input is fully unmounted before focusing wrapper
+      setTimeout(() => {
+        wrapperRef.current?.focus();
+      }, 0);
     }
   }, [isReady, editing]);
 
