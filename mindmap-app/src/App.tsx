@@ -2,13 +2,20 @@ import { useEffect } from 'react';
 import './App.css';
 import { OutlineView } from './components/Outline';
 import { MindMapView } from './components/MindMap';
+import { SearchDialog } from './components/Search';
 import { useDocumentStore } from './store';
+import { useAutoSave } from './hooks';
 
 function App() {
   const viewMode = useDocumentStore((state) => state.viewMode);
   const setViewMode = useDocumentStore((state) => state.setViewMode);
+  const isSearchOpen = useDocumentStore((state) => state.isSearchOpen);
+  const openSearch = useDocumentStore((state) => state.openSearch);
 
-  // Handle mode switching keyboard shortcuts (Ctrl+1, Ctrl+2)
+  // Enable autosave (30 seconds after last change, only if file has been saved before)
+  useAutoSave();
+
+  // Handle global keyboard shortcuts (Ctrl+1, Ctrl+2, Ctrl+F)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMod = e.ctrlKey || e.metaKey;
@@ -20,12 +27,15 @@ function App() {
       } else if (e.key === '2') {
         e.preventDefault();
         setViewMode('outline');
+      } else if (e.key === 'f' && !isSearchOpen) {
+        e.preventDefault();
+        openSearch();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setViewMode]);
+  }, [setViewMode, isSearchOpen, openSearch]);
 
   return (
     <div className="h-screen flex flex-col">
@@ -62,6 +72,9 @@ function App() {
       <main className="flex-1 overflow-hidden">
         {viewMode === 'mindmap' ? <MindMapView /> : <OutlineView />}
       </main>
+
+      {/* Search dialog */}
+      <SearchDialog />
     </div>
   );
 }

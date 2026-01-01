@@ -65,6 +65,13 @@ const createInitialNodes = (): NodeMap => {
   };
 };
 
+// Search result type
+interface SearchResult {
+  nodeId: string;
+  text: string;
+  path: string[]; // Breadcrumb path from root to this node
+}
+
 interface DocumentState {
   // Document data
   nodes: NodeMap;
@@ -79,6 +86,12 @@ interface DocumentState {
   editingNodeId: string | null;
   viewMode: ViewMode;
   viewport: Viewport;
+
+  // Search state
+  isSearchOpen: boolean;
+  searchQuery: string;
+  searchResults: SearchResult[];
+  searchSelectedIndex: number;
 
   // History state for undo/redo
   history: HistoryEntry[];
@@ -102,6 +115,13 @@ interface DocumentState {
 
   // View actions
   setViewMode: (mode: ViewMode) => void;
+
+  // Search actions
+  openSearch: () => void;
+  closeSearch: () => void;
+  setSearchQuery: (query: string) => void;
+  selectSearchResult: (index: number) => void;
+  navigateToSearchResult: () => void;
 
   // History actions
   undo: () => void;
@@ -147,6 +167,12 @@ export const useDocumentStore = create<DocumentState>()(
     editingNodeId: null,
     viewMode: 'outline',
     viewport: { x: 0, y: 0, zoom: 1 },
+
+    // Search state
+    isSearchOpen: false,
+    searchQuery: '',
+    searchResults: [],
+    searchSelectedIndex: 0,
 
     // History state
     history: [{ nodes: createInitialNodes(), rootId: 'root' }],
@@ -349,6 +375,112 @@ export const useDocumentStore = create<DocumentState>()(
         state.viewMode = mode;
         // Stop editing when switching modes
         state.editingNodeId = null;
+      }),
+
+    // Search actions
+    openSearch: () =>
+      set((state) => {
+        state.isSearchOpen = true;
+        state.searchQuery = '';
+        state.searchResults = [];
+        state.searchSelectedIndex = 0;
+        state.editingNodeId = null;
+      }),
+
+    closeSearch: () =>
+      set((state) => {
+        state.isSearchOpen = false;
+        state.searchQuery = '';
+        state.searchResults = [];
+        state.searchSelectedIndex = 0;
+      }),
+
+    setSearchQuery: (query) =>
+      set((state) => {
+        state.searchQuery = query;
+        state.searchSelectedIndex = 0;
+
+        if (!query.trim()) {
+          state.searchResults = [];
+          return;
+        }
+
+        const lowerQuery = query.toLowerCase();
+        const results: SearchResult[] = [];
+
+        // Helper to get breadcrumb path for a node
+        const getPath = (nodeId: string): string[] => {
+          const path: string[] = [];
+          let currentId: string | null = nodeId;
+          while (currentId) {
+            const currentNode: Node | undefined = state.nodes[currentId];
+            if (!currentNode) break;
+            if (currentNode.content.type === 'text') {
+              path.unshift(currentNode.content.text);
+            }
+            currentId = currentNode.parentId;
+          }
+          return path;
+        };
+
+        // Traverse all nodes to find matches
+        const traverse = (nodeId: string): void => {
+          const traverseNode: Node | undefined = state.nodes[nodeId];
+          if (!traverseNode) return;
+
+          if (traverseNode.content.type === 'text') {
+            const text = traverseNode.content.text;
+            if (text.toLowerCase().includes(lowerQuery)) {
+              results.push({
+                nodeId,
+                text,
+                path: getPath(nodeId),
+              });
+            }
+          }
+
+          // Search all children regardless of collapse state
+          for (const childId of traverseNode.childIds) {
+            traverse(childId);
+          }
+        };
+
+        traverse(state.rootId);
+        state.searchResults = results;
+      }),
+
+    selectSearchResult: (index) =>
+      set((state) => {
+        if (index >= 0 && index < state.searchResults.length) {
+          state.searchSelectedIndex = index;
+        }
+      }),
+
+    navigateToSearchResult: () =>
+      set((state) => {
+        const result = state.searchResults[state.searchSelectedIndex];
+        if (!result) return;
+
+        // Expand all ancestors to make the node visible
+        let currentId: string | null = result.nodeId;
+        while (currentId) {
+          const currentNode: Node | undefined = state.nodes[currentId];
+          if (!currentNode) break;
+          if (currentNode.parentId) {
+            const parent: Node | undefined = state.nodes[currentNode.parentId];
+            if (parent && parent.isCollapsed) {
+              parent.isCollapsed = false;
+            }
+          }
+          currentId = currentNode.parentId;
+        }
+
+        // Select the node and close search
+        state.selectedNodeId = result.nodeId;
+        state.isSearchOpen = false;
+        state.searchQuery = '';
+        state.searchResults = [];
+        state.searchSelectedIndex = 0;
       }),
 
     // History actions
