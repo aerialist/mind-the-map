@@ -8,3 +8,21 @@ export type {
   ViewMode,
   Viewport,
 } from './document';
+export type {
+  NodeIcon,
+  IconCategory,
+  IconDefinition,
+  PriorityIcon,
+  TaskIcon,
+  FlagIcon,
+  SmileyIcon,
+  ArrowIcon,
+  SymbolIcon,
+} from './icons';
+export {
+  ICON_DEFINITIONS,
+  ICON_CATEGORY_LABELS,
+  getIconDefinition,
+  getNextIconInCategory,
+  getAllIcons,
+} from './icons';

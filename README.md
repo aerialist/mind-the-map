@@ -9,7 +9,35 @@ Mind the Map is a desktop application built with Tauri 2.0 that provides a snapp
 - **Keyboard-first interaction** - Navigate and edit entirely with keyboard shortcuts
 - **Dual view modes** - Switch seamlessly between mind map and outline views
 - **Smart layout** - Automatic layout with manual positioning support
+- **Node icons** - Mark nodes with priority, task progress, flags, arrows, and symbols
 - **Fast & lightweight** - Built with performance as a top priority
+
+## Features
+
+### Node Icons
+
+Mark your nodes with visual indicators using Lucide React icons:
+
+- **Priority** (1-9) - Number badges for task prioritization
+- **Task Progress** - Empty, 25%, 50%, 75%, Complete checkboxes
+- **Flags** - Red, orange, yellow, green, blue, purple color flags
+- **Smileys** - Happy, neutral, sad, love, thinking, thumbs up/down
+- **Arrows** - 8 directional arrows for flow indication
+- **Symbols** - Star, heart, lightning, fire, warning, info, question, check, cross, clock, bookmark, pin
+
+Press `I` to open the icon picker. The picker stays open while you select different nodes, making it easy to apply icons to multiple nodes quickly. Click any icon on a node to cycle through the same category.
+
+### Multi-Node Selection
+
+Select multiple nodes to apply bulk operations:
+
+- **Ctrl+click** (Cmd+click on Mac): Toggle individual nodes in/out of selection
+- **Shift+click**: Select a range of visible nodes from the current selection to the clicked node
+
+When multiple nodes are selected:
+- The icon picker shows how many nodes are selected
+- Adding an icon applies it to all selected nodes at once
+- "Clear All" removes icons from all selected nodes
 
 ## Technology Stack
 
@@ -84,7 +112,7 @@ cd mindmap-app
 pnpm install
 
 # Install additional required packages
-pnpm add zustand immer pixi.js
+pnpm add zustand immer pixi.js lucide-react
 pnpm add -D tailwindcss@3 postcss autoprefixer
 pnpm add -D @types/node
 ```

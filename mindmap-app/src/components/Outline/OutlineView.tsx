@@ -34,8 +34,6 @@ export const useDragContext = () => {
 function OutlineView() {
   const rootId = useDocumentStore((state) => state.rootId);
   const nodes = useDocumentStore((state) => state.nodes);
-  const isDirty = useDocumentStore((state) => state.isDirty);
-  const currentFilePath = useDocumentStore((state) => state.currentFilePath);
   const moveNode = useDocumentStore((state) => state.moveNode);
 
   // Drag state
@@ -209,20 +207,9 @@ function OutlineView() {
   // Enable file operations (Ctrl+S, Ctrl+O, Ctrl+N)
   useFileOperations();
 
-  // Get filename from path
-  const fileName = currentFilePath
-    ? currentFilePath.split('/').pop() || 'Untitled'
-    : 'Untitled';
-
   return (
     <DragContext.Provider value={dragContextValue}>
       <div className="h-full flex flex-col">
-        {/* Title bar */}
-        <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
-          {fileName}
-          {isDirty && <span className="ml-1">*</span>}
-        </div>
-
         {/* Content */}
         <div
           ref={containerRef}

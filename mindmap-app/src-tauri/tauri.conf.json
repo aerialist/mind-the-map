@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "mindmap-app",
+  "productName": "Mind the Map",
   "version": "0.1.0",
   "identifier": "com.shunya.mindmap-app",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "mindmap-app",
+        "title": "Mind the Map",
         "width": 800,
         "height": 600
       }

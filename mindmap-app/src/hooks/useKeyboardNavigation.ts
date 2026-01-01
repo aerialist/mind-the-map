@@ -17,6 +17,7 @@ export const useKeyboardNavigation = () => {
   const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
   const deleteNode = useDocumentStore((state) => state.deleteNode);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
+  const openIconPicker = useDocumentStore((state) => state.openIconPicker);
   const undo = useDocumentStore((state) => state.undo);
   const redo = useDocumentStore((state) => state.redo);
 
@@ -111,6 +112,13 @@ export const useKeyboardNavigation = () => {
           // Toggle collapse/expand for the selected node
           toggleCollapse(selectedNodeId);
           break;
+
+        case 'i':
+        case 'I':
+          e.preventDefault();
+          // Open icon picker (uses currently selected node)
+          openIconPicker();
+          break;
       }
 
       if (nextNodeId) {
@@ -120,5 +128,5 @@ export const useKeyboardNavigation = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nodes, selectedNodeId, editingNodeId, selectNode, startEditing, createChildNode, createSiblingNode, deleteNode, toggleCollapse, undo, redo]);
+  }, [nodes, selectedNodeId, editingNodeId, selectNode, startEditing, createChildNode, createSiblingNode, deleteNode, toggleCollapse, openIconPicker, undo, redo]);
 };

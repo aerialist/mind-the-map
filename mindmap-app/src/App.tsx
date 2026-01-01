@@ -1,19 +1,44 @@
 import { useEffect } from 'react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import './App.css';
 import { OutlineView } from './components/Outline';
 import { MindMapView } from './components/MindMap';
 import { SearchDialog } from './components/Search';
+import { IconPicker } from './components/IconPicker';
 import { useDocumentStore } from './store';
 import { useAutoSave } from './hooks';
+
+const getFileNameFromPath = (filePath: string): string => {
+  const normalized = filePath.replace(/\\/g, '/');
+  const parts = normalized.split('/').filter(Boolean);
+  return parts[parts.length - 1] ?? filePath;
+};
 
 function App() {
   const viewMode = useDocumentStore((state) => state.viewMode);
   const setViewMode = useDocumentStore((state) => state.setViewMode);
   const isSearchOpen = useDocumentStore((state) => state.isSearchOpen);
   const openSearch = useDocumentStore((state) => state.openSearch);
+  const currentFilePath = useDocumentStore((state) => state.currentFilePath);
+  const isDirty = useDocumentStore((state) => state.isDirty);
 
   // Enable autosave (30 seconds after last change, only if file has been saved before)
   useAutoSave();
+
+  // Sync native window title with current file
+  useEffect(() => {
+    const fileLabel = currentFilePath
+      ? getFileNameFromPath(currentFilePath)
+      : 'Untitled';
+    const dirtyMark = isDirty ? '* ' : '';
+    const title = `${dirtyMark}${fileLabel} — Mind the Map`;
+
+    getCurrentWindow()
+      .setTitle(title)
+      .catch(() => {
+        // Ignore when not running in Tauri (e.g. `pnpm dev`)
+      });
+  }, [currentFilePath, isDirty]);
 
   // Handle global keyboard shortcuts (Ctrl+1, Ctrl+2, Ctrl+F)
   useEffect(() => {
@@ -75,6 +100,9 @@ function App() {
 
       {/* Search dialog */}
       <SearchDialog />
+
+      {/* Icon picker dialog */}
+      <IconPicker />
     </div>
   );
 }

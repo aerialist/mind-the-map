@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState } from 'react';
 import { useDocumentStore } from '../../store';
 import { useDragContext } from './OutlineView';
+import { getIconDefinition } from '../../types';
+import { Tags } from 'lucide-react';
 
 interface OutlineNodeProps {
   nodeId: string;
@@ -10,14 +12,19 @@ interface OutlineNodeProps {
 function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   const node = useDocumentStore((state) => state.nodes[nodeId]);
   const selectedNodeId = useDocumentStore((state) => state.selectedNodeId);
+  const selectedNodeIds = useDocumentStore((state) => state.selectedNodeIds);
   const editingNodeId = useDocumentStore((state) => state.editingNodeId);
   const selectNode = useDocumentStore((state) => state.selectNode);
+  const toggleNodeSelection = useDocumentStore((state) => state.toggleNodeSelection);
+  const selectNodeRange = useDocumentStore((state) => state.selectNodeRange);
   const startEditing = useDocumentStore((state) => state.startEditing);
   const stopEditing = useDocumentStore((state) => state.stopEditing);
   const updateNodeText = useDocumentStore((state) => state.updateNodeText);
   const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
   const createChildNode = useDocumentStore((state) => state.createChildNode);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
+  const openIconPicker = useDocumentStore((state) => state.openIconPicker);
+  const cycleIcon = useDocumentStore((state) => state.cycleIcon);
 
   const { draggedNodeId, startDrag } = useDragContext();
 
@@ -26,7 +33,8 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   const prevEditingRef = useRef(false);
   const isComposingRef = useRef(false);
 
-  const isSelected = selectedNodeId === nodeId;
+  const isSelected = selectedNodeIds.includes(nodeId);
+  const isPrimarySelected = selectedNodeId === nodeId;
   const isEditing = editingNodeId === nodeId;
   const isDragging = draggedNodeId === nodeId;
   const isRoot = !node?.parentId;
@@ -53,9 +61,24 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
 
   const text = node.content.type === 'text' ? node.content.text : '[image]';
   const hasChildren = node.childIds.length > 0;
+  const nodeIcons = node.icons || [];
 
-  const handleClick = () => {
-    selectNode(nodeId);
+  const handleIconClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    openIconPicker();
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      // Ctrl+click (or Cmd+click on Mac): Toggle this node in multi-selection
+      toggleNodeSelection(nodeId);
+    } else if (e.shiftKey) {
+      // Shift+click: Select range from current selection to this node
+      selectNodeRange(nodeId);
+    } else {
+      // Normal click: Single selection
+      selectNode(nodeId);
+    }
   };
 
   const handleDoubleClick = () => {
@@ -146,9 +169,11 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onMouseDown={handleMouseDown}
-        className={`flex items-center py-1 px-2 rounded cursor-pointer
+        className={`group flex items-center py-1 px-2 rounded cursor-pointer
           ${isSelected
-            ? 'bg-blue-100 dark:bg-blue-900'
+            ? isPrimarySelected
+              ? 'bg-blue-100 dark:bg-blue-900'
+              : 'bg-blue-50 dark:bg-blue-950'
             : 'hover:bg-gray-100 dark:hover:bg-gray-800'
           }
           ${isDragging ? 'opacity-50' : ''}`}
@@ -165,6 +190,41 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
           {hasChildren ? (node.isCollapsed ? '▶' : '▼') : '•'}
         </span>
 
+        {/* Node icons */}
+        {nodeIcons.length > 0 && (
+          <span className="flex items-center gap-0.5 mr-1">
+            {nodeIcons.map((icon, index) => {
+              const def = getIconDefinition(icon);
+              if (!def) return null;
+              const IconComponent = def.icon;
+              return (
+                <button
+                  key={`${icon.type}-${index}`}
+                  className="relative cursor-pointer hover:opacity-70 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    cycleIcon(nodeId, index);
+                  }}
+                  title={`${def.label} (click to cycle)`}
+                >
+                  <IconComponent
+                    className="w-4 h-4"
+                    style={{ color: def.color }}
+                  />
+                  {def.text && (
+                    <span
+                      className="absolute inset-0 flex items-center justify-center text-[8px] font-bold pointer-events-none"
+                      style={{ color: def.color }}
+                    >
+                      {def.text}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </span>
+        )}
+
         {/* Node text or input */}
         {isEditing ? (
           <input
@@ -180,6 +240,17 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
           />
         ) : (
           <span className="flex-1">{text}</span>
+        )}
+
+        {/* Icon picker button (visible on hover when selected) */}
+        {isSelected && !isEditing && (
+          <button
+            onClick={handleIconClick}
+            className="ml-1 px-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
+            title="Add icon (I)"
+          >
+            <Tags className="w-4 h-4" />
+          </button>
         )}
       </div>
 

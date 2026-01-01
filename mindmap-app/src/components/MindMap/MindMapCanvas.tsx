@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { useDocumentStore } from '../../store';
 import type { Node, NodeMap } from '../../types';
+import { getIconDefinition } from '../../types';
 
 // Editing state for overlay input
 interface EditingState {
@@ -45,8 +46,10 @@ const COLORS = {
   background: 0x1a1a2e,
   node: 0x16213e,
   nodeSelected: 0x0f3460,
+  nodeMultiSelected: 0x0a2540, // Lighter selection for multi-selected nodes
   nodeBorder: 0x4a5568,
   nodeSelectedBorder: 0x63b3ed,
+  nodeMultiSelectedBorder: 0x4299e1, // Slightly dimmer border for multi-selected
   text: 0xffffff,
   edge: 0x4a5568,
   collapseIndicator: 0x63b3ed,
@@ -99,7 +102,15 @@ const calculateLayout = (
   const getNodeWidth = (node: Node): number => {
     const text = node.content.type === 'text' ? node.content.text : '[image]';
     const textWidth = measureTextWidth(text);
-    return Math.max(textWidth + NODE_PADDING_X * 2, NODE_MIN_WIDTH);
+
+    // Account for icons width
+    let iconsWidth = 0;
+    if (node.icons && node.icons.length > 0) {
+      // Approximate width per icon emoji (12px font + 2px gap)
+      iconsWidth = node.icons.length * 16 + 4;
+    }
+
+    return Math.max(textWidth + iconsWidth + NODE_PADDING_X * 2, NODE_MIN_WIDTH);
   };
 
   // Calculate subtree height
@@ -177,13 +188,18 @@ function MindMapCanvas() {
   const nodes = useDocumentStore((state) => state.nodes);
   const rootId = useDocumentStore((state) => state.rootId);
   const selectedNodeId = useDocumentStore((state) => state.selectedNodeId);
+  const selectedNodeIds = useDocumentStore((state) => state.selectedNodeIds);
   const selectNode = useDocumentStore((state) => state.selectNode);
+  const toggleNodeSelection = useDocumentStore((state) => state.toggleNodeSelection);
+  const selectNodeRange = useDocumentStore((state) => state.selectNodeRange);
   const updateNodeText = useDocumentStore((state) => state.updateNodeText);
   const createChildNode = useDocumentStore((state) => state.createChildNode);
   const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
   const stopEditing = useDocumentStore((state) => state.stopEditing);
   const moveNode = useDocumentStore((state) => state.moveNode);
+  const openIconPicker = useDocumentStore((state) => state.openIconPicker);
+  const cycleIcon = useDocumentStore((state) => state.cycleIcon);
 
   // Check if ancestorId is an ancestor of descendantId
   const isAncestor = useCallback((ancestorId: string, descendantId: string): boolean => {
@@ -776,22 +792,151 @@ function MindMapCanvas() {
       const layout = layouts.get(nodeId);
       if (!layout) return;
 
-      const isSelected = nodeId === selectedNodeId;
+      const isPrimarySelected = nodeId === selectedNodeId;
+      const isMultiSelected = selectedNodeIds.includes(nodeId);
       const container = new Container();
       container.x = layout.x;
       container.y = layout.y;
       container.eventMode = 'static';
       container.cursor = 'pointer';
 
-      // Node background
+      // Node background - different styles for primary vs multi-selected
       const bg = new Graphics();
       bg.roundRect(0, 0, layout.width, layout.height, NODE_RADIUS);
-      bg.fill(isSelected ? COLORS.nodeSelected : COLORS.node);
+      bg.fill(
+        isPrimarySelected
+          ? COLORS.nodeSelected
+          : isMultiSelected
+          ? COLORS.nodeMultiSelected
+          : COLORS.node
+      );
       bg.stroke({
         width: 2,
-        color: isSelected ? COLORS.nodeSelectedBorder : COLORS.nodeBorder,
+        color: isPrimarySelected
+          ? COLORS.nodeSelectedBorder
+          : isMultiSelected
+          ? COLORS.nodeMultiSelectedBorder
+          : COLORS.nodeBorder,
       });
       container.addChild(bg);
+
+      // Node icons
+      const nodeIcons = node.icons || [];
+      let iconOffset = NODE_PADDING_X;
+      const ICON_SIZE = 14;
+
+      if (nodeIcons.length > 0) {
+        nodeIcons.forEach((icon, iconIndex) => {
+          const def = getIconDefinition(icon);
+          if (!def) return;
+
+          const iconColor = parseInt(def.color?.replace('#', '') || '6b7280', 16);
+          const iconY = (layout.height - ICON_SIZE) / 2;
+
+          // Create a container for the icon to handle clicks
+          const iconContainer = new Container();
+          iconContainer.x = iconOffset;
+          iconContainer.y = iconY;
+          iconContainer.eventMode = 'static';
+          iconContainer.cursor = 'pointer';
+
+          // Add click handler to cycle icon
+          iconContainer.on('pointerdown', (e) => {
+            e.stopPropagation();
+            cycleIcon(nodeId, iconIndex);
+          });
+
+          const iconGraphics = new Graphics();
+
+          // Draw simple shapes based on icon type (positions relative to container)
+          if (icon.type === 'priority') {
+            // Circle with number
+            iconGraphics.circle(ICON_SIZE / 2, ICON_SIZE / 2, ICON_SIZE / 2 - 1);
+            iconGraphics.fill(iconColor);
+            // Add number text
+            const numStyle = new TextStyle({
+              fontSize: 9,
+              fill: 0xffffff,
+              fontWeight: 'bold',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+            });
+            const numText = new Text({ text: String(icon.value), style: numStyle });
+            numText.x = (ICON_SIZE - numText.width) / 2;
+            numText.y = (ICON_SIZE - numText.height) / 2;
+            iconContainer.addChild(iconGraphics);
+            iconContainer.addChild(numText);
+          } else if (icon.type === 'task') {
+            // Checkbox shapes
+            const boxSize = ICON_SIZE - 2;
+            const boxX = 1;
+            const boxY = 1;
+            iconGraphics.roundRect(boxX, boxY, boxSize, boxSize, 2);
+            iconGraphics.stroke({ width: 1.5, color: iconColor });
+            if (icon.value === 'done') {
+              // Checkmark
+              iconGraphics.moveTo(boxX + 3, boxY + boxSize / 2);
+              iconGraphics.lineTo(boxX + boxSize / 2 - 1, boxY + boxSize - 3);
+              iconGraphics.lineTo(boxX + boxSize - 3, boxY + 3);
+              iconGraphics.stroke({ width: 2, color: iconColor });
+            } else if (icon.value === 'half') {
+              // Half fill
+              iconGraphics.rect(boxX + 2, boxY + boxSize / 2, boxSize - 4, boxSize / 2 - 2);
+              iconGraphics.fill(iconColor);
+            } else if (icon.value === 'quarter') {
+              // Quarter fill
+              iconGraphics.rect(boxX + 2, boxY + boxSize * 0.75 - 2, boxSize - 4, boxSize * 0.25);
+              iconGraphics.fill(iconColor);
+            } else if (icon.value === 'three-quarter') {
+              // Three quarter fill
+              iconGraphics.rect(boxX + 2, boxY + boxSize * 0.25, boxSize - 4, boxSize * 0.75 - 2);
+              iconGraphics.fill(iconColor);
+            }
+            iconContainer.addChild(iconGraphics);
+          } else if (icon.type === 'flag') {
+            // Flag shape
+            iconGraphics.moveTo(2, 2);
+            iconGraphics.lineTo(ICON_SIZE - 2, 2);
+            iconGraphics.lineTo(ICON_SIZE - 4, ICON_SIZE / 2);
+            iconGraphics.lineTo(ICON_SIZE - 2, ICON_SIZE - 4);
+            iconGraphics.lineTo(2, ICON_SIZE - 4);
+            iconGraphics.closePath();
+            iconGraphics.fill(iconColor);
+            iconContainer.addChild(iconGraphics);
+          } else if (icon.type === 'symbol' && icon.value === 'star') {
+            // Star shape
+            const cx = ICON_SIZE / 2;
+            const cy = ICON_SIZE / 2;
+            const outerR = ICON_SIZE / 2 - 1;
+            const innerR = outerR * 0.4;
+            for (let i = 0; i < 5; i++) {
+              const outerAngle = (i * 72 - 90) * Math.PI / 180;
+              const innerAngle = ((i * 72) + 36 - 90) * Math.PI / 180;
+              const outerX = cx + Math.cos(outerAngle) * outerR;
+              const outerY = cy + Math.sin(outerAngle) * outerR;
+              const innerX = cx + Math.cos(innerAngle) * innerR;
+              const innerY = cy + Math.sin(innerAngle) * innerR;
+              if (i === 0) {
+                iconGraphics.moveTo(outerX, outerY);
+              } else {
+                iconGraphics.lineTo(outerX, outerY);
+              }
+              iconGraphics.lineTo(innerX, innerY);
+            }
+            iconGraphics.closePath();
+            iconGraphics.fill(iconColor);
+            iconContainer.addChild(iconGraphics);
+          } else {
+            // Default: simple colored circle for other icons
+            iconGraphics.circle(ICON_SIZE / 2, ICON_SIZE / 2, ICON_SIZE / 2 - 2);
+            iconGraphics.fill(iconColor);
+            iconContainer.addChild(iconGraphics);
+          }
+
+          container.addChild(iconContainer);
+          iconOffset += ICON_SIZE + 3;
+        });
+        iconOffset += 2; // Extra space after icons
+      }
 
       // Node text
       const text = node.content.type === 'text' ? node.content.text : '[image]';
@@ -801,7 +946,7 @@ function MindMapCanvas() {
         fontFamily: 'system-ui, -apple-system, sans-serif',
       });
       const textObj = new Text({ text: text || '(empty)', style: textStyle });
-      textObj.x = NODE_PADDING_X;
+      textObj.x = iconOffset;
       textObj.y = (layout.height - textObj.height) / 2;
       container.addChild(textObj);
 
@@ -862,14 +1007,28 @@ function MindMapCanvas() {
         const lastClickTime = clickTimesRef.current.get(nodeId) || 0;
         const timeDiff = now - lastClickTime;
 
-        if (timeDiff < 300 && timeDiff > 0) {
-          // Double-click: start in-place editing
+        // Get keyboard modifiers from the original event
+        const originalEvent = e.nativeEvent as PointerEvent;
+        const ctrlKey = originalEvent?.ctrlKey || originalEvent?.metaKey || false;
+        const shiftKey = originalEvent?.shiftKey || false;
+
+        if (timeDiff < 300 && timeDiff > 0 && !ctrlKey && !shiftKey) {
+          // Double-click: start in-place editing (only without modifiers)
           startEditingNode(nodeId);
           clickTimesRef.current.set(nodeId, 0); // Reset to prevent triple-click
           potentialDragRef.current = null; // Cancel any potential drag
         } else {
-          // Single click: select node and prepare for potential drag
-          selectNode(nodeId);
+          // Single click: handle selection based on modifiers
+          if (ctrlKey) {
+            // Ctrl+click: toggle node in multi-selection
+            toggleNodeSelection(nodeId);
+          } else if (shiftKey) {
+            // Shift+click: select range
+            selectNodeRange(nodeId);
+          } else {
+            // Normal click: single selection
+            selectNode(nodeId);
+          }
           clickTimesRef.current.set(nodeId, now);
 
           // Set up potential drag (only for non-root nodes)
@@ -903,7 +1062,7 @@ function MindMapCanvas() {
     };
 
     drawNodes(rootId);
-  }, [nodes, rootId, selectedNodeId, selectNode, startEditingNode, toggleCollapse]);
+  }, [nodes, rootId, selectedNodeId, selectedNodeIds, selectNode, toggleNodeSelection, selectNodeRange, startEditingNode, toggleCollapse]);
 
   // Re-render when data changes or app becomes ready
   useEffect(() => {
@@ -952,8 +1111,13 @@ function MindMapCanvas() {
       e.stopPropagation();
       // Start editing the selected node
       startEditingNode(selectedNodeId);
+    } else if (e.key === 'i' || e.key === 'I') {
+      e.preventDefault();
+      e.stopPropagation();
+      // Open icon picker (uses currently selected node)
+      openIconPicker();
     }
-  }, [editing, selectedNodeId, nodes, createChildNode, createSiblingNode, startEditingNode]);
+  }, [editing, selectedNodeId, nodes, createChildNode, createSiblingNode, startEditingNode, openIconPicker]);
 
   // Focus the wrapper when canvas is clicked (to receive keyboard events)
   const handleWrapperClick = useCallback(() => {

@@ -1,5 +1,7 @@
 // Node-related type definitions
 
+import type { NodeIcon } from './icons';
+
 export interface Position {
   x: number;
   y: number;
@@ -17,6 +19,7 @@ export interface Node {
   content: NodeContent;
   position: Position;
   isCollapsed: boolean;
+  icons?: NodeIcon[]; // Optional array of icons for the node
 }
 
 export type NodeMap = Record<string, Node>;

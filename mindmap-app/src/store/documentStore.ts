@@ -2,7 +2,8 @@
 
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { Node, NodeMap, ViewMode, Viewport } from '../types';
+import type { Node, NodeMap, ViewMode, Viewport, NodeIcon } from '../types';
+import { getNextIconInCategory } from '../types';
 
 // History state for undo/redo
 interface HistoryEntry {
@@ -83,6 +84,7 @@ interface DocumentState {
 
   // UI state
   selectedNodeId: string | null;
+  selectedNodeIds: string[]; // For multi-selection (Ctrl+click, Shift+click)
   editingNodeId: string | null;
   viewMode: ViewMode;
   viewport: Viewport;
@@ -93,12 +95,18 @@ interface DocumentState {
   searchResults: SearchResult[];
   searchSelectedIndex: number;
 
+  // Icon picker state
+  isIconPickerOpen: boolean;
+
   // History state for undo/redo
   history: HistoryEntry[];
   historyIndex: number;
 
   // Actions
   selectNode: (nodeId: string | null) => void;
+  toggleNodeSelection: (nodeId: string) => void; // Ctrl+click
+  selectNodeRange: (nodeId: string) => void; // Shift+click
+  clearMultiSelection: () => void;
   startEditing: (nodeId: string) => void;
   stopEditing: () => void;
   updateNodeText: (nodeId: string, text: string) => void;
@@ -123,6 +131,14 @@ interface DocumentState {
   setSearchQuery: (query: string) => void;
   selectSearchResult: (index: number) => void;
   navigateToSearchResult: () => void;
+
+  // Icon actions
+  openIconPicker: () => void;
+  closeIconPicker: () => void;
+  addIcon: (nodeId: string, icon: NodeIcon) => void;
+  removeIcon: (nodeId: string, iconIndex: number) => void;
+  cycleIcon: (nodeId: string, iconIndex: number) => void;
+  clearIcons: (nodeId: string) => void;
 
   // History actions
   undo: () => void;
@@ -165,6 +181,7 @@ export const useDocumentStore = create<DocumentState>()(
     currentFilePath: null,
     isDirty: false,
     selectedNodeId: 'root',
+    selectedNodeIds: [],
     editingNodeId: null,
     viewMode: 'outline',
     viewport: { x: 0, y: 0, zoom: 1 },
@@ -175,6 +192,9 @@ export const useDocumentStore = create<DocumentState>()(
     searchResults: [],
     searchSelectedIndex: 0,
 
+    // Icon picker state
+    isIconPickerOpen: false,
+
     // History state
     history: [{ nodes: createInitialNodes(), rootId: 'root' }],
     historyIndex: 0,
@@ -183,12 +203,79 @@ export const useDocumentStore = create<DocumentState>()(
     selectNode: (nodeId) =>
       set((state) => {
         state.selectedNodeId = nodeId;
+        state.selectedNodeIds = nodeId ? [nodeId] : [];
+      }),
+
+    toggleNodeSelection: (nodeId) =>
+      set((state) => {
+        if (state.selectedNodeIds.includes(nodeId)) {
+          // Remove from selection
+          state.selectedNodeIds = state.selectedNodeIds.filter((id) => id !== nodeId);
+          // Update primary selection
+          if (state.selectedNodeId === nodeId) {
+            state.selectedNodeId = state.selectedNodeIds[0] || null;
+          }
+        } else {
+          // Add to selection
+          state.selectedNodeIds.push(nodeId);
+          state.selectedNodeId = nodeId;
+        }
+      }),
+
+    selectNodeRange: (nodeId) =>
+      set((state) => {
+        if (!state.selectedNodeId) {
+          // No current selection, just select this node
+          state.selectedNodeId = nodeId;
+          state.selectedNodeIds = [nodeId];
+          return;
+        }
+
+        // Get all visible nodes in order (DFS traversal)
+        const getVisibleNodes = (currentNodeId: string): string[] => {
+          const node = state.nodes[currentNodeId];
+          if (!node) return [];
+          const result: string[] = [currentNodeId];
+          if (!node.isCollapsed) {
+            for (const childId of node.childIds) {
+              result.push(...getVisibleNodes(childId));
+            }
+          }
+          return result;
+        };
+
+        const visibleNodes = getVisibleNodes(state.rootId);
+        const startIndex = visibleNodes.indexOf(state.selectedNodeId);
+        const endIndex = visibleNodes.indexOf(nodeId);
+
+        if (startIndex === -1 || endIndex === -1) {
+          // One of the nodes not visible, just select the new node
+          state.selectedNodeId = nodeId;
+          state.selectedNodeIds = [nodeId];
+          return;
+        }
+
+        // Select all nodes in range
+        const minIndex = Math.min(startIndex, endIndex);
+        const maxIndex = Math.max(startIndex, endIndex);
+        state.selectedNodeIds = visibleNodes.slice(minIndex, maxIndex + 1);
+        // Keep the original selectedNodeId as the anchor
+      }),
+
+    clearMultiSelection: () =>
+      set((state) => {
+        if (state.selectedNodeId) {
+          state.selectedNodeIds = [state.selectedNodeId];
+        } else {
+          state.selectedNodeIds = [];
+        }
       }),
 
     startEditing: (nodeId) =>
       set((state) => {
         state.editingNodeId = nodeId;
         state.selectedNodeId = nodeId;
+        state.selectedNodeIds = [nodeId]; // Clear multi-selection when editing
         // Note: MindMap mode now has its own in-place editing, so we don't switch modes
       }),
 
@@ -238,6 +325,7 @@ export const useDocumentStore = create<DocumentState>()(
 
         // Select and start editing the new node
         state.selectedNodeId = newId;
+        state.selectedNodeIds = [newId];
         state.editingNodeId = newId;
         state.isDirty = true;
       }),
@@ -276,6 +364,7 @@ export const useDocumentStore = create<DocumentState>()(
 
         // Select and start editing the new node
         state.selectedNodeId = newId;
+        state.selectedNodeIds = [newId];
         state.editingNodeId = newId;
         state.isDirty = true;
       }),
@@ -317,6 +406,7 @@ export const useDocumentStore = create<DocumentState>()(
 
         // Select the parent node
         state.selectedNodeId = node.parentId;
+        state.selectedNodeIds = node.parentId ? [node.parentId] : [];
         state.editingNodeId = null;
         state.isDirty = true;
       }),
@@ -402,6 +492,7 @@ export const useDocumentStore = create<DocumentState>()(
         state.currentFilePath = filePath;
         state.isDirty = false;
         state.selectedNodeId = rootId;
+        state.selectedNodeIds = [rootId];
         state.editingNodeId = null;
         // Reset history with loaded document
         state.history = [{ nodes: cloneNodes(nodes), rootId }];
@@ -416,6 +507,7 @@ export const useDocumentStore = create<DocumentState>()(
         state.currentFilePath = null;
         state.isDirty = false;
         state.selectedNodeId = 'root';
+        state.selectedNodeIds = ['root'];
         state.editingNodeId = null;
         // Reset history with new document
         state.history = [{ nodes: cloneNodes({ root }), rootId: 'root' }];
@@ -530,10 +622,95 @@ export const useDocumentStore = create<DocumentState>()(
 
         // Select the node and close search
         state.selectedNodeId = result.nodeId;
+        state.selectedNodeIds = [result.nodeId];
         state.isSearchOpen = false;
         state.searchQuery = '';
         state.searchResults = [];
         state.searchSelectedIndex = 0;
+      }),
+
+    // Icon actions
+    openIconPicker: () =>
+      set((state) => {
+        state.isIconPickerOpen = true;
+        state.editingNodeId = null;
+      }),
+
+    closeIconPicker: () =>
+      set((state) => {
+        state.isIconPickerOpen = false;
+      }),
+
+    addIcon: (nodeId, icon) =>
+      set((state) => {
+        const node = state.nodes[nodeId];
+        if (!node) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        // Initialize icons array if needed
+        if (!node.icons) {
+          node.icons = [];
+        }
+
+        // Check if icon of same type already exists
+        const existingIndex = node.icons.findIndex((i) => i.type === icon.type);
+        if (existingIndex >= 0) {
+          // Replace existing icon of same type
+          node.icons[existingIndex] = icon;
+        } else {
+          // Add new icon
+          node.icons.push(icon);
+        }
+
+        state.isDirty = true;
+      }),
+
+    removeIcon: (nodeId, iconIndex) =>
+      set((state) => {
+        const node = state.nodes[nodeId];
+        if (!node || !node.icons) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        node.icons.splice(iconIndex, 1);
+
+        // Clean up empty array
+        if (node.icons.length === 0) {
+          delete node.icons;
+        }
+
+        state.isDirty = true;
+      }),
+
+    cycleIcon: (nodeId, iconIndex) =>
+      set((state) => {
+        const node = state.nodes[nodeId];
+        if (!node || !node.icons || iconIndex >= node.icons.length) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        // Get the next icon in the same category
+        const currentIcon = node.icons[iconIndex];
+        const nextIcon = getNextIconInCategory(currentIcon);
+        node.icons[iconIndex] = nextIcon;
+
+        state.isDirty = true;
+      }),
+
+    clearIcons: (nodeId) =>
+      set((state) => {
+        const node = state.nodes[nodeId];
+        if (!node || !node.icons) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        delete node.icons;
+        state.isDirty = true;
       }),
 
     // History actions
@@ -549,6 +726,13 @@ export const useDocumentStore = create<DocumentState>()(
           // Keep selection if node still exists, otherwise select root
           if (!state.nodes[state.selectedNodeId || '']) {
             state.selectedNodeId = state.rootId;
+            state.selectedNodeIds = [state.rootId];
+          } else {
+            // Filter out any selected nodes that no longer exist
+            state.selectedNodeIds = state.selectedNodeIds.filter((id) => state.nodes[id]);
+            if (state.selectedNodeIds.length === 0 && state.selectedNodeId) {
+              state.selectedNodeIds = [state.selectedNodeId];
+            }
           }
         }
       }),
@@ -565,6 +749,13 @@ export const useDocumentStore = create<DocumentState>()(
           // Keep selection if node still exists, otherwise select root
           if (!state.nodes[state.selectedNodeId || '']) {
             state.selectedNodeId = state.rootId;
+            state.selectedNodeIds = [state.rootId];
+          } else {
+            // Filter out any selected nodes that no longer exist
+            state.selectedNodeIds = state.selectedNodeIds.filter((id) => state.nodes[id]);
+            if (state.selectedNodeIds.length === 0 && state.selectedNodeId) {
+              state.selectedNodeIds = [state.selectedNodeId];
+            }
           }
         }
       }),
