@@ -41,6 +41,34 @@ interface NodeLayout {
   height: number;
 }
 
+// Text measurement cache to avoid creating Text objects repeatedly
+const textWidthCache = new Map<string, number>();
+
+// Measure text width using PixiJS Text object
+const measureTextWidth = (text: string): number => {
+  if (textWidthCache.has(text)) {
+    return textWidthCache.get(text)!;
+  }
+
+  const textStyle = new TextStyle({
+    fontSize: 14,
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+  });
+  const textObj = new Text({ text: text || '(empty)', style: textStyle });
+  const width = textObj.width;
+
+  // Cache the result (limit cache size to prevent memory issues)
+  if (textWidthCache.size > 1000) {
+    textWidthCache.clear();
+  }
+  textWidthCache.set(text, width);
+
+  // Clean up
+  textObj.destroy();
+
+  return width;
+};
+
 // Calculate tree layout
 const calculateLayout = (
   nodes: NodeMap,
@@ -48,11 +76,11 @@ const calculateLayout = (
 ): Map<string, NodeLayout> => {
   const layouts = new Map<string, NodeLayout>();
 
-  // First pass: calculate node sizes
+  // First pass: calculate node sizes using proper text measurement
   const getNodeWidth = (node: Node): number => {
     const text = node.content.type === 'text' ? node.content.text : '[image]';
-    const estimatedWidth = text.length * 8 + NODE_PADDING_X * 2;
-    return Math.max(estimatedWidth, NODE_MIN_WIDTH);
+    const textWidth = measureTextWidth(text);
+    return Math.max(textWidth + NODE_PADDING_X * 2, NODE_MIN_WIDTH);
   };
 
   // Calculate subtree height
@@ -109,6 +137,7 @@ const calculateLayout = (
 
 function MindMapCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<Application | null>(null);
   const nodesContainerRef = useRef<Container | null>(null);
   const edgesContainerRef = useRef<Container | null>(null);
@@ -118,6 +147,8 @@ function MindMapCanvas() {
   const layoutsRef = useRef<Map<string, NodeLayout>>(new Map());
   // Track click times per node for double-click detection (persists across re-renders)
   const clickTimesRef = useRef<Map<string, number>>(new Map());
+  // Track IME composition state for Japanese input
+  const isComposingRef = useRef(false);
 
   const nodes = useDocumentStore((state) => state.nodes);
   const rootId = useDocumentStore((state) => state.rootId);
@@ -276,6 +307,12 @@ function MindMapCanvas() {
   const handleEditKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!editing) return;
 
+    // Ignore all keys during IME composition (e.g., Japanese input)
+    // During IME composition, keyCode is 229 or key is 'Process'
+    if (e.nativeEvent.isComposing || isComposingRef.current || e.keyCode === 229 || e.key === 'Process') {
+      return; // Let IME handle the key
+    }
+
     if (e.key === 'Enter') {
       e.preventDefault();
       // Save the current text
@@ -314,10 +351,25 @@ function MindMapCanvas() {
       }, 0);
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      // Cancel editing (don't save)
-      setEditing(null);
+      if (e.ctrlKey) {
+        // Ctrl+Escape: Cancel editing (don't save)
+        setEditing(null);
+      } else {
+        // Escape: Save and exit editing mode
+        updateNodeText(editing.nodeId, editing.text);
+        setEditing(null);
+      }
     }
   }, [editing, nodes, updateNodeText, createSiblingNode, createChildNode, startEditingNode]);
+
+  // Handle IME composition events
+  const handleCompositionStart = useCallback(() => {
+    isComposingRef.current = true;
+  }, []);
+
+  const handleCompositionEnd = useCallback(() => {
+    isComposingRef.current = false;
+  }, []);
 
   // Track when editing started to prevent immediate blur
   const editingStartTimeRef = useRef<number>(0);
@@ -488,8 +540,71 @@ function MindMapCanvas() {
     }
   }, [isReady, render]);
 
+  // Handle keyboard events when canvas wrapper is focused (not editing)
+  const handleWrapperKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    // If we're editing, let the input handle it
+    if (editing) return;
+
+    // Only handle keys when we have a selected node
+    if (!selectedNodeId) return;
+
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      e.stopPropagation();
+      // Create child node
+      createChildNode(selectedNodeId);
+      // Start editing the new node after state update
+      setTimeout(() => {
+        const newSelectedId = useDocumentStore.getState().selectedNodeId;
+        if (newSelectedId && newSelectedId !== selectedNodeId) {
+          startEditingNode(newSelectedId);
+        }
+      }, 0);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      // Create sibling node (only if not root)
+      const node = nodes[selectedNodeId];
+      if (node?.parentId) {
+        createSiblingNode(selectedNodeId);
+        // Start editing the new node after state update
+        setTimeout(() => {
+          const newSelectedId = useDocumentStore.getState().selectedNodeId;
+          if (newSelectedId && newSelectedId !== selectedNodeId) {
+            startEditingNode(newSelectedId);
+          }
+        }, 0);
+      }
+    } else if (e.key === 'e' || e.key === 'E' || e.key === 'F2') {
+      e.preventDefault();
+      e.stopPropagation();
+      // Start editing the selected node
+      startEditingNode(selectedNodeId);
+    }
+  }, [editing, selectedNodeId, nodes, createChildNode, createSiblingNode, startEditingNode]);
+
+  // Focus the wrapper when canvas is clicked (to receive keyboard events)
+  const handleWrapperClick = useCallback(() => {
+    if (!editing) {
+      wrapperRef.current?.focus();
+    }
+  }, [editing]);
+
+  // Focus wrapper when PixiJS is ready to ensure keyboard events work
+  useEffect(() => {
+    if (isReady && wrapperRef.current && !editing) {
+      wrapperRef.current.focus();
+    }
+  }, [isReady, editing]);
+
   return (
-    <div className="relative w-full h-full">
+    <div
+      ref={wrapperRef}
+      className="relative w-full h-full outline-none"
+      tabIndex={0}
+      onKeyDown={handleWrapperKeyDown}
+      onClick={handleWrapperClick}
+    >
       {/* PixiJS Canvas */}
       <div
         ref={containerRef}
@@ -506,6 +621,8 @@ function MindMapCanvas() {
           onChange={handleEditChange}
           onKeyDown={handleEditKeyDown}
           onBlur={handleEditBlur}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
           className="absolute bg-[#16213e] text-white border-2 border-blue-400 rounded px-2 outline-none"
           style={{
             left: editing.x,

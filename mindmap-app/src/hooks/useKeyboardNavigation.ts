@@ -15,11 +15,32 @@ export const useKeyboardNavigation = () => {
   const selectNode = useDocumentStore((state) => state.selectNode);
   const startEditing = useDocumentStore((state) => state.startEditing);
   const createChildNode = useDocumentStore((state) => state.createChildNode);
+  const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
   const deleteNode = useDocumentStore((state) => state.deleteNode);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
+  const undo = useDocumentStore((state) => state.undo);
+  const redo = useDocumentStore((state) => state.redo);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Handle undo/redo globally (even during editing)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+        return;
+      }
+
+      // Alternative redo shortcut: Ctrl+Y
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) {
+        e.preventDefault();
+        redo();
+        return;
+      }
+
       // Skip if no node is selected
       if (!selectedNodeId) return;
 
@@ -60,16 +81,23 @@ export const useKeyboardNavigation = () => {
           break;
 
         case 'Enter':
-        case 'F2':
           e.preventDefault();
-          // Start editing the selected node
-          startEditing(selectedNodeId);
+          // Create a sibling node
+          createSiblingNode(selectedNodeId);
           break;
 
         case 'Tab':
           e.preventDefault();
           // Create a child node
           createChildNode(selectedNodeId);
+          break;
+
+        case 'e':
+        case 'E':
+        case 'F2':
+          e.preventDefault();
+          // Start editing the selected node
+          startEditing(selectedNodeId);
           break;
 
         case 'Delete':
@@ -93,5 +121,5 @@ export const useKeyboardNavigation = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nodes, rootId, selectedNodeId, editingNodeId, selectNode, startEditing, createChildNode, deleteNode, toggleCollapse]);
+  }, [nodes, rootId, selectedNodeId, editingNodeId, selectNode, startEditing, createChildNode, createSiblingNode, deleteNode, toggleCollapse, undo, redo]);
 };

@@ -150,11 +150,12 @@ mindmap-app/
    - 階層リスト表示
    - ノード選択（クリック）
    - キーボードナビゲーション（矢印キー）
-   - テキスト編集（Enter/F2で編集、Escapeで確定）
-   - 子ノード作成（Tab）
-   - 兄弟ノード作成（編集中にEnter）
+   - テキスト編集（E/F2/ダブルクリックで編集開始、Escapeで保存終了、Ctrl+Escapeでキャンセル）
+   - 子ノード作成（Tab） - 選択時・編集時ともに有効
+   - 兄弟ノード作成（Enter） - 選択時・編集時ともに有効
    - ノード削除（Delete/Backspace）
    - 折りたたみ/展開（Space、またはインジケータクリック）
+   - 日本語IME対応（変換中のEnterは漢字確定として処理）
 
 ### Phase 2: ファイル操作 ✅ 完了
 
@@ -186,16 +187,20 @@ mindmap-app/
 3. **モード切替** ✅
    - Ctrl+1（マインドマップ）、Ctrl+2（アウトライン）
    - ヘッダーのMap/Outlineボタン
-   - ダブルクリックでアウトラインモードに切り替えて編集開始
 
 ### Phase 4: 機能拡充（次のフェーズ）
 
 1. **マインドマップモードでの編集** ✅
-   - ダブルクリックでその場編集
-   - Tab で子ノード作成（編集モードで継続）
-   - Enter で兄弟ノード作成（編集モードで継続）
-   - Escape でキャンセル
-2. **Undo/Redo**
+   - E/F2/ダブルクリックで編集開始
+   - Tab で子ノード作成（選択時・編集時ともに有効、編集モードで継続）
+   - Enter で兄弟ノード作成（選択時・編集時ともに有効、編集モードで継続）
+   - Escape で保存して編集終了
+   - Ctrl+Escape でキャンセル（保存しない）
+   - 日本語IME対応（変換中のEnterは漢字確定として処理）
+2. **Undo/Redo** ✅
+   - Ctrl+Z で元に戻す
+   - Ctrl+Shift+Z / Ctrl+Y でやり直し
+   - 最大50件の履歴を保持
 3. **ノードドラッグ移動**
 4. **検索機能**
 5. **自動保存**
@@ -332,43 +337,45 @@ const switchMode = (mode: 'mindmap' | 'outline') => {
 
 ---
 
-## キーボードショートカット実装
+## キーボードショートカット
 
-```typescript
-// hooks/useKeyboardShortcuts.ts
+### ノード選択時（編集モードでない時）
 
-const shortcuts: ShortcutMap = {
-  // 基本操作
-  'Tab': { action: 'createChild', mode: 'both' },
-  'Enter': { action: 'createSibling', mode: 'both', condition: 'notEditing' },
-  'Space': { action: 'toggleCollapse', mode: 'both' },
-  'Delete': { action: 'deleteNode', mode: 'both' },
-  'Backspace': { action: 'deleteNode', mode: 'both' },
-  
-  // ナビゲーション
-  'ArrowUp': { action: 'navigateUp', mode: 'both' },
-  'ArrowDown': { action: 'navigateDown', mode: 'both' },
-  'ArrowLeft': { action: 'navigateLeft', mode: 'both' },
-  'ArrowRight': { action: 'navigateRight', mode: 'both' },
-  
-  // モード切替
-  'Ctrl+1': { action: 'switchToMindmap', mode: 'both' },
-  'Ctrl+2': { action: 'switchToOutline', mode: 'both' },
-  
-  // ファイル操作
-  'Ctrl+s': { action: 'save', mode: 'both' },
-  'Ctrl+o': { action: 'open', mode: 'both' },
-  'Ctrl+n': { action: 'new', mode: 'both' },
-  
-  // 編集
-  'Ctrl+z': { action: 'undo', mode: 'both' },
-  'Ctrl+Shift+z': { action: 'redo', mode: 'both' },
-  'Ctrl+f': { action: 'search', mode: 'both' },
-  
-  // アウトラインモード専用
-  'Shift+Tab': { action: 'outdent', mode: 'outline' },
-};
-```
+| キー | アクション | 備考 |
+|------|------------|------|
+| Tab | 子ノード作成 | 作成後、編集モードに入る |
+| Enter | 兄弟ノード作成 | ルートノードでは無効。作成後、編集モードに入る |
+| E / F2 | 編集開始 | ダブルクリックでも可 |
+| Delete / Backspace | ノード削除 | ルートノードは削除不可 |
+| Space | 折りたたみ/展開 | 子ノードがある場合のみ |
+| ↑ / ↓ / ← / → | ノード間移動 | ツリー構造に沿って移動 |
+
+### 編集モード時
+
+| キー | アクション | 備考 |
+|------|------------|------|
+| Tab | 子ノード作成 | テキストを保存し、新しい子ノードの編集を開始 |
+| Enter | 兄弟ノード作成 | テキストを保存し、新しい兄弟ノードの編集を開始（ルートでは編集終了のみ） |
+| Escape | 保存して編集終了 | |
+| Ctrl+Escape | キャンセル（保存しない） | |
+
+### グローバルショートカット
+
+| キー | アクション | 備考 |
+|------|------------|------|
+| Ctrl+1 | マインドマップモードに切替 | |
+| Ctrl+2 | アウトラインモードに切替 | |
+| Ctrl+S | 保存 | 未保存の場合は名前を付けて保存 |
+| Ctrl+Shift+S | 名前を付けて保存 | |
+| Ctrl+O | ファイルを開く | |
+| Ctrl+N | 新規作成 | |
+| Ctrl+Z | 元に戻す | 編集中でも有効 |
+| Ctrl+Shift+Z / Ctrl+Y | やり直し | 編集中でも有効 |
+
+### 日本語入力（IME）対応
+
+- IME入力中のEnterキーは漢字変換確定として処理され、ノード操作は行われない
+- 変換確定後のEnterキーで兄弟ノード作成が可能
 
 ---
 
@@ -513,7 +520,7 @@ describe('documentStore', () => {
 | Step | 機能 | 確認方法 | 状態 |
 |------|------|----------|------|
 | 22 | マインドマップモードでの編集 | ダブルクリックでその場編集 | ✅ |
-| 23 | Undo/Redo | Ctrl+Z/Ctrl+Shift+Zで操作取消 | |
+| 23 | Undo/Redo | Ctrl+Z/Ctrl+Shift+Zで操作取消 | ✅ |
 | 24 | ノードドラッグ移動 | ドラッグでノード位置変更 | |
 | 25 | 検索機能 | Ctrl+Fで検索ダイアログ | |
 | 26 | 自動保存 | 編集後30秒で自動保存 | |

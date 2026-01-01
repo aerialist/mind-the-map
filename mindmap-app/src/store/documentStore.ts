@@ -4,6 +4,14 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { Node, NodeMap, ViewMode, Viewport } from '../types';
 
+// History state for undo/redo
+interface HistoryEntry {
+  nodes: NodeMap;
+  rootId: string;
+}
+
+const MAX_HISTORY_SIZE = 50;
+
 // Generate unique ID
 const generateId = (): string => {
   return `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -72,6 +80,10 @@ interface DocumentState {
   viewMode: ViewMode;
   viewport: Viewport;
 
+  // History state for undo/redo
+  history: HistoryEntry[];
+  historyIndex: number;
+
   // Actions
   selectNode: (nodeId: string | null) => void;
   startEditing: (nodeId: string) => void;
@@ -90,10 +102,42 @@ interface DocumentState {
 
   // View actions
   setViewMode: (mode: ViewMode) => void;
+
+  // History actions
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
 }
 
+// Helper to deep clone nodes for history
+const cloneNodes = (nodes: NodeMap): NodeMap => {
+  return JSON.parse(JSON.stringify(nodes));
+};
+
+// Helper to save current state to history
+const saveToHistory = (state: DocumentState) => {
+  // Remove any future history if we're not at the end
+  const newHistory = state.history.slice(0, state.historyIndex + 1);
+
+  // Add current state to history
+  newHistory.push({
+    nodes: cloneNodes(state.nodes),
+    rootId: state.rootId,
+  });
+
+  // Limit history size
+  if (newHistory.length > MAX_HISTORY_SIZE) {
+    newHistory.shift();
+  } else {
+    state.historyIndex = newHistory.length - 1;
+  }
+
+  state.history = newHistory;
+};
+
 export const useDocumentStore = create<DocumentState>()(
-  immer((set) => ({
+  immer((set, get) => ({
     // Initial state
     nodes: createInitialNodes(),
     rootId: 'root',
@@ -103,6 +147,10 @@ export const useDocumentStore = create<DocumentState>()(
     editingNodeId: null,
     viewMode: 'outline',
     viewport: { x: 0, y: 0, zoom: 1 },
+
+    // History state
+    history: [{ nodes: createInitialNodes(), rootId: 'root' }],
+    historyIndex: 0,
 
     // Actions
     selectNode: (nodeId) =>
@@ -126,6 +174,8 @@ export const useDocumentStore = create<DocumentState>()(
       set((state) => {
         const node = state.nodes[nodeId];
         if (node && node.content.type === 'text') {
+          // Save to history before making changes
+          saveToHistory(state);
           node.content.text = text;
           state.isDirty = true;
         }
@@ -135,6 +185,9 @@ export const useDocumentStore = create<DocumentState>()(
       set((state) => {
         const parent = state.nodes[parentId];
         if (!parent) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
 
         // Create new node
         const newId = generateId();
@@ -173,6 +226,9 @@ export const useDocumentStore = create<DocumentState>()(
         const parent = state.nodes[sibling.parentId];
         if (!parent) return;
 
+        // Save to history before making changes
+        saveToHistory(state);
+
         // Create new node
         const newId = generateId();
         const newNode: Node = {
@@ -207,6 +263,9 @@ export const useDocumentStore = create<DocumentState>()(
 
         const parent = state.nodes[node.parentId];
         if (!parent) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
 
         // Helper function to recursively delete a node and its descendants
         const deleteNodeAndDescendants = (id: string) => {
@@ -265,6 +324,9 @@ export const useDocumentStore = create<DocumentState>()(
         state.isDirty = false;
         state.selectedNodeId = rootId;
         state.editingNodeId = null;
+        // Reset history with loaded document
+        state.history = [{ nodes: cloneNodes(nodes), rootId }];
+        state.historyIndex = 0;
       }),
 
     newDocument: () =>
@@ -276,6 +338,9 @@ export const useDocumentStore = create<DocumentState>()(
         state.isDirty = false;
         state.selectedNodeId = 'root';
         state.editingNodeId = null;
+        // Reset history with new document
+        state.history = [{ nodes: cloneNodes({ root }), rootId: 'root' }];
+        state.historyIndex = 0;
       }),
 
     // View actions
@@ -285,5 +350,48 @@ export const useDocumentStore = create<DocumentState>()(
         // Stop editing when switching modes
         state.editingNodeId = null;
       }),
+
+    // History actions
+    undo: () =>
+      set((state) => {
+        if (state.historyIndex > 0) {
+          state.historyIndex -= 1;
+          const entry = state.history[state.historyIndex];
+          state.nodes = cloneNodes(entry.nodes);
+          state.rootId = entry.rootId;
+          state.isDirty = true;
+          state.editingNodeId = null;
+          // Keep selection if node still exists, otherwise select root
+          if (!state.nodes[state.selectedNodeId || '']) {
+            state.selectedNodeId = state.rootId;
+          }
+        }
+      }),
+
+    redo: () =>
+      set((state) => {
+        if (state.historyIndex < state.history.length - 1) {
+          state.historyIndex += 1;
+          const entry = state.history[state.historyIndex];
+          state.nodes = cloneNodes(entry.nodes);
+          state.rootId = entry.rootId;
+          state.isDirty = true;
+          state.editingNodeId = null;
+          // Keep selection if node still exists, otherwise select root
+          if (!state.nodes[state.selectedNodeId || '']) {
+            state.selectedNodeId = state.rootId;
+          }
+        }
+      }),
+
+    canUndo: () => {
+      const state = get();
+      return state.historyIndex > 0;
+    },
+
+    canRedo: () => {
+      const state = get();
+      return state.historyIndex < state.history.length - 1;
+    },
   }))
 );

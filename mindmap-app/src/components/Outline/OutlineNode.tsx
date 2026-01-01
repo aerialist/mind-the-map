@@ -15,11 +15,13 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   const stopEditing = useDocumentStore((state) => state.stopEditing);
   const updateNodeText = useDocumentStore((state) => state.updateNodeText);
   const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
+  const createChildNode = useDocumentStore((state) => state.createChildNode);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [editText, setEditText] = useState('');
   const prevEditingRef = useRef(false);
+  const isComposingRef = useRef(false);
 
   const isSelected = selectedNodeId === nodeId;
   const isEditing = editingNodeId === nodeId;
@@ -67,22 +69,46 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Ignore all keys during IME composition (e.g., Japanese input)
+    // During IME composition, keyCode is 229 or key is 'Process'
+    if (e.nativeEvent.isComposing || isComposingRef.current || e.keyCode === 229 || e.key === 'Process') {
+      return; // Let IME handle the key
+    }
+
     if (e.key === 'Enter') {
       e.preventDefault();
-      // Save the current text
+      // Save the current text and create sibling node
       updateNodeText(nodeId, editText);
-      // Create a sibling node (will also stop editing current and start editing new)
-      // For root node, this will do nothing (can't create sibling of root)
+      // For root node, just stop editing (can't create sibling of root)
       if (node?.parentId) {
         createSiblingNode(nodeId);
       } else {
         stopEditing();
       }
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      // Save the current text and create child node
+      updateNodeText(nodeId, editText);
+      createChildNode(nodeId);
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      // Cancel editing (don't save)
-      stopEditing();
+      if (e.ctrlKey) {
+        // Ctrl+Escape: Cancel editing (don't save)
+        stopEditing();
+      } else {
+        // Escape: Save and exit editing mode
+        updateNodeText(nodeId, editText);
+        stopEditing();
+      }
     }
+  };
+
+  const handleCompositionStart = () => {
+    isComposingRef.current = true;
+  };
+
+  const handleCompositionEnd = () => {
+    isComposingRef.current = false;
   };
 
   const handleInputBlur = () => {
@@ -123,6 +149,8 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
             onChange={handleInputChange}
             onKeyDown={handleInputKeyDown}
             onBlur={handleInputBlur}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
             className="flex-1 bg-white dark:bg-gray-800 border border-blue-400 rounded px-1 py-0 outline-none"
           />
         ) : (
