@@ -452,9 +452,30 @@ function MindMapCanvas() {
         app.canvas.style.cursor = '';
       });
 
-      // Enable zoom
+      // Enable zoom and panning (Ctrl + wheel for vertical pan, horizontal wheel for horizontal pan)
       app.canvas.addEventListener('wheel', (e: WheelEvent) => {
         e.preventDefault();
+
+        const panSpeed = 1;
+
+        // Horizontal wheel (with or without Shift): pan horizontally
+        if (e.deltaX !== 0) {
+          app.stage.x -= e.deltaX * panSpeed;
+        }
+
+        // Ctrl + wheel: pan vertically
+        if (e.ctrlKey) {
+          app.stage.y -= e.deltaY * panSpeed;
+          return;
+        }
+
+        // Shift + wheel: pan horizontally (for mice without horizontal scroll)
+        if (e.shiftKey) {
+          app.stage.x -= e.deltaY * panSpeed;
+          return;
+        }
+
+        // Normal wheel: zoom
         const scaleFactor = e.deltaY > 0 ? 0.9 : 1.1;
         const newScale = app.stage.scale.x * scaleFactor;
 

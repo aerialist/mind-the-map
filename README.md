@@ -39,6 +39,14 @@ When multiple nodes are selected:
 - Adding an icon applies it to all selected nodes at once
 - "Clear All" removes icons from all selected nodes
 
+### Mouse Controls (Mind Map Mode)
+
+- **Mouse drag**: Pan the canvas
+- **Mouse wheel**: Zoom in/out
+- **Ctrl + wheel**: Pan vertically
+- **Shift + wheel**: Pan horizontally
+- **Horizontal wheel**: Pan horizontally (for mice/trackpads with horizontal scroll)
+
 ## Technology Stack
 
 - **Framework**: Tauri 2.0
