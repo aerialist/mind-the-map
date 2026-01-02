@@ -21,18 +21,20 @@ const shortcutSections: ShortcutSection[] = [
     title: 'Navigation',
     shortcuts: [
       { keys: ['↑', '↓'], description: 'Move between siblings' },
-      { keys: ['←'], description: 'Go to parent node' },
-      { keys: ['→'], description: 'Go to first child' },
+      { keys: ['←'], description: 'Go to parent / collapse' },
+      { keys: ['→'], description: 'Go to first child / expand' },
       { keys: [`${modKey}+F`], description: 'Search nodes' },
     ],
   },
   {
     title: 'Node Editing',
     shortcuts: [
+      { keys: ['Tab'], description: 'Create child node' },
       { keys: ['Enter'], description: 'Create sibling below' },
       { keys: [`${shiftKey}+Enter`], description: 'Create sibling above' },
-      { keys: ['Tab'], description: 'Create child node' },
       { keys: ['E', 'F2'], description: 'Edit selected node' },
+      { keys: ['Escape'], description: 'Save and stop editing' },
+      { keys: [`${modKey}+Escape`], description: 'Cancel (discard changes)' },
       { keys: ['Delete', 'Backspace'], description: 'Delete node' },
       { keys: ['I'], description: 'Open icon picker' },
     ],
@@ -41,7 +43,7 @@ const shortcutSections: ShortcutSection[] = [
     title: 'Collapse & Expand',
     shortcuts: [
       { keys: ['Space'], description: 'Toggle collapse' },
-      { keys: [`${shiftKey}+${altKey}+Space`], description: 'Toggle collapse all children' },
+      { keys: [`${shiftKey}+${altKey}+Space`], description: 'Smart collapse all (3-state cycle)' },
     ],
   },
   {
@@ -49,8 +51,15 @@ const shortcutSections: ShortcutSection[] = [
     shortcuts: [
       { keys: [`${modKey}+C`], description: 'Copy nodes' },
       { keys: [`${modKey}+X`], description: 'Cut nodes' },
-      { keys: [`${modKey}+V`], description: 'Paste nodes' },
+      { keys: [`${modKey}+V`], description: 'Paste as children' },
       { keys: [`${modKey}+${shiftKey}+M`], description: 'Copy for Miro' },
+    ],
+  },
+  {
+    title: 'Multi-Selection',
+    shortcuts: [
+      { keys: [`${modKey}+Click`], description: 'Toggle node in selection' },
+      { keys: [`${shiftKey}+Click`], description: 'Select range' },
     ],
   },
   {
@@ -81,11 +90,13 @@ const shortcutSections: ShortcutSection[] = [
 ];
 
 const tips = [
-  'Click and drag the canvas to pan around in mind map view',
-  'Use scroll wheel to zoom in/out on the mind map',
-  'Paste indented text to create multiple nodes at once',
-  'Copy nodes and paste into other apps as formatted lists',
-  'Use Cmd/Ctrl+Click to select multiple nodes',
+  'Press Tab or Enter while editing to create new nodes without stopping',
+  'Right-click and drag to pan the mind map canvas',
+  'Use mouse wheel to zoom, Ctrl+wheel to pan vertically, Shift+wheel to pan horizontally',
+  'Paste indented text or HTML lists to create structured nodes',
+  'Click an icon on a node to cycle through variants in the same category',
+  'Smart Collapse cycles: Collapsed → Expanded (except ✓) → Fully Expanded',
+  'Multi-select nodes, then use icon picker to apply icons to all at once',
   'Collapsed nodes show a count of hidden children',
 ];
 
@@ -132,7 +143,7 @@ function HelpDialog() {
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
+        className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -169,7 +180,7 @@ function HelpDialog() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {/* Shortcuts Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {shortcutSections.map((section) => (
               <div key={section.title}>
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
@@ -208,7 +219,7 @@ function HelpDialog() {
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
               Quick Tips
             </h3>
-            <ul className="space-y-2">
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {tips.map((tip, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <span className="text-blue-500 mt-0.5">•</span>

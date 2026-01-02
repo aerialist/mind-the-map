@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mind the Map - A Fast, Keyboard-Driven Mind Mapping App</title>
-  <meta name="description" content="A lightweight, keyboard-first mind mapping application built with Tauri. Create, organize, and export your ideas with speed.">
+  <title>Mind the Map - User Manual</title>
+  <meta name="description" content="Complete user manual for Mind the Map - a lightweight, keyboard-first mind mapping application.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -18,6 +18,8 @@
       --color-primary-dark: #2563eb;
       --color-border: #e2e8f0;
       --color-code-bg: #f1f5f9;
+      --color-success: #22c55e;
+      --color-warning: #f59e0b;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -30,6 +32,8 @@
         --color-primary-dark: #3b82f6;
         --color-border: #334155;
         --color-code-bg: #1e293b;
+        --color-success: #4ade80;
+        --color-warning: #fbbf24;
       }
     }
 
@@ -56,6 +60,10 @@
     header {
       padding: 20px 0;
       border-bottom: 1px solid var(--color-border);
+      position: sticky;
+      top: 0;
+      background: var(--color-bg);
+      z-index: 100;
     }
 
     header .container {
@@ -71,16 +79,23 @@
       text-decoration: none;
     }
 
+    nav {
+      display: flex;
+      gap: 8px;
+    }
+
     nav a {
       color: var(--color-text-muted);
       text-decoration: none;
-      margin-left: 32px;
+      padding: 8px 16px;
       font-size: 0.9rem;
-      transition: color 0.2s;
+      border-radius: 6px;
+      transition: all 0.2s;
     }
 
     nav a:hover {
       color: var(--color-primary);
+      background: var(--color-bg-alt);
     }
 
     /* Hero */
@@ -194,9 +209,26 @@
       display: inline-block;
     }
 
+    .guide-section h4 {
+      margin-top: 24px;
+      margin-bottom: 12px;
+      font-size: 1.1rem;
+      color: var(--color-text);
+    }
+
     .guide-section p {
       color: var(--color-text-muted);
       margin-bottom: 16px;
+    }
+
+    .guide-section ul, .guide-section ol {
+      margin-left: 24px;
+      color: var(--color-text-muted);
+      margin-bottom: 16px;
+    }
+
+    .guide-section li {
+      margin-bottom: 8px;
     }
 
     .shortcut-table {
@@ -218,6 +250,10 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--color-text-muted);
+    }
+
+    .shortcut-table td:first-child {
+      white-space: nowrap;
     }
 
     kbd {
@@ -243,6 +279,18 @@
       color: var(--color-primary);
     }
 
+    .warning-box {
+      background: var(--color-bg-alt);
+      border-left: 4px solid var(--color-warning);
+      padding: 16px 20px;
+      margin: 16px 0;
+      border-radius: 0 8px 8px 0;
+    }
+
+    .warning-box strong {
+      color: var(--color-warning);
+    }
+
     .state-cycle {
       display: flex;
       align-items: center;
@@ -262,6 +310,32 @@
     .state-arrow {
       color: var(--color-text-muted);
       font-size: 1.2rem;
+    }
+
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    .icon-category {
+      background: var(--color-bg-alt);
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+    }
+
+    .icon-category h5 {
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+      color: var(--color-text);
+    }
+
+    .icon-category p {
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+      margin: 0;
     }
 
     /* Footer */
@@ -291,17 +365,29 @@
       nav {
         display: none;
       }
+
+      .state-cycle {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .state-arrow {
+        transform: rotate(90deg);
+        text-align: center;
+      }
     }
   </style>
 </head>
 <body>
   <header>
     <div class="container">
-      <a href="#" class="logo">🗺️ Mind the Map</a>
+      <a href="#" class="logo">Mind the Map</a>
       <nav>
         <a href="#features">Features</a>
-        <a href="#guide">Guide</a>
+        <a href="#getting-started">Getting Started</a>
         <a href="#shortcuts">Shortcuts</a>
+        <a href="#icons">Icons</a>
+        <a href="#clipboard">Clipboard</a>
         <a href="https://github.com/aerialist/mind-the-map" target="_blank">GitHub</a>
       </nav>
     </div>
@@ -315,7 +401,7 @@
       </p>
       <div class="cta">
         <a href="https://github.com/aerialist/mind-the-map/releases" class="btn btn-primary">Download</a>
-        <a href="#guide" class="btn btn-secondary">Learn More</a>
+        <a href="#getting-started" class="btn btn-secondary">User Manual</a>
       </div>
     </div>
   </section>
@@ -325,86 +411,154 @@
       <h2>Why Mind the Map?</h2>
       <div class="feature-grid">
         <div class="feature-card">
-          <h3>⌨️ Keyboard First</h3>
-          <p>Navigate, create, and edit nodes without touching your mouse. Every action has a keyboard shortcut.</p>
+          <h3>Keyboard First</h3>
+          <p>Navigate, create, and edit nodes without touching your mouse. Every action has a keyboard shortcut. Press <kbd>?</kbd> anytime to see them all.</p>
         </div>
         <div class="feature-card">
-          <h3>🚀 Lightning Fast</h3>
-          <p>Built with Tauri and React for native performance. Opens instantly and handles large maps smoothly.</p>
+          <h3>Lightning Fast</h3>
+          <p>Built with Tauri and React for native performance. Opens instantly and handles large maps smoothly with 60fps rendering.</p>
         </div>
         <div class="feature-card">
-          <h3>📋 Smart Clipboard</h3>
-          <p>Paste indented text or HTML lists and they become structured nodes. Export to other apps like Miro.</p>
+          <h3>Smart Clipboard</h3>
+          <p>Paste indented text or HTML lists and they become structured nodes. Export to other apps like Miro with one shortcut.</p>
         </div>
         <div class="feature-card">
-          <h3>🎨 Two Views</h3>
-          <p>Switch between mind map visualization and outline view. Use whatever fits your current task.</p>
+          <h3>Two Views</h3>
+          <p>Switch between mind map visualization and outline view with <kbd>Ctrl</kbd>+<kbd>1</kbd>/<kbd>2</kbd>. Use whatever fits your current task.</p>
         </div>
         <div class="feature-card">
-          <h3>🏷️ Icon Markers</h3>
-          <p>Mark nodes with icons for status, priority, or categories. Quick cycle through icon variants.</p>
+          <h3>Icon Markers</h3>
+          <p>Mark nodes with icons for status, priority, or categories. Press <kbd>I</kbd> to open the picker. Click icons to cycle through variants.</p>
         </div>
         <div class="feature-card">
-          <h3>💾 Local Files</h3>
-          <p>Your data stays on your machine in simple JSON files. No cloud, no account, no tracking.</p>
+          <h3>Local Files</h3>
+          <p>Your data stays on your machine in simple JSON files. No cloud, no account, no tracking. Auto-saves every 30 seconds.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="guide" id="guide">
+  <section class="guide" id="getting-started">
     <div class="container">
-      <h2>User Guide</h2>
+      <h2>User Manual</h2>
+
+      <div class="guide-section">
+        <h3>Getting Started</h3>
+        <p>When you first open Mind the Map, you'll see a single "Central Topic" node. This is your root node - the starting point for your mind map.</p>
+
+        <h4>Creating Your First Map</h4>
+        <ol>
+          <li>Press <kbd>E</kbd> or <kbd>F2</kbd> to edit the root node text</li>
+          <li>Type your main topic and press <kbd>Escape</kbd> to save</li>
+          <li>Press <kbd>Tab</kbd> to create a child node</li>
+          <li>Type your first idea and press <kbd>Enter</kbd> to create a sibling</li>
+          <li>Continue adding ideas - use <kbd>Tab</kbd> for sub-topics, <kbd>Enter</kbd> for related ideas</li>
+        </ol>
+
+        <div class="tip-box">
+          <strong>Tip:</strong> You can press <kbd>Tab</kbd> or <kbd>Enter</kbd> while editing - it will save your current text and immediately start editing the new node.
+        </div>
+      </div>
 
       <div class="guide-section" id="shortcuts">
         <h3>Keyboard Shortcuts</h3>
-        <p>Mind the Map is designed to keep your hands on the keyboard. Here are the essential shortcuts:</p>
+        <p>Mind the Map is designed to keep your hands on the keyboard. Press <kbd>?</kbd> or <kbd>Ctrl</kbd>+<kbd>/</kbd> in the app to see the quick reference.</p>
 
-        <h4 style="margin-top: 24px; margin-bottom: 12px;">Navigation</h4>
+        <h4>Navigation</h4>
         <table class="shortcut-table">
           <tr><th>Key</th><th>Action</th></tr>
           <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Move between sibling nodes</td></tr>
-          <tr><td><kbd>←</kbd></td><td>Go to parent node</td></tr>
-          <tr><td><kbd>→</kbd></td><td>Go to first child node</td></tr>
-          <tr><td><kbd>⌘</kbd>+<kbd>F</kbd></td><td>Search nodes</td></tr>
+          <tr><td><kbd>←</kbd></td><td>Go to parent node (or collapse if expanded)</td></tr>
+          <tr><td><kbd>→</kbd></td><td>Go to first child node (or expand if collapsed)</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Open search dialog</td></tr>
         </table>
 
-        <h4 style="margin-top: 24px; margin-bottom: 12px;">Creating & Editing Nodes</h4>
+        <h4>Creating & Editing Nodes</h4>
         <table class="shortcut-table">
           <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>Tab</kbd></td><td>Create child node</td></tr>
           <tr><td><kbd>Enter</kbd></td><td>Create sibling node below</td></tr>
           <tr><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>Create sibling node above</td></tr>
-          <tr><td><kbd>Tab</kbd></td><td>Create child node</td></tr>
-          <tr><td><kbd>E</kbd> or <kbd>F2</kbd></td><td>Edit selected node</td></tr>
-          <tr><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td><td>Delete node</td></tr>
-          <tr><td><kbd>I</kbd></td><td>Open icon picker</td></tr>
+          <tr><td><kbd>E</kbd> or <kbd>F2</kbd></td><td>Start editing selected node</td></tr>
+          <tr><td><kbd>Escape</kbd></td><td>Save and stop editing</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Escape</kbd></td><td>Cancel editing (discard changes)</td></tr>
+          <tr><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td><td>Delete selected node(s)</td></tr>
         </table>
 
-        <h4 style="margin-top: 24px; margin-bottom: 12px;">File & View</h4>
+        <h4>Collapse & Expand</h4>
         <table class="shortcut-table">
           <tr><th>Key</th><th>Action</th></tr>
-          <tr><td><kbd>⌘</kbd>+<kbd>N</kbd></td><td>New document</td></tr>
-          <tr><td><kbd>⌘</kbd>+<kbd>O</kbd></td><td>Open document</td></tr>
-          <tr><td><kbd>⌘</kbd>+<kbd>S</kbd></td><td>Save</td></tr>
-          <tr><td><kbd>⌘</kbd>+<kbd>1</kbd></td><td>Mind map view</td></tr>
-          <tr><td><kbd>⌘</kbd>+<kbd>2</kbd></td><td>Outline view</td></tr>
-          <tr><td><kbd>⌘</kbd>+<kbd>Z</kbd></td><td>Undo</td></tr>
-          <tr><td><kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>Redo</td></tr>
+          <tr><td><kbd>Space</kbd></td><td>Toggle collapse for selected node</td></tr>
+          <tr><td><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd></td><td>Smart cycle through collapse states (see below)</td></tr>
         </table>
+
+        <h4>File Operations</h4>
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>New document</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Open document</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Save document</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Save as...</td></tr>
+        </table>
+
+        <h4>View & History</h4>
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>1</kbd></td><td>Switch to Mind Map view</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>2</kbd></td><td>Switch to Outline view</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Undo</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> or <kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>Redo</td></tr>
+        </table>
+
+        <h4>Clipboard</h4>
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd></td><td>Copy selected nodes</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>X</kbd></td><td>Cut selected nodes</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>V</kbd></td><td>Paste as children of selected node</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd></td><td>Copy for Miro (table format)</td></tr>
+        </table>
+
+        <div class="tip-box">
+          <strong>Mac Users:</strong> Replace <kbd>Ctrl</kbd> with <kbd>Cmd</kbd> and <kbd>Alt</kbd> with <kbd>Option</kbd> for all shortcuts.
+        </div>
+      </div>
+
+      <div class="guide-section" id="views">
+        <h3>Two View Modes</h3>
+        <p>Mind the Map offers two ways to view and edit your mind map:</p>
+
+        <h4>Mind Map View (Ctrl+1)</h4>
+        <ul>
+          <li>Visual 2D canvas with automatic tree layout</li>
+          <li>Pan: Right-click and drag, or use scroll wheel with Shift/Ctrl</li>
+          <li>Zoom: Mouse wheel (without modifiers)</li>
+          <li>Nodes connected by curved lines (bezier curves)</li>
+          <li>Double-click or press <kbd>E</kbd> to edit nodes in place</li>
+        </ul>
+
+        <h4>Outline View (Ctrl+2)</h4>
+        <ul>
+          <li>Hierarchical list with indentation</li>
+          <li>Focused text editing experience</li>
+          <li>Same keyboard shortcuts as Mind Map view</li>
+          <li>Drag nodes to reorder or change hierarchy</li>
+        </ul>
+
+        <div class="tip-box">
+          <strong>Tip:</strong> Use Outline view for rapid brainstorming and text entry. Switch to Mind Map view to see the big picture and spatial relationships.
+        </div>
       </div>
 
       <div class="guide-section" id="collapse">
         <h3>Collapse & Expand</h3>
-        <p>Manage complexity by collapsing nodes you don't need to see right now.</p>
+        <p>Manage complexity by hiding parts of your map you don't need to see.</p>
 
-        <table class="shortcut-table">
-          <tr><th>Key</th><th>Action</th></tr>
-          <tr><td><kbd>Space</kbd></td><td>Toggle collapse for selected node</td></tr>
-          <tr><td><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd></td><td>Cycle through collapse states for all descendants</td></tr>
-        </table>
+        <h4>Basic Toggle</h4>
+        <p>Press <kbd>Space</kbd> to collapse or expand the selected node's children. Collapsed nodes show a count of hidden children.</p>
 
-        <h4 style="margin-top: 24px; margin-bottom: 12px;">Three-State Collapse Cycle</h4>
-        <p>When you press <kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd>, the node's children cycle through three states:</p>
+        <h4>Smart Collapse All</h4>
+        <p>Press <kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd> (<kbd>Shift</kbd>+<kbd>Option</kbd>+<kbd>Space</kbd> on Mac) to cycle through three states:</p>
 
         <div class="state-cycle">
           <div class="state-box">
@@ -414,7 +568,7 @@
           <span class="state-arrow">→</span>
           <div class="state-box">
             <strong>2. Expanded (except completed)</strong><br>
-            Shows all except nodes marked ✓
+            Shows all except nodes marked with ✓
           </div>
           <span class="state-arrow">→</span>
           <div class="state-box">
@@ -426,41 +580,7 @@
         </div>
 
         <div class="tip-box">
-          <strong>💡 Tip:</strong> The "Expanded except completed" state is great for focusing on what's left to do. Mark finished items with a ✓ icon, then use the cycle to hide them.
-        </div>
-      </div>
-
-      <div class="guide-section" id="clipboard">
-        <h3>Clipboard & Export</h3>
-        <p>Mind the Map handles copy/paste intelligently, preserving structure when possible.</p>
-
-        <table class="shortcut-table">
-          <tr><th>Key</th><th>Action</th></tr>
-          <tr><td><kbd>⌘</kbd>+<kbd>C</kbd></td><td>Copy selected nodes</td></tr>
-          <tr><td><kbd>⌘</kbd>+<kbd>X</kbd></td><td>Cut selected nodes</td></tr>
-          <tr><td><kbd>⌘</kbd>+<kbd>V</kbd></td><td>Paste as children of selected node</td></tr>
-          <tr><td><kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd></td><td>Copy for Miro</td></tr>
-        </table>
-
-        <h4 style="margin-top: 24px; margin-bottom: 12px;">Pasting from External Apps</h4>
-        <p>When you paste text from other apps, Mind the Map tries to preserve structure:</p>
-        <ul style="margin-left: 24px; color: var(--color-text-muted);">
-          <li><strong>Indented text</strong> — Indentation levels become parent/child relationships</li>
-          <li><strong>HTML lists</strong> — Copied lists from web pages maintain their hierarchy</li>
-          <li><strong>Plain text</strong> — Each line becomes a separate sibling node</li>
-        </ul>
-
-        <h4 style="margin-top: 24px; margin-bottom: 12px;" id="miro">Copy for Miro</h4>
-        <p>Use <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> to copy nodes in a format optimized for Miro's mind map import.</p>
-
-        <div class="tip-box">
-          <strong>How to use with Miro:</strong>
-          <ol style="margin-left: 20px; margin-top: 8px; color: var(--color-text-muted);">
-            <li>Select the nodes you want to export</li>
-            <li>Press <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> to copy</li>
-            <li>In Miro, use the Mind Map tool and paste</li>
-            <li>Choose "Table" format in Miro's paste dialog</li>
-          </ol>
+          <strong>Tip:</strong> The "Expanded except completed" state is perfect for focusing on remaining work. Mark finished items with a ✓ Task icon, then use Smart Collapse to hide them while keeping unfinished items visible.
         </div>
       </div>
 
@@ -468,35 +588,148 @@
         <h3>Icons & Markers</h3>
         <p>Add visual markers to nodes for status tracking, priorities, or categorization.</p>
 
-        <table class="shortcut-table">
-          <tr><th>Key</th><th>Action</th></tr>
-          <tr><td><kbd>I</kbd></td><td>Open icon picker</td></tr>
-          <tr><td>Click existing icon</td><td>Cycle to next variant in category</td></tr>
-        </table>
-
-        <h4 style="margin-top: 24px; margin-bottom: 12px;">Icon Categories</h4>
-        <ul style="margin-left: 24px; color: var(--color-text-muted);">
-          <li><strong>Progress</strong> — Empty, half, complete checkmarks</li>
-          <li><strong>Priority</strong> — Numbered priorities (1-4)</li>
-          <li><strong>Flags</strong> — Different colored flags</li>
-          <li><strong>Symbols</strong> — Star, heart, warning, question, etc.</li>
+        <h4>Using Icons</h4>
+        <ul>
+          <li>Press <kbd>I</kbd> to open the icon picker</li>
+          <li>The picker stays open while you select different nodes</li>
+          <li>Click an icon in the picker to add it to the selected node(s)</li>
+          <li>Click an existing icon on a node to cycle to the next variant</li>
+          <li>Each node can have one icon per category</li>
         </ul>
 
+        <h4>Icon Categories</h4>
+        <div class="icon-grid">
+          <div class="icon-category">
+            <h5>Priority (1-9)</h5>
+            <p>Numbered badges for task prioritization. Click to cycle through numbers.</p>
+          </div>
+          <div class="icon-category">
+            <h5>Task Progress</h5>
+            <p>Empty, 25%, 50%, 75%, Complete (✓). Track work progress visually.</p>
+          </div>
+          <div class="icon-category">
+            <h5>Flags</h5>
+            <p>Six colors: Red, Orange, Yellow, Green, Blue, Purple. Use for categories or status.</p>
+          </div>
+          <div class="icon-category">
+            <h5>Smileys</h5>
+            <p>Happy, Neutral, Sad, Love, Thinking, Thumbs Up, Thumbs Down. Express sentiment.</p>
+          </div>
+          <div class="icon-category">
+            <h5>Arrows</h5>
+            <p>Eight directions for showing flow or relationships between ideas.</p>
+          </div>
+          <div class="icon-category">
+            <h5>Symbols</h5>
+            <p>Star, Heart, Lightning, Fire, Warning, Info, Question, Check, X, Clock, Bookmark, Pin.</p>
+          </div>
+        </div>
+
         <div class="tip-box">
-          <strong>💡 Tip:</strong> Click on an existing icon to cycle through variants. For example, clicking a "Priority 1" icon changes it to "Priority 2".
+          <strong>Tip:</strong> When multiple nodes are selected, adding an icon applies it to all selected nodes at once. Great for bulk categorization!
         </div>
       </div>
 
       <div class="guide-section" id="selection">
         <h3>Multi-Selection</h3>
-        <p>Select multiple nodes to copy, cut, or delete them together.</p>
+        <p>Select multiple nodes to perform bulk operations like copy, delete, or add icons.</p>
 
         <table class="shortcut-table">
           <tr><th>Action</th><th>Result</th></tr>
-          <tr><td><kbd>⌘</kbd>+Click</td><td>Toggle node in selection (add or remove)</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+Click</td><td>Toggle node in selection (add or remove)</td></tr>
           <tr><td><kbd>Shift</kbd>+Click</td><td>Select range from last selected to clicked node</td></tr>
-          <tr><td><kbd>Escape</kbd></td><td>Clear selection</td></tr>
+          <tr><td>Click</td><td>Clear multi-selection, select only clicked node</td></tr>
+          <tr><td><kbd>Escape</kbd></td><td>Clear selection and close any dialogs</td></tr>
         </table>
+
+        <p>Multi-selection works in both Mind Map and Outline views.</p>
+      </div>
+
+      <div class="guide-section" id="clipboard">
+        <h3>Clipboard & Export</h3>
+        <p>Mind the Map handles copy/paste intelligently, preserving structure when possible.</p>
+
+        <h4>Copying Within the App</h4>
+        <ul>
+          <li><kbd>Ctrl</kbd>+<kbd>C</kbd> copies selected nodes and all their descendants</li>
+          <li><kbd>Ctrl</kbd>+<kbd>X</kbd> cuts nodes (they're removed immediately)</li>
+          <li><kbd>Ctrl</kbd>+<kbd>V</kbd> pastes as children of the selected node</li>
+          <li>Multiple nodes can be copied/cut when using multi-selection</li>
+        </ul>
+
+        <div class="warning-box">
+          <strong>Note:</strong> The root node cannot be cut or deleted. This ensures your map always has a starting point.
+        </div>
+
+        <h4>Pasting from External Apps</h4>
+        <p>When you paste text from other apps, Mind the Map tries to preserve structure:</p>
+        <ul>
+          <li><strong>Indented text</strong> - Indentation levels (tabs or spaces) become parent/child relationships</li>
+          <li><strong>HTML lists</strong> - Copied lists from web pages or apps like Workflowy maintain their hierarchy</li>
+          <li><strong>Plain text</strong> - Each line becomes a separate sibling node</li>
+        </ul>
+
+        <h4 id="miro">Copy for Miro</h4>
+        <p>Use <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> to copy nodes in a format optimized for Miro.</p>
+
+        <div class="tip-box">
+          <strong>How to use with Miro:</strong>
+          <ol style="margin-left: 20px; margin-top: 8px;">
+            <li>Select the nodes you want to export</li>
+            <li>Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> to copy</li>
+            <li>In Miro, paste with <kbd>Ctrl</kbd>+<kbd>V</kbd></li>
+            <li>Choose "Table" in Miro's paste dialog</li>
+            <li>Miro will create a table that can be converted to sticky notes or a mind map</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="guide-section" id="files">
+        <h3>File Management</h3>
+
+        <h4>File Format</h4>
+        <p>Mind the Map saves files with the <code>.mindmap</code> extension. Files are stored in JSON format, making them human-readable and easy to version control with Git.</p>
+
+        <h4>Auto-Save</h4>
+        <p>Once you've saved a file for the first time, Mind the Map automatically saves your changes every 30 seconds. The title bar shows an asterisk (*) when there are unsaved changes.</p>
+
+        <h4>File Operations</h4>
+        <table class="shortcut-table">
+          <tr><th>Action</th><th>Shortcut</th><th>Notes</th></tr>
+          <tr><td>New</td><td><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>Creates a fresh map with one root node</td></tr>
+          <tr><td>Open</td><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Opens a .mindmap file</td></tr>
+          <tr><td>Save</td><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Saves to current file (or prompts if new)</td></tr>
+          <tr><td>Save As</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Save with a new name</td></tr>
+        </table>
+      </div>
+
+      <div class="guide-section" id="mouse">
+        <h3>Mouse Controls (Mind Map View)</h3>
+
+        <table class="shortcut-table">
+          <tr><th>Action</th><th>Effect</th></tr>
+          <tr><td>Left-click</td><td>Select node</td></tr>
+          <tr><td>Double-click</td><td>Edit node text</td></tr>
+          <tr><td>Right-click + drag</td><td>Pan the canvas</td></tr>
+          <tr><td>Mouse wheel</td><td>Zoom in/out</td></tr>
+          <tr><td><kbd>Ctrl</kbd> + wheel</td><td>Pan vertically</td></tr>
+          <tr><td><kbd>Shift</kbd> + wheel</td><td>Pan horizontally</td></tr>
+          <tr><td>Horizontal wheel</td><td>Pan horizontally (if your mouse/trackpad supports it)</td></tr>
+          <tr><td>Drag node</td><td>Move node to new position or parent</td></tr>
+        </table>
+      </div>
+
+      <div class="guide-section" id="tips">
+        <h3>Tips & Tricks</h3>
+
+        <ul>
+          <li><strong>Quick capture:</strong> Press <kbd>Tab</kbd> or <kbd>Enter</kbd> while editing to create new nodes without stopping to save first</li>
+          <li><strong>Bulk icons:</strong> Multi-select nodes, then open the icon picker to apply icons to all at once</li>
+          <li><strong>Focus mode:</strong> Use Smart Collapse (<kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd>) to hide completed work</li>
+          <li><strong>Japanese input:</strong> IME composition is fully supported - Enter during conversion confirms the character, not the node</li>
+          <li><strong>Undo everything:</strong> Up to 50 operations are saved in history, even across editing sessions</li>
+          <li><strong>Cancel edits:</strong> Press <kbd>Ctrl</kbd>+<kbd>Escape</kbd> to abandon changes to a node</li>
+        </ul>
       </div>
 
     </div>
@@ -505,8 +738,9 @@
   <footer>
     <div class="container">
       <p>
-        Mind the Map is open source. 
-        <a href="https://github.com/aerialist/mind-the-map" target="_blank">View on GitHub</a>
+        Mind the Map is open source.
+        <a href="https://github.com/aerialist/mind-the-map" target="_blank">View on GitHub</a> |
+        <a href="https://github.com/aerialist/mind-the-map/releases" target="_blank">Download</a>
       </p>
     </div>
   </footer>

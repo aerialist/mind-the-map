@@ -8,78 +8,52 @@ Mind the Map is a desktop application built with Tauri 2.0 that provides a snapp
 
 - **Keyboard-first interaction** - Navigate and edit entirely with keyboard shortcuts
 - **Dual view modes** - Switch seamlessly between mind map and outline views
-- **Smart layout** - Automatic layout with manual positioning support
+- **Smart layout** - Automatic tree layout with manual positioning support
 - **Node icons** - Mark nodes with priority, task progress, flags, arrows, and symbols
+- **Smart clipboard** - Paste indented text or HTML lists as structured nodes
 - **Fast & lightweight** - Built with performance as a top priority
 
-## Features
+## Documentation
 
-### Node Icons
-
-Mark your nodes with visual indicators using Lucide React icons:
-
-- **Priority** (1-9) - Number badges for task prioritization
-- **Task Progress** - Empty, 25%, 50%, 75%, Complete checkboxes
-- **Flags** - Red, orange, yellow, green, blue, purple color flags
-- **Smileys** - Happy, neutral, sad, love, thinking, thumbs up/down
-- **Arrows** - 8 directional arrows for flow indication
-- **Symbols** - Star, heart, lightning, fire, warning, info, question, check, cross, clock, bookmark, pin
-
-Press `I` to open the icon picker. The picker stays open while you select different nodes, making it easy to apply icons to multiple nodes quickly. Click any icon on a node to cycle through the same category.
-
-### Multi-Node Selection
-
-Select multiple nodes to apply bulk operations:
-
-- **Ctrl+click** (Cmd+click on Mac): Toggle individual nodes in/out of selection
-- **Shift+click**: Select a range of visible nodes from the current selection to the clicked node
-
-When multiple nodes are selected:
-- The icon picker shows how many nodes are selected
-- Adding an icon applies it to all selected nodes at once
-- "Clear All" removes icons from all selected nodes
-
-### Mouse Controls (Mind Map Mode)
-
-- **Mouse drag**: Pan the canvas
-- **Mouse wheel**: Zoom in/out
-- **Ctrl + wheel**: Pan vertically
-- **Shift + wheel**: Pan horizontally
-- **Horizontal wheel**: Pan horizontally (for mice/trackpads with horizontal scroll)
+- **User Manual**: [docs/index.html](./docs/index.html) or [online version](https://aerialist.github.io/mind-the-map/)
+- **In-App Help**: Press `?` or `Ctrl+/` (Cmd+/ on Mac) to see keyboard shortcuts
+- **AI Development Guide**: [CLAUDE.md](./CLAUDE.md) for AI-assisted development context
 
 ## Technology Stack
 
-- **Framework**: Tauri 2.0
-- **Frontend**: React 18 + TypeScript 5
-- **State Management**: Zustand + Immer
-- **Rendering**: PixiJS 8 (for mind map mode)
-- **Styling**: Tailwind CSS
-- **Build Tool**: Vite
-- **Backend**: Rust
+| Component | Technology | Version |
+|-----------|------------|---------|
+| Framework | Tauri | 2.x |
+| Frontend | React + TypeScript | 19.x / 5.8 |
+| State Management | Zustand + Immer | 5.x / 11.x |
+| Rendering | PixiJS | 8.x |
+| Styling | Tailwind CSS | 3.x |
+| Build Tool | Vite | 7.x |
+| Icons | Lucide React | 0.562.x |
+| Backend | Rust | - |
 
 ## Prerequisites
-
-Before setting up the development environment, ensure you have the following installed:
 
 ### Required
 
 1. **Node.js** (v18 or later)
-   - Download from [nodejs.org](https://nodejs.org/)
-   - Verify: `node --version`
+   ```bash
+   node --version
+   ```
 
 2. **pnpm** (recommended package manager)
    ```bash
    npm install -g pnpm
+   pnpm --version
    ```
-   - Verify: `pnpm --version`
 
 3. **Rust** (latest stable)
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   rustc --version
    ```
-   - Verify: `rustc --version`
 
-4. **Tauri Prerequisites**
+4. **Platform-specific dependencies**
 
    **macOS:**
    ```bash
@@ -92,63 +66,22 @@ Before setting up the development environment, ensure you have the following ins
 
 ## Development Setup
 
-### 1. Clone the Repository
+### Quick Start
 
 ```bash
-git clone https://github.com/yourusername/mind-the-map.git
+# Clone the repository
+git clone https://github.com/aerialist/mind-the-map.git
 cd mind-the-map
-```
 
-### 2. Initialize Tauri Project
-
-Since this is a new project, create the Tauri application:
-
-```bash
-pnpm create tauri-app mindmap-app
-```
-
-Select the following options when prompted:
-- Package manager: `pnpm`
-- UI template: `React`
-- TypeScript: `Yes`
-- Additional options: Select as needed
-
-### 3. Install Dependencies
-
-```bash
+# Install dependencies
 cd mindmap-app
 pnpm install
 
-# Install additional required packages
-pnpm add zustand immer pixi.js lucide-react
-pnpm add -D tailwindcss@3 postcss autoprefixer
-pnpm add -D @types/node
-```
-
-### 4. Configure Tailwind CSS
-
-```bash
-./node_modules/.bin/tailwindcss init -p
-```
-
-**Note:** We use Tailwind CSS v3 for compatibility. The initialization command uses the local binary since `pnpx` may not work correctly with Tailwind CSS.
-
-### 5. Run Development Server
-
-```bash
+# Run development server
 pnpm tauri dev
 ```
 
-This will:
-- Start the Vite development server
-- Compile the Rust backend
-- Launch the application window
-
-## Project Structure
-
-See [CLAUDE.md](./CLAUDE.md) for detailed project structure and architecture.
-
-## Build for Production
+### Build for Production
 
 ```bash
 pnpm tauri build
@@ -156,17 +89,70 @@ pnpm tauri build
 
 The built application will be available in `src-tauri/target/release/bundle/`.
 
-## Documentation
+## Project Structure
 
-- [CLAUDE.md](./CLAUDE.md) - Development guide and coding conventions
-- [mindmap-requirements.md](./mindmap-requirements.md) - Detailed requirements and specifications
+```
+mind-the-map/
+├── README.md                    # This file (developer guide)
+├── CLAUDE.md                    # AI development context
+├── docs/
+│   └── index.html               # User manual (web page)
+│
+└── mindmap-app/                 # Application source
+    ├── src/                     # Frontend (TypeScript/React)
+    │   ├── components/          # React components
+    │   │   ├── Help/            # Help dialog (cheat sheet)
+    │   │   ├── MindMap/         # PixiJS canvas rendering
+    │   │   ├── Outline/         # Outline view components
+    │   │   ├── IconPicker/      # Node icon picker
+    │   │   └── Search/          # Search dialog
+    │   ├── store/               # Zustand state management
+    │   ├── core/                # Core logic (UI-independent)
+    │   ├── hooks/               # Custom React hooks
+    │   └── services/            # Tauri API integration
+    │
+    └── src-tauri/               # Backend (Rust)
+        └── src/
+            └── commands/        # Tauri commands (file I/O)
+```
+
+## Key Features Implemented
+
+### Core Editing
+- Create nodes: `Tab` (child), `Enter` (sibling below), `Shift+Enter` (sibling above)
+- Edit nodes: `E`, `F2`, or double-click
+- Delete nodes: `Delete` or `Backspace`
+- Navigate: Arrow keys
+
+### Views
+- Mind Map view (`Ctrl+1`): 2D canvas with tree layout, pan & zoom
+- Outline view (`Ctrl+2`): Hierarchical list with inline editing
+
+### Organization
+- Collapse/Expand: `Space` for single node
+- Smart Collapse All: `Shift+Alt+Space` cycles through 3 states (collapsed → expanded except completed → fully expanded)
+- Node icons: `I` to open picker, click icons to cycle variants
+
+### Clipboard
+- Copy/Cut/Paste: Standard shortcuts with hierarchy preservation
+- External paste: Indented text and HTML lists become structured nodes
+- Miro export: `Ctrl+Shift+M` copies in Miro-compatible table format
+
+### File Operations
+- New/Open/Save: `Ctrl+N`, `Ctrl+O`, `Ctrl+S`
+- Auto-save: 30 seconds after changes (if file was previously saved)
+- File format: `.mindmap` (JSON)
+
+### History
+- Undo/Redo: `Ctrl+Z`, `Ctrl+Shift+Z` (or `Ctrl+Y`)
+- 50 operations history
 
 ## Development Notes
 
-- This project uses **Tauri 2.0** - ensure you reference v2 documentation
-- **PixiJS v8** has different initialization compared to v7
-- **Zustand v4+** has updated API patterns
-- Cross-platform compatibility (macOS/Windows) is a priority
+- **Tauri 2.0**: Use v2 documentation (API differs from v1)
+- **PixiJS v8**: Initialization differs from v7
+- **Zustand v5**: Updated API patterns from v4
+- **Cross-platform**: Test on both macOS and Windows
 
 ## Troubleshooting
 
@@ -176,12 +162,18 @@ xcode-select --install
 ```
 
 ### Windows: Missing WebView2
-Download and install from [Microsoft Edge WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)
+Download from [Microsoft Edge WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)
 
 ### Rust compilation errors
 ```bash
 rustup update
 cargo clean
+```
+
+### Vite/React issues
+```bash
+rm -rf node_modules
+pnpm install
 ```
 
 ## License
@@ -190,4 +182,4 @@ See [LICENSE](./LICENSE) file for details.
 
 ## Contributing
 
-This project is in early development. Contribution guidelines will be added soon.
+Contributions are welcome! Please feel free to submit issues and pull requests.
