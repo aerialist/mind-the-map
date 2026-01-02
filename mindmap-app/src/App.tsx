@@ -7,6 +7,7 @@ import { MindMapView } from './components/MindMap';
 import { SearchDialog } from './components/Search';
 import { IconPicker } from './components/IconPicker';
 import { HelpDialog } from './components/Help';
+import { LinkDialog } from './components/LinkDialog';
 import { useDocumentStore } from './store';
 import { useAutoSave } from './hooks';
 
@@ -26,6 +27,8 @@ function App() {
   const editingNodeId = useDocumentStore((state) => state.editingNodeId);
   const currentFilePath = useDocumentStore((state) => state.currentFilePath);
   const isDirty = useDocumentStore((state) => state.isDirty);
+  const isLinkDialogOpen = useDocumentStore((state) => state.isLinkDialogOpen);
+  const openLinkDialog = useDocumentStore((state) => state.openLinkDialog);
 
   // Enable autosave (30 seconds after last change, only if file has been saved before)
   useAutoSave();
@@ -74,12 +77,15 @@ function App() {
       } else if (e.key === 'f' && !isSearchOpen) {
         e.preventDefault();
         openSearch();
+      } else if (e.key === 'k' && !isLinkDialogOpen) {
+        e.preventDefault();
+        openLinkDialog();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setViewMode, isSearchOpen, isHelpOpen, openSearch, toggleHelp, editingNodeId]);
+  }, [setViewMode, isSearchOpen, isHelpOpen, openSearch, toggleHelp, editingNodeId, isLinkDialogOpen, openLinkDialog]);
 
   // Listen for Tauri menu events (View menu)
   useEffect(() => {
@@ -149,6 +155,9 @@ function App() {
 
       {/* Icon picker dialog */}
       <IconPicker />
+
+      {/* Link dialog */}
+      <LinkDialog />
 
       {/* Help dialog */}
       <HelpDialog />

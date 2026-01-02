@@ -20,6 +20,7 @@ export interface Node {
   position: Position;
   isCollapsed: boolean;
   icons?: NodeIcon[]; // Optional array of icons for the node
+  link?: string; // Optional link (URL or file path)
 }
 
 export type NodeMap = Record<string, Node>;

@@ -2,7 +2,8 @@ import { useRef, useEffect, useState } from 'react';
 import { useDocumentStore } from '../../store';
 import { useDragContext } from './OutlineView';
 import { getIconDefinition } from '../../types';
-import { Tags } from 'lucide-react';
+import { Tags, Link } from 'lucide-react';
+import { openLink } from '../../services/tauri';
 
 interface OutlineNodeProps {
   nodeId: string;
@@ -26,6 +27,7 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
   const openIconPicker = useDocumentStore((state) => state.openIconPicker);
   const cycleIcon = useDocumentStore((state) => state.cycleIcon);
+  const openLinkDialog = useDocumentStore((state) => state.openLinkDialog);
 
   const { draggedNodeId, startDrag } = useDragContext();
 
@@ -244,7 +246,31 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
             className="flex-1 bg-white dark:bg-gray-800 border border-blue-400 rounded px-1 py-0 outline-none"
           />
         ) : (
-          <span className="flex-1">{text}</span>
+          <span className="flex-1">
+            <span
+              className={node.link ? 'text-purple-600 dark:text-purple-400 underline cursor-pointer hover:text-purple-700 dark:hover:text-purple-300' : ''}
+              onClick={node.link ? (e) => {
+                e.stopPropagation();
+                openLink(node.link!);
+              } : undefined}
+            >
+              {text}
+            </span>
+          </span>
+        )}
+
+        {/* Link icon (shown when node has a link) */}
+        {node.link && !isEditing && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              openLinkDialog();
+            }}
+            className="ml-1 px-1 text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300"
+            title={`Edit link: ${node.link}`}
+          >
+            <Link className="w-4 h-4" />
+          </button>
         )}
 
         {/* Icon picker button (visible on hover when selected) */}

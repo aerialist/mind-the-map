@@ -3,6 +3,7 @@ import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { useDocumentStore } from '../../store';
 import type { Node, NodeMap } from '../../types';
 import { getIconDefinition } from '../../types';
+import { openLink } from '../../services/tauri';
 
 // Editing state for overlay input
 interface EditingState {
@@ -51,9 +52,11 @@ const COLORS = {
   nodeSelectedBorder: 0x63b3ed,
   nodeMultiSelectedBorder: 0x4299e1, // Slightly dimmer border for multi-selected
   text: 0xffffff,
+  textLink: 0xc084fc, // Purple color for linked text
   edge: 0x4a5568,
   collapseIndicator: 0x63b3ed,
   collapseIndicatorBg: 0x16213e,
+  linkIcon: 0xa855f7, // Purple color for link icon
 };
 
 interface NodeLayout {
@@ -110,7 +113,13 @@ const calculateLayout = (
       iconsWidth = node.icons.length * 16 + 4;
     }
 
-    return Math.max(textWidth + iconsWidth + NODE_PADDING_X * 2, NODE_MIN_WIDTH);
+    // Account for link icon width
+    let linkWidth = 0;
+    if (node.link) {
+      linkWidth = 20; // Link icon width + padding
+    }
+
+    return Math.max(textWidth + iconsWidth + linkWidth + NODE_PADDING_X * 2, NODE_MIN_WIDTH);
   };
 
   // Calculate subtree height
@@ -979,15 +988,72 @@ function MindMapCanvas() {
 
       // Node text
       const text = node.content.type === 'text' ? node.content.text : '[image]';
+      const hasLink = !!node.link;
       const textStyle = new TextStyle({
         fontSize: 14,
-        fill: COLORS.text,
+        fill: hasLink ? COLORS.textLink : COLORS.text,
         fontFamily: 'system-ui, -apple-system, sans-serif',
       });
       const textObj = new Text({ text: text || '(empty)', style: textStyle });
       textObj.x = iconOffset;
       textObj.y = (layout.height - textObj.height) / 2;
+
+      // If linked, make text clickable and add underline
+      if (hasLink) {
+        textObj.eventMode = 'static';
+        textObj.cursor = 'pointer';
+        textObj.on('pointerdown', (e) => {
+          const originalEvent = e.nativeEvent as PointerEvent | undefined;
+          if (originalEvent?.button === 2) return;
+          e.stopPropagation();
+          openLink(node.link!);
+        });
+
+        // Add underline
+        const underline = new Graphics();
+        underline.moveTo(iconOffset, textObj.y + textObj.height - 2);
+        underline.lineTo(iconOffset + textObj.width, textObj.y + textObj.height - 2);
+        underline.stroke({ width: 1, color: COLORS.textLink });
+        container.addChild(underline);
+      }
+
       container.addChild(textObj);
+
+      // Link icon (shown at right end of node if node has a link)
+      if (hasLink) {
+        const linkIconSize = 14;
+        const linkIconX = layout.width - NODE_PADDING_X - linkIconSize + 2;
+        const linkIconY = (layout.height - linkIconSize) / 2;
+
+        const linkIconContainer = new Container();
+        linkIconContainer.x = linkIconX;
+        linkIconContainer.y = linkIconY;
+        linkIconContainer.eventMode = 'static';
+        linkIconContainer.cursor = 'pointer';
+
+        linkIconContainer.on('pointerdown', (e) => {
+          const originalEvent = e.nativeEvent as PointerEvent | undefined;
+          if (originalEvent?.button === 2) return;
+          e.stopPropagation();
+          // Open link dialog to edit the link
+          useDocumentStore.getState().openLinkDialog();
+        });
+
+        const linkIcon = new Graphics();
+        // Draw a simple link icon (chain link shape)
+        const cx = linkIconSize / 2;
+        const cy = linkIconSize / 2;
+        const r = 4;
+        // First ring
+        linkIcon.arc(cx - 2, cy, r, Math.PI * 0.75, Math.PI * 1.75);
+        linkIcon.stroke({ width: 2, color: COLORS.linkIcon });
+        // Second ring
+        linkIcon.arc(cx + 2, cy, r, -Math.PI * 0.25, Math.PI * 0.75);
+        linkIcon.stroke({ width: 2, color: COLORS.linkIcon });
+
+        linkIconContainer.addChild(linkIcon);
+        container.addChild(linkIconContainer);
+      }
 
       // Collapse/expand indicator for nodes with children
       if (node.childIds.length > 0) {

@@ -35,6 +35,7 @@ export const useKeyboardNavigation = () => {
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
   const toggleCollapseAll = useDocumentStore((state) => state.toggleCollapseAll);
   const openIconPicker = useDocumentStore((state) => state.openIconPicker);
+  const openLinkDialog = useDocumentStore((state) => state.openLinkDialog);
   const copyNodes = useDocumentStore((state) => state.copyNodes);
   const cutNodes = useDocumentStore((state) => state.cutNodes);
   const pasteNodes = useDocumentStore((state) => state.pasteNodes);
@@ -492,10 +493,15 @@ export const useKeyboardNavigation = () => {
           openIconPicker();
         }
       }),
+      listen('menu-add-link', () => {
+        if (selectedNodeId && !editingNodeId) {
+          openLinkDialog();
+        }
+      }),
     ];
 
     return () => {
       listeners.forEach((unlisten) => unlisten.then((fn) => fn()));
     };
-  }, [copyForMiro, selectedNodeId, editingNodeId, createChildNode, createSiblingNode, createSiblingNodeAbove, startEditing, deleteNode, toggleCollapse, toggleCollapseAll, openIconPicker]);
+  }, [copyForMiro, selectedNodeId, editingNodeId, createChildNode, createSiblingNode, createSiblingNodeAbove, startEditing, deleteNode, toggleCollapse, toggleCollapseAll, openIconPicker, openLinkDialog]);
 };

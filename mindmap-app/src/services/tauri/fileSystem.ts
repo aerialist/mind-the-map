@@ -2,6 +2,8 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { save, open } from '@tauri-apps/plugin-dialog';
+import { openUrl, openPath } from '@tauri-apps/plugin-opener';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import type { NodeMap } from '../../types';
 import { serialize, deserialize, getDocumentTitle } from '../../core/serialization';
 
@@ -97,6 +99,54 @@ export const openDocument = async (): Promise<OpenResult> => {
     const { nodes, rootId, title } = deserialize(content);
 
     return { success: true, nodes, rootId, title, path };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+// Determine link type
+export const getLinkType = (link: string): 'url' | 'mindmap' | 'file' => {
+  if (!link) return 'url';
+  if (link.startsWith('http://') || link.startsWith('https://')) return 'url';
+  if (link.endsWith('.mindmap')) return 'mindmap';
+  return 'file';
+};
+
+// Open a link (URL, file path, or mindmap file)
+export const openLink = async (link: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const linkType = getLinkType(link);
+
+    if (linkType === 'url') {
+      // Open URL in default browser
+      await openUrl(link);
+    } else if (linkType === 'mindmap') {
+      // Open .mindmap file in a new app window
+      const label = `mindmap-${Date.now()}`;
+      const webview = new WebviewWindow(label, {
+        url: `index.html?file=${encodeURIComponent(link)}`,
+        title: 'Mind the Map',
+        width: 1200,
+        height: 800,
+      });
+
+      // Wait for the window to be created
+      webview.once('tauri://created', () => {
+        // Window created successfully
+      });
+
+      webview.once('tauri://error', (e) => {
+        console.error('Failed to create window:', e);
+      });
+    } else {
+      // Open file with default application
+      await openPath(link);
+    }
+
+    return { success: true };
   } catch (error) {
     return {
       success: false,

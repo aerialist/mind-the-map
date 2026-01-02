@@ -123,6 +123,9 @@ pub fn run() {
             let open_icon_picker = MenuItemBuilder::with_id("open_icon_picker", "Add Icon...")
                 .accelerator("I")
                 .build(app)?;
+            let add_link = MenuItemBuilder::with_id("add_link", "Add Link...")
+                .accelerator("CmdOrCtrl+K")
+                .build(app)?;
 
             let node_menu = SubmenuBuilder::new(app, "Node")
                 .item(&create_child)
@@ -136,6 +139,7 @@ pub fn run() {
                 .item(&toggle_collapse_all)
                 .separator()
                 .item(&open_icon_picker)
+                .item(&add_link)
                 .build()?;
 
             // === Window menu ===
@@ -175,6 +179,7 @@ pub fn run() {
                 "toggle_collapse" => Some("menu-toggle-collapse"),
                 "toggle_collapse_all" => Some("menu-toggle-collapse-all"),
                 "open_icon_picker" => Some("menu-open-icon-picker"),
+                "add_link" => Some("menu-add-link"),
                 _ => None,
             };
 

@@ -113,6 +113,9 @@ interface DocumentState {
   // Icon picker state
   isIconPickerOpen: boolean;
 
+  // Link dialog state
+  isLinkDialogOpen: boolean;
+
   // Collapse all state for cycling
   collapseAllState: CollapseAllState;
 
@@ -167,6 +170,11 @@ interface DocumentState {
   removeIcon: (nodeId: string, iconIndex: number) => void;
   cycleIcon: (nodeId: string, iconIndex: number) => void;
   clearIcons: (nodeId: string) => void;
+
+  // Link actions
+  openLinkDialog: () => void;
+  closeLinkDialog: () => void;
+  setNodeLink: (nodeId: string, link: string | undefined) => void;
 
   // Clipboard actions
   copyNodes: (nodeIds: string[]) => void;
@@ -236,6 +244,9 @@ export const useDocumentStore = create<DocumentState>()(
 
     // Icon picker state
     isIconPickerOpen: false,
+
+    // Link dialog state
+    isLinkDialogOpen: false,
 
     // Collapse all state for cycling
     collapseAllState: 'expanded' as CollapseAllState,
@@ -873,6 +884,35 @@ export const useDocumentStore = create<DocumentState>()(
         saveToHistory(state);
 
         delete node.icons;
+        state.isDirty = true;
+      }),
+
+    // Link actions
+    openLinkDialog: () =>
+      set((state) => {
+        state.isLinkDialogOpen = true;
+        state.editingNodeId = null;
+      }),
+
+    closeLinkDialog: () =>
+      set((state) => {
+        state.isLinkDialogOpen = false;
+      }),
+
+    setNodeLink: (nodeId, link) =>
+      set((state) => {
+        const node = state.nodes[nodeId];
+        if (!node) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        if (link && link.trim()) {
+          node.link = link.trim();
+        } else {
+          delete node.link;
+        }
+
         state.isDirty = true;
       }),
 
