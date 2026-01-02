@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { listen } from '@tauri-apps/api/event';
 import './App.css';
 import { OutlineView } from './components/Outline';
 import { MindMapView } from './components/MindMap';
@@ -61,6 +62,19 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setViewMode, isSearchOpen, openSearch]);
+
+  // Listen for Tauri menu events (View menu)
+  useEffect(() => {
+    const listeners = [
+      listen('menu-view-mindmap', () => setViewMode('mindmap')),
+      listen('menu-view-outline', () => setViewMode('outline')),
+      listen('menu-find', () => openSearch()),
+    ];
+
+    return () => {
+      listeners.forEach((unlisten) => unlisten.then((fn) => fn()));
+    };
+  }, [setViewMode, openSearch]);
 
   return (
     <div className="h-screen flex flex-col">

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useDocumentStore } from '../store';
 import {
   getUpNodeId,
@@ -12,7 +12,9 @@ import {
   parseIndentedTextToNodes,
   nodesToHtml,
   nodesToPlainText,
+  nodesToMiroFormat,
 } from '../core/clipboard';
+import { listen } from '@tauri-apps/api/event';
 
 export const useKeyboardNavigation = () => {
   const nodes = useDocumentStore((state) => state.nodes);
@@ -110,6 +112,57 @@ export const useKeyboardNavigation = () => {
           }
 
           copyNodes(selectedNodeIds);
+        }
+        return;
+      }
+
+      // Copy for Miro (Ctrl+Shift+M) - exports as table format for Miro's paste dialog
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'm' || e.key === 'M')) {
+        if (!editingNodeId && selectedNodeIds.length > 0) {
+          e.preventDefault();
+
+          // Collect nodes for the selected subtrees
+          const collectSubtree = (nodeId: string): Record<string, typeof nodes[string]> => {
+            const result: Record<string, typeof nodes[string]> = {};
+            const node = nodes[nodeId];
+            if (!node) return result;
+            result[nodeId] = node;
+            for (const childId of node.childIds) {
+              Object.assign(result, collectSubtree(childId));
+            }
+            return result;
+          };
+
+          const subtreeNodes: Record<string, typeof nodes[string]> = {};
+          for (const nodeId of selectedNodeIds) {
+            Object.assign(subtreeNodes, collectSubtree(nodeId));
+          }
+
+          // Generate Miro-compatible format (table/TSV)
+          const { html: htmlContent, text: textContent } = nodesToMiroFormat(
+            subtreeNodes,
+            selectedNodeIds
+          );
+
+          // Store the text for later comparison
+          lastWrittenClipboardTextRef.current = textContent;
+
+          // Write to system clipboard with both formats
+          try {
+            const clipboardItems = [
+              new ClipboardItem({
+                'text/plain': new Blob([textContent], { type: 'text/plain' }),
+                'text/html': new Blob([htmlContent], { type: 'text/html' }),
+              }),
+            ];
+            navigator.clipboard.write(clipboardItems).catch(() => {
+              navigator.clipboard.writeText(textContent).catch(() => {});
+            });
+          } catch {
+            navigator.clipboard.writeText(textContent).catch(() => {});
+          }
+
+          // Don't update internal clipboard - this is for external paste only
         }
         return;
       }
@@ -345,4 +398,93 @@ export const useKeyboardNavigation = () => {
       window.removeEventListener('paste', handlePaste);
     };
   }, [nodes, selectedNodeId, selectedNodeIds, editingNodeId, clipboard, selectNode, startEditing, createChildNode, createSiblingNode, deleteNode, toggleCollapse, toggleCollapseAll, openIconPicker, copyNodes, cutNodes, pasteNodes, pasteNodesFromText, pasteNodesFromExternal, undo, redo]);
+
+  // Handle "Copy for Miro" menu event from Tauri
+  const copyForMiro = useCallback(() => {
+    if (selectedNodeIds.length === 0) return;
+
+    // Collect nodes for the selected subtrees
+    const collectSubtree = (nodeId: string): Record<string, typeof nodes[string]> => {
+      const result: Record<string, typeof nodes[string]> = {};
+      const node = nodes[nodeId];
+      if (!node) return result;
+      result[nodeId] = node;
+      for (const childId of node.childIds) {
+        Object.assign(result, collectSubtree(childId));
+      }
+      return result;
+    };
+
+    const subtreeNodes: Record<string, typeof nodes[string]> = {};
+    for (const nodeId of selectedNodeIds) {
+      Object.assign(subtreeNodes, collectSubtree(nodeId));
+    }
+
+    // Generate Miro-compatible format (table/TSV)
+    const { html: htmlContent, text: textContent } = nodesToMiroFormat(
+      subtreeNodes,
+      selectedNodeIds
+    );
+
+    // Write to system clipboard with both formats
+    try {
+      const clipboardItems = [
+        new ClipboardItem({
+          'text/plain': new Blob([textContent], { type: 'text/plain' }),
+          'text/html': new Blob([htmlContent], { type: 'text/html' }),
+        }),
+      ];
+      navigator.clipboard.write(clipboardItems).catch(() => {
+        navigator.clipboard.writeText(textContent).catch(() => {});
+      });
+    } catch {
+      navigator.clipboard.writeText(textContent).catch(() => {});
+    }
+  }, [nodes, selectedNodeIds]);
+
+  useEffect(() => {
+    // Listen for menu events from Tauri
+    const listeners = [
+      listen('menu-copy-for-miro', () => copyForMiro()),
+      listen('menu-create-child', () => {
+        if (selectedNodeId && !editingNodeId) {
+          createChildNode(selectedNodeId);
+        }
+      }),
+      listen('menu-create-sibling', () => {
+        if (selectedNodeId && !editingNodeId) {
+          createSiblingNode(selectedNodeId);
+        }
+      }),
+      listen('menu-edit-node', () => {
+        if (selectedNodeId && !editingNodeId) {
+          startEditing(selectedNodeId);
+        }
+      }),
+      listen('menu-delete-node', () => {
+        if (selectedNodeId && !editingNodeId) {
+          deleteNode(selectedNodeId);
+        }
+      }),
+      listen('menu-toggle-collapse', () => {
+        if (selectedNodeId && !editingNodeId) {
+          toggleCollapse(selectedNodeId);
+        }
+      }),
+      listen('menu-toggle-collapse-all', () => {
+        if (selectedNodeId && !editingNodeId) {
+          toggleCollapseAll(selectedNodeId);
+        }
+      }),
+      listen('menu-open-icon-picker', () => {
+        if (selectedNodeId && !editingNodeId) {
+          openIconPicker();
+        }
+      }),
+    ];
+
+    return () => {
+      listeners.forEach((unlisten) => unlisten.then((fn) => fn()));
+    };
+  }, [copyForMiro, selectedNodeId, editingNodeId, createChildNode, createSiblingNode, startEditing, deleteNode, toggleCollapse, toggleCollapseAll, openIconPicker]);
 };

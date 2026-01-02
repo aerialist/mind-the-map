@@ -250,3 +250,122 @@ const escapeHtml = (text: string): string => {
   div.textContent = text;
   return div.innerHTML;
 };
+
+/**
+ * Convert NodeMap subtrees to Miro-compatible format (Excel/Numbers table format)
+ * This triggers Miro's special paste dialog for Table/Grid/Sticky notes
+ *
+ * Format: Each node becomes a row, with columns representing hierarchy depth
+ * Example:
+ *   Root
+ *     Child1
+ *       Grandchild1
+ *     Child2
+ *
+ * Becomes a table:
+ *   | Level 1 | Level 2      | Level 3      |
+ *   | Root    |              |              |
+ *   |         | Child1       |              |
+ *   |         |              | Grandchild1  |
+ *   |         | Child2       |              |
+ */
+export const nodesToMiroFormat = (
+  nodes: NodeMap,
+  rootIds: string[]
+): { html: string; text: string } => {
+  // Collect all nodes with their depths
+  const rows: { depth: number; text: string }[] = [];
+  let maxDepth = 0;
+
+  const collectNodes = (nodeId: string, depth: number) => {
+    const node = nodes[nodeId];
+    if (!node) return;
+
+    const text = node.content.type === 'text' ? node.content.text : '';
+    rows.push({ depth, text });
+    maxDepth = Math.max(maxDepth, depth);
+
+    for (const childId of node.childIds) {
+      collectNodes(childId, depth + 1);
+    }
+  };
+
+  for (const rootId of rootIds) {
+    collectNodes(rootId, 0);
+  }
+
+  // Generate TSV (tab-separated values) for plain text
+  // Each row has empty cells for levels before its depth
+  const tsvLines: string[] = [];
+  for (const row of rows) {
+    const cells: string[] = [];
+    for (let i = 0; i <= maxDepth; i++) {
+      if (i === row.depth) {
+        cells.push(row.text);
+      } else {
+        cells.push('');
+      }
+    }
+    tsvLines.push(cells.join('\t'));
+  }
+  const tsvText = tsvLines.join('\n');
+
+  // Generate HTML table with Excel-compatible structure
+  // The key is to include proper table structure that Excel/Numbers recognize
+  const tableRows: string[] = [];
+  for (const row of rows) {
+    const cells: string[] = [];
+    for (let i = 0; i <= maxDepth; i++) {
+      if (i === row.depth) {
+        cells.push(`<td>${escapeHtml(row.text)}</td>`);
+      } else {
+        cells.push('<td></td>');
+      }
+    }
+    tableRows.push(`<tr>${cells.join('')}</tr>`);
+  }
+
+  // Excel-style HTML table that Miro recognizes
+  const htmlTable = `<meta charset="utf-8"><table>${tableRows.join('')}</table>`;
+
+  return { html: htmlTable, text: tsvText };
+};
+
+/**
+ * Alternative Miro format: Flat list where each node is a separate item
+ * This creates individual sticky notes when pasted as sticky notes in Miro
+ */
+export const nodesToMiroStickyFormat = (
+  nodes: NodeMap,
+  rootIds: string[]
+): { html: string; text: string } => {
+  // Collect all node texts (flattened, depth-first)
+  const texts: string[] = [];
+
+  const collectNodes = (nodeId: string) => {
+    const node = nodes[nodeId];
+    if (!node) return;
+
+    const text = node.content.type === 'text' ? node.content.text : '';
+    if (text.trim()) {
+      texts.push(text);
+    }
+
+    for (const childId of node.childIds) {
+      collectNodes(childId);
+    }
+  };
+
+  for (const rootId of rootIds) {
+    collectNodes(rootId);
+  }
+
+  // Each text on a new line (for sticky notes)
+  const plainText = texts.join('\n');
+
+  // HTML table with one column - each row becomes a sticky note
+  const tableRows = texts.map((t) => `<tr><td>${escapeHtml(t)}</td></tr>`);
+  const htmlTable = `<meta charset="utf-8"><table>${tableRows.join('')}</table>`;
+
+  return { html: htmlTable, text: plainText };
+};

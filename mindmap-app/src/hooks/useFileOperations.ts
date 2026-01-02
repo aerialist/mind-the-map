@@ -5,6 +5,7 @@ import {
   saveDocumentAs,
   openDocument,
 } from '../services/tauri/fileSystem';
+import { listen } from '@tauri-apps/api/event';
 
 export const useFileOperations = () => {
   const nodes = useDocumentStore((state) => state.nodes);
@@ -97,6 +98,20 @@ export const useFileOperations = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleSave, handleSaveAs, handleOpen, handleNew]);
+
+  // Listen for Tauri menu events
+  useEffect(() => {
+    const listeners = [
+      listen('menu-new', () => handleNew()),
+      listen('menu-open', () => handleOpen()),
+      listen('menu-save', () => handleSave()),
+      listen('menu-save-as', () => handleSaveAs()),
+    ];
+
+    return () => {
+      listeners.forEach((unlisten) => unlisten.then((fn) => fn()));
+    };
+  }, [handleNew, handleOpen, handleSave, handleSaveAs]);
 
   return {
     handleSave,
