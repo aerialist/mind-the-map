@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useDocumentStore } from '../store';
 import {
   getUpNodeId,
@@ -6,18 +6,39 @@ import {
   getParentNodeId,
   getFirstChildNodeId,
 } from '../core/navigation';
+import {
+  parseHtmlToNodes,
+  parsedNodesToNodeMap,
+  parseIndentedTextToNodes,
+  nodesToHtml,
+  nodesToPlainText,
+} from '../core/clipboard';
 
 export const useKeyboardNavigation = () => {
   const nodes = useDocumentStore((state) => state.nodes);
   const selectedNodeId = useDocumentStore((state) => state.selectedNodeId);
+  const selectedNodeIds = useDocumentStore((state) => state.selectedNodeIds);
   const editingNodeId = useDocumentStore((state) => state.editingNodeId);
+  const clipboard = useDocumentStore((state) => state.clipboard);
   const selectNode = useDocumentStore((state) => state.selectNode);
+
+  // Track the last text we wrote to system clipboard
+  // Used to detect if user copied something externally
+  const lastWrittenClipboardTextRef = useRef<string | null>(null);
   const startEditing = useDocumentStore((state) => state.startEditing);
   const createChildNode = useDocumentStore((state) => state.createChildNode);
   const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
   const deleteNode = useDocumentStore((state) => state.deleteNode);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
+  const toggleCollapseAll = useDocumentStore((state) => state.toggleCollapseAll);
   const openIconPicker = useDocumentStore((state) => state.openIconPicker);
+  const copyNodes = useDocumentStore((state) => state.copyNodes);
+  const cutNodes = useDocumentStore((state) => state.cutNodes);
+  const pasteNodes = useDocumentStore((state) => state.pasteNodes);
+  const pasteNodesFromText = useDocumentStore((state) => state.pasteNodesFromText);
+  const pasteNodesFromExternal = useDocumentStore(
+    (state) => state.pasteNodesFromExternal
+  );
   const undo = useDocumentStore((state) => state.undo);
   const redo = useDocumentStore((state) => state.redo);
 
@@ -38,6 +59,121 @@ export const useKeyboardNavigation = () => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) {
         e.preventDefault();
         redo();
+        return;
+      }
+
+      // Handle copy/cut/paste globally (even during editing for paste)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+        // Copy - only when not editing and has selection
+        if (!editingNodeId && selectedNodeIds.length > 0) {
+          e.preventDefault();
+
+          // Collect nodes for the selected subtrees
+          const collectSubtree = (nodeId: string): Record<string, typeof nodes[string]> => {
+            const result: Record<string, typeof nodes[string]> = {};
+            const node = nodes[nodeId];
+            if (!node) return result;
+            result[nodeId] = node;
+            for (const childId of node.childIds) {
+              Object.assign(result, collectSubtree(childId));
+            }
+            return result;
+          };
+
+          const subtreeNodes: Record<string, typeof nodes[string]> = {};
+          for (const nodeId of selectedNodeIds) {
+            Object.assign(subtreeNodes, collectSubtree(nodeId));
+          }
+
+          // Generate HTML and plain text for system clipboard
+          const htmlContent = nodesToHtml(subtreeNodes, selectedNodeIds);
+          const textContent = nodesToPlainText(subtreeNodes, selectedNodeIds);
+
+          // Store the text for later comparison
+          lastWrittenClipboardTextRef.current = textContent;
+
+          // Write to system clipboard with both formats
+          try {
+            const clipboardItems = [
+              new ClipboardItem({
+                'text/plain': new Blob([textContent], { type: 'text/plain' }),
+                'text/html': new Blob([htmlContent], { type: 'text/html' }),
+              }),
+            ];
+            navigator.clipboard.write(clipboardItems).catch(() => {
+              // Fallback to text-only
+              navigator.clipboard.writeText(textContent).catch(() => {});
+            });
+          } catch {
+            // Fallback for browsers that don't support ClipboardItem
+            navigator.clipboard.writeText(textContent).catch(() => {});
+          }
+
+          copyNodes(selectedNodeIds);
+        }
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X')) {
+        // Cut - only when not editing and has selection (excluding root)
+        if (!editingNodeId && selectedNodeIds.length > 0) {
+          e.preventDefault();
+
+          // Collect nodes for the selected subtrees (before they're removed)
+          const collectSubtree = (nodeId: string): Record<string, typeof nodes[string]> => {
+            const result: Record<string, typeof nodes[string]> = {};
+            const node = nodes[nodeId];
+            if (!node) return result;
+            result[nodeId] = node;
+            for (const childId of node.childIds) {
+              Object.assign(result, collectSubtree(childId));
+            }
+            return result;
+          };
+
+          const subtreeNodes: Record<string, typeof nodes[string]> = {};
+          for (const nodeId of selectedNodeIds) {
+            Object.assign(subtreeNodes, collectSubtree(nodeId));
+          }
+
+          // Generate HTML and plain text for system clipboard
+          const htmlContent = nodesToHtml(subtreeNodes, selectedNodeIds);
+          const textContent = nodesToPlainText(subtreeNodes, selectedNodeIds);
+
+          // Store the text for later comparison
+          lastWrittenClipboardTextRef.current = textContent;
+
+          // Write to system clipboard with both formats
+          try {
+            const clipboardItems = [
+              new ClipboardItem({
+                'text/plain': new Blob([textContent], { type: 'text/plain' }),
+                'text/html': new Blob([htmlContent], { type: 'text/html' }),
+              }),
+            ];
+            navigator.clipboard.write(clipboardItems).catch(() => {
+              // Fallback to text-only
+              navigator.clipboard.writeText(textContent).catch(() => {});
+            });
+          } catch {
+            // Fallback for browsers that don't support ClipboardItem
+            navigator.clipboard.writeText(textContent).catch(() => {});
+          }
+
+          cutNodes(selectedNodeIds);
+        }
+        return;
+      }
+
+      // For Ctrl+V, we don't handle it in keydown - let the native paste event handle it
+      // This avoids the permission popup from navigator.clipboard.read()
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+        // Only intercept if we're not editing and have a target selected
+        // The actual paste handling is done in the 'paste' event listener below
+        if (!editingNodeId && selectedNodeId) {
+          // Don't prevent default - let the paste event fire
+          // The paste event handler will handle the actual paste logic
+        }
         return;
       }
 
@@ -108,9 +244,15 @@ export const useKeyboardNavigation = () => {
           break;
 
         case ' ':
+        case '\u00A0': // Non-breaking space (produced by Option+Space on macOS)
           e.preventDefault();
-          // Toggle collapse/expand for the selected node
-          toggleCollapse(selectedNodeId);
+          if (e.shiftKey && e.altKey) {
+            // Toggle collapse/expand all children recursively (Shift+Alt+Space)
+            toggleCollapseAll(selectedNodeId);
+          } else {
+            // Toggle collapse/expand for the selected node
+            toggleCollapse(selectedNodeId);
+          }
           break;
 
         case 'i':
@@ -126,7 +268,81 @@ export const useKeyboardNavigation = () => {
       }
     };
 
+    // Handle paste event - this gives us access to clipboardData without permission prompts
+    const handlePaste = (e: ClipboardEvent) => {
+      // Skip if editing or no target selected
+      if (editingNodeId || !selectedNodeId) return;
+
+      // Skip if user is in an input or textarea
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      e.preventDefault();
+
+      const clipboardData = e.clipboardData;
+      if (!clipboardData) return;
+
+      const hasInternalClipboard = clipboard && clipboard.rootIds.length > 0;
+      const htmlContent = clipboardData.getData('text/html');
+      const textContent = clipboardData.getData('text/plain');
+
+      // Check if content differs from what we last wrote
+      const systemTextDiffersFromLastWrite =
+        textContent &&
+        textContent.trim() &&
+        textContent !== lastWrittenClipboardTextRef.current;
+
+      if (systemTextDiffersFromLastWrite) {
+        // User copied something externally - try to parse HTML first
+        if (htmlContent) {
+          const parsedNodes = parseHtmlToNodes(htmlContent);
+          if (parsedNodes.length > 0) {
+            // Successfully parsed HTML structure
+            const { nodes: newNodes, rootIds } = parsedNodesToNodeMap(
+              parsedNodes,
+              selectedNodeId
+            );
+            pasteNodesFromExternal(selectedNodeId, newNodes, rootIds);
+            return;
+          }
+        }
+
+        // Try parsing indented text
+        if (textContent) {
+          const parsedNodes = parseIndentedTextToNodes(textContent);
+          if (parsedNodes.length > 1 || (parsedNodes.length === 1 && parsedNodes[0].children.length > 0)) {
+            // Has hierarchy - use structured paste
+            const { nodes: newNodes, rootIds } = parsedNodesToNodeMap(
+              parsedNodes,
+              selectedNodeId
+            );
+            pasteNodesFromExternal(selectedNodeId, newNodes, rootIds);
+            return;
+          }
+        }
+
+        // Fallback to plain text paste
+        if (textContent && textContent.trim()) {
+          pasteNodesFromText(selectedNodeId, textContent);
+        }
+      } else if (hasInternalClipboard) {
+        // Use internal clipboard (node copy/cut)
+        pasteNodes(selectedNodeId);
+      } else if (textContent && textContent.trim()) {
+        // Fallback: use system clipboard text
+        pasteNodesFromText(selectedNodeId, textContent);
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nodes, selectedNodeId, editingNodeId, selectNode, startEditing, createChildNode, createSiblingNode, deleteNode, toggleCollapse, openIconPicker, undo, redo]);
+    window.addEventListener('paste', handlePaste);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, [nodes, selectedNodeId, selectedNodeIds, editingNodeId, clipboard, selectNode, startEditing, createChildNode, createSiblingNode, deleteNode, toggleCollapse, toggleCollapseAll, openIconPicker, copyNodes, cutNodes, pasteNodes, pasteNodesFromText, pasteNodesFromExternal, undo, redo]);
 };

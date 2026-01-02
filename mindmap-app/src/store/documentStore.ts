@@ -11,6 +11,14 @@ interface HistoryEntry {
   rootId: string;
 }
 
+// Clipboard data for copy/cut/paste
+interface ClipboardData {
+  nodes: NodeMap;
+  rootIds: string[]; // Root nodes of the copied subtrees
+  mode: 'copy' | 'cut';
+  sourceNodeIds: string[]; // Original node IDs (for cut operation)
+}
+
 const MAX_HISTORY_SIZE = 50;
 
 // Generate unique ID
@@ -98,6 +106,9 @@ interface DocumentState {
   // Icon picker state
   isIconPickerOpen: boolean;
 
+  // Clipboard state
+  clipboard: ClipboardData | null;
+
   // History state for undo/redo
   history: HistoryEntry[];
   historyIndex: number;
@@ -114,6 +125,7 @@ interface DocumentState {
   createSiblingNode: (siblingId: string) => void;
   deleteNode: (nodeId: string) => void;
   toggleCollapse: (nodeId: string) => void;
+  toggleCollapseAll: (nodeId: string) => void;
   moveNode: (nodeId: string, newParentId: string, insertIndex: number) => void;
 
   // File actions
@@ -139,6 +151,17 @@ interface DocumentState {
   removeIcon: (nodeId: string, iconIndex: number) => void;
   cycleIcon: (nodeId: string, iconIndex: number) => void;
   clearIcons: (nodeId: string) => void;
+
+  // Clipboard actions
+  copyNodes: (nodeIds: string[]) => void;
+  cutNodes: (nodeIds: string[]) => void;
+  pasteNodes: (targetParentId: string) => void;
+  pasteNodesFromText: (targetParentId: string, text: string) => void;
+  pasteNodesFromExternal: (
+    targetParentId: string,
+    nodes: NodeMap,
+    rootIds: string[]
+  ) => void;
 
   // History actions
   undo: () => void;
@@ -194,6 +217,9 @@ export const useDocumentStore = create<DocumentState>()(
 
     // Icon picker state
     isIconPickerOpen: false,
+
+    // Clipboard state
+    clipboard: null,
 
     // History state
     history: [{ nodes: createInitialNodes(), rootId: 'root' }],
@@ -420,6 +446,38 @@ export const useDocumentStore = create<DocumentState>()(
         if (node.childIds.length > 0) {
           node.isCollapsed = !node.isCollapsed;
         }
+      }),
+
+    toggleCollapseAll: (nodeId) =>
+      set((state) => {
+        const node = state.nodes[nodeId];
+        if (!node) return;
+
+        // Only toggle if node has children
+        if (node.childIds.length === 0) return;
+
+        // Determine if we should collapse or expand all
+        // If the node itself is collapsed, expand all; otherwise, collapse all
+        const shouldExpand = node.isCollapsed;
+
+        // Helper to recursively set collapse state for a node and all its descendants
+        const setCollapseRecursive = (currentNodeId: string, collapse: boolean) => {
+          const currentNode = state.nodes[currentNodeId];
+          if (!currentNode) return;
+
+          // Only set collapse state if node has children
+          if (currentNode.childIds.length > 0) {
+            currentNode.isCollapsed = collapse;
+          }
+
+          // Process all children recursively
+          for (const childId of currentNode.childIds) {
+            setCollapseRecursive(childId, collapse);
+          }
+        };
+
+        // Apply to the selected node and all its descendants
+        setCollapseRecursive(nodeId, !shouldExpand);
       }),
 
     moveNode: (nodeId, newParentId, insertIndex) =>
@@ -710,6 +768,284 @@ export const useDocumentStore = create<DocumentState>()(
         saveToHistory(state);
 
         delete node.icons;
+        state.isDirty = true;
+      }),
+
+    // Clipboard actions
+    copyNodes: (nodeIds) =>
+      set((state) => {
+        if (nodeIds.length === 0) return;
+
+        // Filter out nodes that don't exist
+        const validNodeIds = nodeIds.filter((id) => state.nodes[id]);
+        if (validNodeIds.length === 0) return;
+
+        // Helper to collect a node and all its descendants
+        const collectNodeTree = (nodeId: string): NodeMap => {
+          const result: NodeMap = {};
+          const node = state.nodes[nodeId];
+          if (!node) return result;
+
+          // Clone the node
+          result[nodeId] = JSON.parse(JSON.stringify(node));
+
+          // Recursively collect children
+          for (const childId of node.childIds) {
+            const childNodes = collectNodeTree(childId);
+            Object.assign(result, childNodes);
+          }
+
+          return result;
+        };
+
+        // Collect all nodes from all selected subtrees
+        const clipboardNodes: NodeMap = {};
+        for (const nodeId of validNodeIds) {
+          const subtree = collectNodeTree(nodeId);
+          Object.assign(clipboardNodes, subtree);
+        }
+
+        // Set parent to null for root nodes of the clipboard (they will be re-parented on paste)
+        for (const nodeId of validNodeIds) {
+          if (clipboardNodes[nodeId]) {
+            clipboardNodes[nodeId].parentId = null;
+          }
+        }
+
+        state.clipboard = {
+          nodes: clipboardNodes,
+          rootIds: validNodeIds,
+          mode: 'copy',
+          sourceNodeIds: validNodeIds,
+        };
+      }),
+
+    cutNodes: (nodeIds) =>
+      set((state) => {
+        if (nodeIds.length === 0) return;
+
+        // Filter out nodes that don't exist and root node (can't cut root)
+        const validNodeIds = nodeIds.filter(
+          (id) => state.nodes[id] && state.nodes[id].parentId !== null
+        );
+        if (validNodeIds.length === 0) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        // Helper to collect a node and all its descendants
+        const collectNodeTree = (nodeId: string): NodeMap => {
+          const result: NodeMap = {};
+          const node = state.nodes[nodeId];
+          if (!node) return result;
+
+          // Clone the node
+          result[nodeId] = JSON.parse(JSON.stringify(node));
+
+          // Recursively collect children
+          for (const childId of node.childIds) {
+            const childNodes = collectNodeTree(childId);
+            Object.assign(result, childNodes);
+          }
+
+          return result;
+        };
+
+        // Collect all nodes from all selected subtrees
+        const clipboardNodes: NodeMap = {};
+        for (const nodeId of validNodeIds) {
+          const subtree = collectNodeTree(nodeId);
+          Object.assign(clipboardNodes, subtree);
+        }
+
+        // Set parent to null for root nodes of the clipboard
+        for (const nodeId of validNodeIds) {
+          if (clipboardNodes[nodeId]) {
+            clipboardNodes[nodeId].parentId = null;
+          }
+        }
+
+        // Helper to delete node and descendants
+        const deleteNodeAndDescendants = (id: string) => {
+          const n = state.nodes[id];
+          if (!n) return;
+
+          for (const childId of n.childIds) {
+            deleteNodeAndDescendants(childId);
+          }
+          delete state.nodes[id];
+        };
+
+        // Immediately remove the cut nodes from the tree
+        let newSelectedNodeId: string | null = null;
+        for (const nodeId of validNodeIds) {
+          const node = state.nodes[nodeId];
+          if (node && node.parentId) {
+            const parent = state.nodes[node.parentId];
+            if (parent) {
+              // Remember parent for selection after cut
+              if (!newSelectedNodeId) {
+                newSelectedNodeId = node.parentId;
+              }
+              // Remove from parent's childIds
+              const index = parent.childIds.indexOf(nodeId);
+              if (index !== -1) {
+                parent.childIds.splice(index, 1);
+              }
+            }
+          }
+          deleteNodeAndDescendants(nodeId);
+        }
+
+        state.clipboard = {
+          nodes: clipboardNodes,
+          rootIds: validNodeIds.map((id) => id), // Keep original IDs for reference
+          mode: 'cut',
+          sourceNodeIds: validNodeIds,
+        };
+
+        // Select the parent of the first cut node
+        state.selectedNodeId = newSelectedNodeId || state.rootId;
+        state.selectedNodeIds = [state.selectedNodeId];
+        state.isDirty = true;
+      }),
+
+    pasteNodes: (targetParentId) =>
+      set((state) => {
+        if (!state.clipboard || state.clipboard.rootIds.length === 0) return;
+
+        const targetParent = state.nodes[targetParentId];
+        if (!targetParent) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        // Deep clone clipboard data to avoid mutation issues with Immer
+        const clipboardNodes: NodeMap = JSON.parse(JSON.stringify(state.clipboard.nodes));
+        const clipboardRootIds: string[] = [...state.clipboard.rootIds];
+
+        // Generate new IDs for all nodes to avoid conflicts
+        const idMapping: Record<string, string> = {};
+        for (const oldId of Object.keys(clipboardNodes)) {
+          idMapping[oldId] = generateId();
+        }
+
+        // Create new nodes with updated IDs and references
+        const newRootIds: string[] = [];
+        for (const oldRootId of clipboardRootIds) {
+          const newRootId = idMapping[oldRootId];
+          newRootIds.push(newRootId);
+        }
+
+        // Add all nodes with new IDs
+        for (const [oldId, oldNode] of Object.entries(clipboardNodes)) {
+          const newId = idMapping[oldId];
+          const newNode: Node = {
+            ...oldNode,
+            id: newId,
+            parentId: oldNode.parentId ? idMapping[oldNode.parentId] : null,
+            // Map childIds, filtering out any that aren't in the clipboard
+            childIds: oldNode.childIds
+              .map((childId) => idMapping[childId])
+              .filter((id): id is string => id !== undefined),
+            position: { x: 0, y: 0, source: 'auto' as const }, // Reset position
+          };
+
+          // Set parent for root nodes of pasted subtrees
+          if (clipboardRootIds.includes(oldId)) {
+            newNode.parentId = targetParentId;
+          }
+
+          state.nodes[newId] = newNode;
+        }
+
+        // Add new root nodes to target parent's children
+        targetParent.childIds.push(...newRootIds);
+
+        // Expand target parent if collapsed
+        targetParent.isCollapsed = false;
+
+        // After cut-paste, convert to copy mode so subsequent pastes work
+        // (the original nodes were already removed during cut)
+        if (state.clipboard.mode === 'cut') {
+          state.clipboard = {
+            ...state.clipboard,
+            mode: 'copy',
+          };
+        }
+
+        // Select the first pasted node
+        if (newRootIds.length > 0) {
+          state.selectedNodeId = newRootIds[0];
+          state.selectedNodeIds = newRootIds;
+        }
+
+        state.isDirty = true;
+      }),
+
+    pasteNodesFromText: (targetParentId, text) =>
+      set((state) => {
+        const targetParent = state.nodes[targetParentId];
+        if (!targetParent) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        // Create new node with the text content
+        const newId = generateId();
+        const newNode: Node = {
+          id: newId,
+          parentId: targetParentId,
+          childIds: [],
+          content: { type: 'text', text: text.trim() },
+          position: { x: 0, y: 0, source: 'auto' },
+          isCollapsed: false,
+        };
+
+        state.nodes[newId] = newNode;
+        targetParent.childIds.push(newId);
+
+        // Expand parent if collapsed
+        targetParent.isCollapsed = false;
+
+        // Select the new node
+        state.selectedNodeId = newId;
+        state.selectedNodeIds = [newId];
+        state.isDirty = true;
+      }),
+
+    pasteNodesFromExternal: (targetParentId, externalNodes, rootIds) =>
+      set((state) => {
+        const targetParent = state.nodes[targetParentId];
+        if (!targetParent || rootIds.length === 0) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        // Add all nodes to state
+        for (const [nodeId, node] of Object.entries(externalNodes)) {
+          state.nodes[nodeId] = node;
+        }
+
+        // Update root nodes to have target parent
+        for (const rootId of rootIds) {
+          if (state.nodes[rootId]) {
+            state.nodes[rootId].parentId = targetParentId;
+          }
+        }
+
+        // Add root nodes to target parent's children
+        targetParent.childIds.push(...rootIds);
+
+        // Expand parent if collapsed
+        targetParent.isCollapsed = false;
+
+        // Select the first pasted node
+        if (rootIds.length > 0) {
+          state.selectedNodeId = rootIds[0];
+          state.selectedNodeIds = [...rootIds];
+        }
+
         state.isDirty = true;
       }),
 
