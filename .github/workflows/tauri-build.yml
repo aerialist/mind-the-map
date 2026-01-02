@@ -1,0 +1,44 @@
+name: Build Tauri bundles
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - windows-latest
+    defaults:
+      run:
+        working-directory: mindmap-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: mindmap-app/pnpm-lock.yaml
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build Tauri app
+        run: pnpm tauri build
+      - name: Upload bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-bundle-${{ matrix.os }}
+          path: mindmap-app/src-tauri/target/release/bundle
