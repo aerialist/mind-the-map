@@ -35,7 +35,7 @@ const createRootNode = (): Node => ({
   id: 'root',
   parentId: null,
   childIds: [],
-  content: { type: 'text', text: '中心トピック' },
+  content: { type: 'text', text: 'My Big Idea 💡' },
   position: { x: 0, y: 0, source: 'auto' },
   isCollapsed: false,
 });
@@ -47,7 +47,7 @@ const createInitialNodes = (): NodeMap => {
     id: 'child-1',
     parentId: 'root',
     childIds: ['grandchild-1'],
-    content: { type: 'text', text: 'アイデア 1' },
+    content: { type: 'text', text: 'What if we...' },
     position: { x: 0, y: 0, source: 'auto' },
     isCollapsed: false,
   };
@@ -55,7 +55,7 @@ const createInitialNodes = (): NodeMap => {
     id: 'child-2',
     parentId: 'root',
     childIds: [],
-    content: { type: 'text', text: 'アイデア 2' },
+    content: { type: 'text', text: 'Mind = Blown 🤯' },
     position: { x: 0, y: 0, source: 'auto' },
     isCollapsed: false,
   };
@@ -63,7 +63,7 @@ const createInitialNodes = (): NodeMap => {
     id: 'grandchild-1',
     parentId: 'child-1',
     childIds: [],
-    content: { type: 'text', text: 'サブアイデア 1-1' },
+    content: { type: 'text', text: 'This could be huge!' },
     position: { x: 0, y: 0, source: 'auto' },
     isCollapsed: false,
   };
