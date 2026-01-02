@@ -5,6 +5,7 @@ import {
   saveDocumentAs,
   openDocument,
 } from '../services/tauri/fileSystem';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 
 export const useFileOperations = () => {
@@ -99,13 +100,32 @@ export const useFileOperations = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleSave, handleSaveAs, handleOpen, handleNew]);
 
-  // Listen for Tauri menu events
+  // Listen for Tauri menu events - filter by window label in payload
   useEffect(() => {
+    const myLabel = getCurrentWindow().label;
+
+    // Use global listen but filter by target label in payload
     const listeners = [
-      listen('menu-new', () => handleNew()),
-      listen('menu-open', () => handleOpen()),
-      listen('menu-save', () => handleSave()),
-      listen('menu-save-as', () => handleSaveAs()),
+      listen<string>('menu-new', (event) => {
+        if (event.payload === myLabel) {
+          handleNew();
+        }
+      }),
+      listen<string>('menu-open', (event) => {
+        if (event.payload === myLabel) {
+          handleOpen();
+        }
+      }),
+      listen<string>('menu-save', (event) => {
+        if (event.payload === myLabel) {
+          handleSave();
+        }
+      }),
+      listen<string>('menu-save-as', (event) => {
+        if (event.payload === myLabel) {
+          handleSaveAs();
+        }
+      }),
     ];
 
     return () => {

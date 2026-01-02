@@ -2111,6 +2111,7 @@ dependencies = [
  "tauri-plugin-clipboard-manager",
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
+ "uuid",
 ]
 
 [[package]]

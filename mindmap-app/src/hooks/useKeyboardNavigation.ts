@@ -14,6 +14,7 @@ import {
   nodesToPlainText,
   nodesToMiroFormat,
 } from '../core/clipboard';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 
 export const useKeyboardNavigation = () => {
@@ -450,51 +451,54 @@ export const useKeyboardNavigation = () => {
   }, [nodes, selectedNodeIds]);
 
   useEffect(() => {
-    // Listen for menu events from Tauri
+    // Listen for menu events from Tauri - filter by window label in payload
+    const myLabel = getCurrentWindow().label;
     const listeners = [
-      listen('menu-copy-for-miro', () => copyForMiro()),
-      listen('menu-create-child', () => {
-        if (selectedNodeId && !editingNodeId) {
+      listen<string>('menu-copy-for-miro', (event) => {
+        if (event.payload === myLabel) copyForMiro();
+      }),
+      listen<string>('menu-create-child', (event) => {
+        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
           createChildNode(selectedNodeId);
         }
       }),
-      listen('menu-create-sibling', () => {
-        if (selectedNodeId && !editingNodeId) {
+      listen<string>('menu-create-sibling', (event) => {
+        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
           createSiblingNode(selectedNodeId);
         }
       }),
-      listen('menu-create-sibling-above', () => {
-        if (selectedNodeId && !editingNodeId) {
+      listen<string>('menu-create-sibling-above', (event) => {
+        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
           createSiblingNodeAbove(selectedNodeId);
         }
       }),
-      listen('menu-edit-node', () => {
-        if (selectedNodeId && !editingNodeId) {
+      listen<string>('menu-edit-node', (event) => {
+        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
           startEditing(selectedNodeId);
         }
       }),
-      listen('menu-delete-node', () => {
-        if (selectedNodeId && !editingNodeId) {
+      listen<string>('menu-delete-node', (event) => {
+        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
           deleteNode(selectedNodeId);
         }
       }),
-      listen('menu-toggle-collapse', () => {
-        if (selectedNodeId && !editingNodeId) {
+      listen<string>('menu-toggle-collapse', (event) => {
+        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
           toggleCollapse(selectedNodeId);
         }
       }),
-      listen('menu-toggle-collapse-all', () => {
-        if (selectedNodeId && !editingNodeId) {
+      listen<string>('menu-toggle-collapse-all', (event) => {
+        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
           toggleCollapseAll(selectedNodeId);
         }
       }),
-      listen('menu-open-icon-picker', () => {
-        if (selectedNodeId && !editingNodeId) {
+      listen<string>('menu-open-icon-picker', (event) => {
+        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
           openIconPicker();
         }
       }),
-      listen('menu-add-link', () => {
-        if (selectedNodeId && !editingNodeId) {
+      listen<string>('menu-add-link', (event) => {
+        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
           openLinkDialog();
         }
       }),

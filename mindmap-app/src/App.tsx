@@ -87,12 +87,19 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setViewMode, isSearchOpen, isHelpOpen, openSearch, toggleHelp, editingNodeId, isLinkDialogOpen, openLinkDialog]);
 
-  // Listen for Tauri menu events (View menu)
+  // Listen for Tauri menu events (View menu) - filter by window label in payload
   useEffect(() => {
+    const myLabel = getCurrentWindow().label;
     const listeners = [
-      listen('menu-view-mindmap', () => setViewMode('mindmap')),
-      listen('menu-view-outline', () => setViewMode('outline')),
-      listen('menu-find', () => openSearch()),
+      listen<string>('menu-view-mindmap', (event) => {
+        if (event.payload === myLabel) setViewMode('mindmap');
+      }),
+      listen<string>('menu-view-outline', (event) => {
+        if (event.payload === myLabel) setViewMode('outline');
+      }),
+      listen<string>('menu-find', (event) => {
+        if (event.payload === myLabel) openSearch();
+      }),
     ];
 
     return () => {
