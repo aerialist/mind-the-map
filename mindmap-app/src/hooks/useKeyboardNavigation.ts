@@ -30,6 +30,7 @@ export const useKeyboardNavigation = () => {
   const startEditing = useDocumentStore((state) => state.startEditing);
   const createChildNode = useDocumentStore((state) => state.createChildNode);
   const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
+  const createSiblingNodeAbove = useDocumentStore((state) => state.createSiblingNodeAbove);
   const deleteNode = useDocumentStore((state) => state.deleteNode);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
   const toggleCollapseAll = useDocumentStore((state) => state.toggleCollapseAll);
@@ -271,8 +272,13 @@ export const useKeyboardNavigation = () => {
 
         case 'Enter':
           e.preventDefault();
-          // Create a sibling node
-          createSiblingNode(selectedNodeId);
+          if (e.shiftKey) {
+            // Create a sibling node above
+            createSiblingNodeAbove(selectedNodeId);
+          } else {
+            // Create a sibling node below
+            createSiblingNode(selectedNodeId);
+          }
           break;
 
         case 'Tab':
@@ -397,7 +403,7 @@ export const useKeyboardNavigation = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('paste', handlePaste);
     };
-  }, [nodes, selectedNodeId, selectedNodeIds, editingNodeId, clipboard, selectNode, startEditing, createChildNode, createSiblingNode, deleteNode, toggleCollapse, toggleCollapseAll, openIconPicker, copyNodes, cutNodes, pasteNodes, pasteNodesFromText, pasteNodesFromExternal, undo, redo]);
+  }, [nodes, selectedNodeId, selectedNodeIds, editingNodeId, clipboard, selectNode, startEditing, createChildNode, createSiblingNode, createSiblingNodeAbove, deleteNode, toggleCollapse, toggleCollapseAll, openIconPicker, copyNodes, cutNodes, pasteNodes, pasteNodesFromText, pasteNodesFromExternal, undo, redo]);
 
   // Handle "Copy for Miro" menu event from Tauri
   const copyForMiro = useCallback(() => {
@@ -456,6 +462,11 @@ export const useKeyboardNavigation = () => {
           createSiblingNode(selectedNodeId);
         }
       }),
+      listen('menu-create-sibling-above', () => {
+        if (selectedNodeId && !editingNodeId) {
+          createSiblingNodeAbove(selectedNodeId);
+        }
+      }),
       listen('menu-edit-node', () => {
         if (selectedNodeId && !editingNodeId) {
           startEditing(selectedNodeId);
@@ -486,5 +497,5 @@ export const useKeyboardNavigation = () => {
     return () => {
       listeners.forEach((unlisten) => unlisten.then((fn) => fn()));
     };
-  }, [copyForMiro, selectedNodeId, editingNodeId, createChildNode, createSiblingNode, startEditing, deleteNode, toggleCollapse, toggleCollapseAll, openIconPicker]);
+  }, [copyForMiro, selectedNodeId, editingNodeId, createChildNode, createSiblingNode, createSiblingNodeAbove, startEditing, deleteNode, toggleCollapse, toggleCollapseAll, openIconPicker]);
 };

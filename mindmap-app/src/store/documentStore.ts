@@ -123,6 +123,7 @@ interface DocumentState {
   updateNodeText: (nodeId: string, text: string) => void;
   createChildNode: (parentId: string) => void;
   createSiblingNode: (siblingId: string) => void;
+  createSiblingNodeAbove: (siblingId: string) => void;
   deleteNode: (nodeId: string) => void;
   toggleCollapse: (nodeId: string) => void;
   toggleCollapseAll: (nodeId: string) => void;
@@ -387,6 +388,45 @@ export const useDocumentStore = create<DocumentState>()(
         // Insert after the sibling in parent's children
         const siblingIndex = parent.childIds.indexOf(siblingId);
         parent.childIds.splice(siblingIndex + 1, 0, newId);
+
+        // Select and start editing the new node
+        state.selectedNodeId = newId;
+        state.selectedNodeIds = [newId];
+        state.editingNodeId = newId;
+        state.isDirty = true;
+      }),
+
+    createSiblingNodeAbove: (siblingId) =>
+      set((state) => {
+        const sibling = state.nodes[siblingId];
+        if (!sibling) return;
+
+        // Can't create sibling for root node
+        if (!sibling.parentId) return;
+
+        const parent = state.nodes[sibling.parentId];
+        if (!parent) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        // Create new node
+        const newId = generateId();
+        const newNode: Node = {
+          id: newId,
+          parentId: sibling.parentId,
+          childIds: [],
+          content: { type: 'text', text: '' },
+          position: { x: 0, y: 0, source: 'auto' },
+          isCollapsed: false,
+        };
+
+        // Add to nodes
+        state.nodes[newId] = newNode;
+
+        // Insert before the sibling in parent's children
+        const siblingIndex = parent.childIds.indexOf(siblingId);
+        parent.childIds.splice(siblingIndex, 0, newId);
 
         // Select and start editing the new node
         state.selectedNodeId = newId;

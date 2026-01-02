@@ -195,6 +195,7 @@ function MindMapCanvas() {
   const updateNodeText = useDocumentStore((state) => state.updateNodeText);
   const createChildNode = useDocumentStore((state) => state.createChildNode);
   const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
+  const createSiblingNodeAbove = useDocumentStore((state) => state.createSiblingNodeAbove);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
   const stopEditing = useDocumentStore((state) => state.stopEditing);
   const moveNode = useDocumentStore((state) => state.moveNode);
@@ -551,7 +552,11 @@ function MindMapCanvas() {
       // Create sibling if not root
       const node = nodes[editing.nodeId];
       if (node?.parentId) {
-        createSiblingNode(editing.nodeId);
+        if (e.shiftKey) {
+          createSiblingNodeAbove(editing.nodeId);
+        } else {
+          createSiblingNode(editing.nodeId);
+        }
         // After creating sibling, start editing the new node
         // The new node will be selected, we need to wait for the state update
         setEditing(null);
@@ -593,7 +598,7 @@ function MindMapCanvas() {
         stopEditing();
       }
     }
-  }, [editing, nodes, updateNodeText, createSiblingNode, createChildNode, startEditingNode, stopEditing]);
+  }, [editing, nodes, updateNodeText, createSiblingNode, createSiblingNodeAbove, createChildNode, startEditingNode, stopEditing]);
 
   // Handle IME composition events
   const handleCompositionStart = useCallback(() => {
@@ -1117,7 +1122,11 @@ function MindMapCanvas() {
       // Create sibling node (only if not root)
       const node = nodes[selectedNodeId];
       if (node?.parentId) {
-        createSiblingNode(selectedNodeId);
+        if (e.shiftKey) {
+          createSiblingNodeAbove(selectedNodeId);
+        } else {
+          createSiblingNode(selectedNodeId);
+        }
         // Start editing the new node after state update
         setTimeout(() => {
           const newSelectedId = useDocumentStore.getState().selectedNodeId;
@@ -1137,7 +1146,7 @@ function MindMapCanvas() {
       // Open icon picker (uses currently selected node)
       openIconPicker();
     }
-  }, [editing, selectedNodeId, nodes, createChildNode, createSiblingNode, startEditingNode, openIconPicker]);
+  }, [editing, selectedNodeId, nodes, createChildNode, createSiblingNode, createSiblingNodeAbove, startEditingNode, openIconPicker]);
 
   // Focus the wrapper when canvas is clicked (to receive keyboard events)
   const handleWrapperClick = useCallback(() => {

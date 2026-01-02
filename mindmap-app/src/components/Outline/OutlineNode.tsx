@@ -21,6 +21,7 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   const stopEditing = useDocumentStore((state) => state.stopEditing);
   const updateNodeText = useDocumentStore((state) => state.updateNodeText);
   const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
+  const createSiblingNodeAbove = useDocumentStore((state) => state.createSiblingNodeAbove);
   const createChildNode = useDocumentStore((state) => state.createChildNode);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
   const openIconPicker = useDocumentStore((state) => state.openIconPicker);
@@ -109,7 +110,11 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
       updateNodeText(nodeId, editText);
       // For root node, just stop editing (can't create sibling of root)
       if (node?.parentId) {
-        createSiblingNode(nodeId);
+        if (e.shiftKey) {
+          createSiblingNodeAbove(nodeId);
+        } else {
+          createSiblingNode(nodeId);
+        }
       } else {
         stopEditing();
       }

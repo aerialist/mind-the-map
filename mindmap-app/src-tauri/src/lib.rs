@@ -105,6 +105,9 @@ pub fn run() {
             let create_sibling = MenuItemBuilder::with_id("create_sibling", "Create Sibling")
                 .accelerator("Enter")
                 .build(app)?;
+            let create_sibling_above = MenuItemBuilder::with_id("create_sibling_above", "Create Sibling Above")
+                .accelerator("Shift+Enter")
+                .build(app)?;
             let edit_node = MenuItemBuilder::with_id("edit_node", "Edit")
                 .accelerator("F2")
                 .build(app)?;
@@ -124,6 +127,7 @@ pub fn run() {
             let node_menu = SubmenuBuilder::new(app, "Node")
                 .item(&create_child)
                 .item(&create_sibling)
+                .item(&create_sibling_above)
                 .separator()
                 .item(&edit_node)
                 .item(&delete_node)
@@ -165,6 +169,7 @@ pub fn run() {
                 "find" => Some("menu-find"),
                 "create_child" => Some("menu-create-child"),
                 "create_sibling" => Some("menu-create-sibling"),
+                "create_sibling_above" => Some("menu-create-sibling-above"),
                 "edit_node" => Some("menu-edit-node"),
                 "delete_node" => Some("menu-delete-node"),
                 "toggle_collapse" => Some("menu-toggle-collapse"),
