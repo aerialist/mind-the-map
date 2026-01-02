@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useDocumentStore } from '../store';
 import { saveDocument } from '../services/tauri/fileSystem';
 
-const AUTOSAVE_DELAY_MS = 30000; // 30 seconds
+const AUTOSAVE_DELAY_MS = 1000; // 1 second
 
 export const useAutoSave = () => {
   const nodes = useDocumentStore((state) => state.nodes);
