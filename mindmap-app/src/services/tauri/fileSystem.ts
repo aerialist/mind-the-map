@@ -107,6 +107,21 @@ export const openDocument = async (): Promise<OpenResult> => {
   }
 };
 
+// Open document by path (no dialog)
+export const openDocumentByPath = async (path: string): Promise<OpenResult> => {
+  try {
+    const content = await invoke<string>('read_document', { path });
+    const { nodes, rootId, title } = deserialize(content);
+
+    return { success: true, nodes, rootId, title, path };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
 // Determine link type
 export const getLinkType = (link: string): 'url' | 'mindmap' | 'file' => {
   if (!link) return 'url';

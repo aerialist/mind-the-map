@@ -9,7 +9,7 @@ import { IconPicker } from './components/IconPicker';
 import { HelpDialog } from './components/Help';
 import { LinkDialog } from './components/LinkDialog';
 import { useDocumentStore } from './store';
-import { useAutoSave } from './hooks';
+import { useAutoSave, useInitialFileLoad } from './hooks';
 
 const getFileNameFromPath = (filePath: string): string => {
   const normalized = filePath.replace(/\\/g, '/');
@@ -32,6 +32,9 @@ function App() {
 
   // Enable autosave (30 seconds after last change, only if file has been saved before)
   useAutoSave();
+
+  // Load file from URL query parameter (for opening .mindmap links in new window)
+  useInitialFileLoad();
 
   // Sync native window title with current file
   useEffect(() => {
