@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mind the Map - A Fast, Keyboard-Driven Mind Mapping App</title>
+  <meta name="description" content="A lightweight, keyboard-first mind mapping application built with Tauri. Create, organize, and export your ideas with speed.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-bg: #ffffff;
+      --color-bg-alt: #f8fafc;
+      --color-text: #1e293b;
+      --color-text-muted: #64748b;
+      --color-primary: #3b82f6;
+      --color-primary-dark: #2563eb;
+      --color-border: #e2e8f0;
+      --color-code-bg: #f1f5f9;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-bg: #0f172a;
+        --color-bg-alt: #1e293b;
+        --color-text: #f1f5f9;
+        --color-text-muted: #94a3b8;
+        --color-primary: #60a5fa;
+        --color-primary-dark: #3b82f6;
+        --color-border: #334155;
+        --color-code-bg: #1e293b;
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header */
+    header {
+      padding: 20px 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    header .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--color-text);
+      text-decoration: none;
+    }
+
+    nav a {
+      color: var(--color-text-muted);
+      text-decoration: none;
+      margin-left: 32px;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    nav a:hover {
+      color: var(--color-primary);
+    }
+
+    /* Hero */
+    .hero {
+      padding: 80px 0;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .hero .subtitle {
+      font-size: 1.25rem;
+      color: var(--color-text-muted);
+      max-width: 600px;
+      margin: 0 auto 32px;
+    }
+
+    .hero .cta {
+      display: inline-flex;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--color-primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--color-primary-dark);
+    }
+
+    .btn-secondary {
+      background: var(--color-bg-alt);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--color-primary);
+    }
+
+    /* Features */
+    .features {
+      padding: 80px 0;
+      background: var(--color-bg-alt);
+    }
+
+    .features h2 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 48px;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 32px;
+    }
+
+    .feature-card {
+      background: var(--color-bg);
+      padding: 32px;
+      border-radius: 12px;
+      border: 1px solid var(--color-border);
+    }
+
+    .feature-card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      color: var(--color-text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* Guide Section */
+    .guide {
+      padding: 80px 0;
+    }
+
+    .guide h2 {
+      font-size: 2rem;
+      margin-bottom: 48px;
+      text-align: center;
+    }
+
+    .guide-section {
+      margin-bottom: 64px;
+    }
+
+    .guide-section h3 {
+      font-size: 1.4rem;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--color-primary);
+      display: inline-block;
+    }
+
+    .guide-section p {
+      color: var(--color-text-muted);
+      margin-bottom: 16px;
+    }
+
+    .shortcut-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+    }
+
+    .shortcut-table th,
+    .shortcut-table td {
+      text-align: left;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .shortcut-table th {
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-muted);
+    }
+
+    kbd {
+      display: inline-block;
+      padding: 4px 8px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 0.85rem;
+      background: var(--color-code-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 4px;
+      box-shadow: 0 1px 0 var(--color-border);
+    }
+
+    .tip-box {
+      background: var(--color-bg-alt);
+      border-left: 4px solid var(--color-primary);
+      padding: 16px 20px;
+      margin: 16px 0;
+      border-radius: 0 8px 8px 0;
+    }
+
+    .tip-box strong {
+      color: var(--color-primary);
+    }
+
+    .state-cycle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+
+    .state-box {
+      background: var(--color-bg-alt);
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+      font-size: 0.9rem;
+    }
+
+    .state-arrow {
+      color: var(--color-text-muted);
+      font-size: 1.2rem;
+    }
+
+    /* Footer */
+    footer {
+      padding: 40px 0;
+      border-top: 1px solid var(--color-border);
+      text-align: center;
+      color: var(--color-text-muted);
+      font-size: 0.9rem;
+    }
+
+    footer a {
+      color: var(--color-primary);
+      text-decoration: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 2rem;
+      }
+
+      .hero .subtitle {
+        font-size: 1rem;
+      }
+
+      nav {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="#" class="logo">🗺️ Mind the Map</a>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="#guide">Guide</a>
+        <a href="#shortcuts">Shortcuts</a>
+        <a href="https://github.com/aerialist/mind-the-map" target="_blank">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <h1>Mind the Map</h1>
+      <p class="subtitle">
+        A fast, keyboard-driven mind mapping app. Create and organize your ideas without leaving the keyboard.
+      </p>
+      <div class="cta">
+        <a href="https://github.com/aerialist/mind-the-map/releases" class="btn btn-primary">Download</a>
+        <a href="#guide" class="btn btn-secondary">Learn More</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="container">
+      <h2>Why Mind the Map?</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>⌨️ Keyboard First</h3>
+          <p>Navigate, create, and edit nodes without touching your mouse. Every action has a keyboard shortcut.</p>
+        </div>
+        <div class="feature-card">
+          <h3>🚀 Lightning Fast</h3>
+          <p>Built with Tauri and React for native performance. Opens instantly and handles large maps smoothly.</p>
+        </div>
+        <div class="feature-card">
+          <h3>📋 Smart Clipboard</h3>
+          <p>Paste indented text or HTML lists and they become structured nodes. Export to other apps like Miro.</p>
+        </div>
+        <div class="feature-card">
+          <h3>🎨 Two Views</h3>
+          <p>Switch between mind map visualization and outline view. Use whatever fits your current task.</p>
+        </div>
+        <div class="feature-card">
+          <h3>🏷️ Icon Markers</h3>
+          <p>Mark nodes with icons for status, priority, or categories. Quick cycle through icon variants.</p>
+        </div>
+        <div class="feature-card">
+          <h3>💾 Local Files</h3>
+          <p>Your data stays on your machine in simple JSON files. No cloud, no account, no tracking.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="guide" id="guide">
+    <div class="container">
+      <h2>User Guide</h2>
+
+      <div class="guide-section" id="shortcuts">
+        <h3>Keyboard Shortcuts</h3>
+        <p>Mind the Map is designed to keep your hands on the keyboard. Here are the essential shortcuts:</p>
+
+        <h4 style="margin-top: 24px; margin-bottom: 12px;">Navigation</h4>
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Move between sibling nodes</td></tr>
+          <tr><td><kbd>←</kbd></td><td>Go to parent node</td></tr>
+          <tr><td><kbd>→</kbd></td><td>Go to first child node</td></tr>
+          <tr><td><kbd>⌘</kbd>+<kbd>F</kbd></td><td>Search nodes</td></tr>
+        </table>
+
+        <h4 style="margin-top: 24px; margin-bottom: 12px;">Creating & Editing Nodes</h4>
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>Enter</kbd></td><td>Create sibling node below</td></tr>
+          <tr><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>Create sibling node above</td></tr>
+          <tr><td><kbd>Tab</kbd></td><td>Create child node</td></tr>
+          <tr><td><kbd>E</kbd> or <kbd>F2</kbd></td><td>Edit selected node</td></tr>
+          <tr><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td><td>Delete node</td></tr>
+          <tr><td><kbd>I</kbd></td><td>Open icon picker</td></tr>
+        </table>
+
+        <h4 style="margin-top: 24px; margin-bottom: 12px;">File & View</h4>
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>⌘</kbd>+<kbd>N</kbd></td><td>New document</td></tr>
+          <tr><td><kbd>⌘</kbd>+<kbd>O</kbd></td><td>Open document</td></tr>
+          <tr><td><kbd>⌘</kbd>+<kbd>S</kbd></td><td>Save</td></tr>
+          <tr><td><kbd>⌘</kbd>+<kbd>1</kbd></td><td>Mind map view</td></tr>
+          <tr><td><kbd>⌘</kbd>+<kbd>2</kbd></td><td>Outline view</td></tr>
+          <tr><td><kbd>⌘</kbd>+<kbd>Z</kbd></td><td>Undo</td></tr>
+          <tr><td><kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>Redo</td></tr>
+        </table>
+      </div>
+
+      <div class="guide-section" id="collapse">
+        <h3>Collapse & Expand</h3>
+        <p>Manage complexity by collapsing nodes you don't need to see right now.</p>
+
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>Space</kbd></td><td>Toggle collapse for selected node</td></tr>
+          <tr><td><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd></td><td>Cycle through collapse states for all descendants</td></tr>
+        </table>
+
+        <h4 style="margin-top: 24px; margin-bottom: 12px;">Three-State Collapse Cycle</h4>
+        <p>When you press <kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd>, the node's children cycle through three states:</p>
+
+        <div class="state-cycle">
+          <div class="state-box">
+            <strong>1. Collapsed</strong><br>
+            All children hidden
+          </div>
+          <span class="state-arrow">→</span>
+          <div class="state-box">
+            <strong>2. Expanded (except completed)</strong><br>
+            Shows all except nodes marked ✓
+          </div>
+          <span class="state-arrow">→</span>
+          <div class="state-box">
+            <strong>3. Fully Expanded</strong><br>
+            Everything visible
+          </div>
+          <span class="state-arrow">→</span>
+          <div class="state-box" style="opacity: 0.6;">Back to 1...</div>
+        </div>
+
+        <div class="tip-box">
+          <strong>💡 Tip:</strong> The "Expanded except completed" state is great for focusing on what's left to do. Mark finished items with a ✓ icon, then use the cycle to hide them.
+        </div>
+      </div>
+
+      <div class="guide-section" id="clipboard">
+        <h3>Clipboard & Export</h3>
+        <p>Mind the Map handles copy/paste intelligently, preserving structure when possible.</p>
+
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>⌘</kbd>+<kbd>C</kbd></td><td>Copy selected nodes</td></tr>
+          <tr><td><kbd>⌘</kbd>+<kbd>X</kbd></td><td>Cut selected nodes</td></tr>
+          <tr><td><kbd>⌘</kbd>+<kbd>V</kbd></td><td>Paste as children of selected node</td></tr>
+          <tr><td><kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd></td><td>Copy for Miro</td></tr>
+        </table>
+
+        <h4 style="margin-top: 24px; margin-bottom: 12px;">Pasting from External Apps</h4>
+        <p>When you paste text from other apps, Mind the Map tries to preserve structure:</p>
+        <ul style="margin-left: 24px; color: var(--color-text-muted);">
+          <li><strong>Indented text</strong> — Indentation levels become parent/child relationships</li>
+          <li><strong>HTML lists</strong> — Copied lists from web pages maintain their hierarchy</li>
+          <li><strong>Plain text</strong> — Each line becomes a separate sibling node</li>
+        </ul>
+
+        <h4 style="margin-top: 24px; margin-bottom: 12px;" id="miro">Copy for Miro</h4>
+        <p>Use <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> to copy nodes in a format optimized for Miro's mind map import.</p>
+
+        <div class="tip-box">
+          <strong>How to use with Miro:</strong>
+          <ol style="margin-left: 20px; margin-top: 8px; color: var(--color-text-muted);">
+            <li>Select the nodes you want to export</li>
+            <li>Press <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> to copy</li>
+            <li>In Miro, use the Mind Map tool and paste</li>
+            <li>Choose "Table" format in Miro's paste dialog</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="guide-section" id="icons">
+        <h3>Icons & Markers</h3>
+        <p>Add visual markers to nodes for status tracking, priorities, or categorization.</p>
+
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>I</kbd></td><td>Open icon picker</td></tr>
+          <tr><td>Click existing icon</td><td>Cycle to next variant in category</td></tr>
+        </table>
+
+        <h4 style="margin-top: 24px; margin-bottom: 12px;">Icon Categories</h4>
+        <ul style="margin-left: 24px; color: var(--color-text-muted);">
+          <li><strong>Progress</strong> — Empty, half, complete checkmarks</li>
+          <li><strong>Priority</strong> — Numbered priorities (1-4)</li>
+          <li><strong>Flags</strong> — Different colored flags</li>
+          <li><strong>Symbols</strong> — Star, heart, warning, question, etc.</li>
+        </ul>
+
+        <div class="tip-box">
+          <strong>💡 Tip:</strong> Click on an existing icon to cycle through variants. For example, clicking a "Priority 1" icon changes it to "Priority 2".
+        </div>
+      </div>
+
+      <div class="guide-section" id="selection">
+        <h3>Multi-Selection</h3>
+        <p>Select multiple nodes to copy, cut, or delete them together.</p>
+
+        <table class="shortcut-table">
+          <tr><th>Action</th><th>Result</th></tr>
+          <tr><td><kbd>⌘</kbd>+Click</td><td>Toggle node in selection (add or remove)</td></tr>
+          <tr><td><kbd>Shift</kbd>+Click</td><td>Select range from last selected to clicked node</td></tr>
+          <tr><td><kbd>Escape</kbd></td><td>Clear selection</td></tr>
+        </table>
+      </div>
+
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p>
+        Mind the Map is open source. 
+        <a href="https://github.com/aerialist/mind-the-map" target="_blank">View on GitHub</a>
+      </p>
+    </div>
+  </footer>
+</body>
+</html>

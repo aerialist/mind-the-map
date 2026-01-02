@@ -107,6 +107,9 @@ interface DocumentState {
   searchResults: SearchResult[];
   searchSelectedIndex: number;
 
+  // Help dialog state
+  isHelpOpen: boolean;
+
   // Icon picker state
   isIconPickerOpen: boolean;
 
@@ -151,6 +154,11 @@ interface DocumentState {
   setSearchQuery: (query: string) => void;
   selectSearchResult: (index: number) => void;
   navigateToSearchResult: () => void;
+
+  // Help actions
+  openHelp: () => void;
+  closeHelp: () => void;
+  toggleHelp: () => void;
 
   // Icon actions
   openIconPicker: () => void;
@@ -222,6 +230,9 @@ export const useDocumentStore = create<DocumentState>()(
     searchQuery: '',
     searchResults: [],
     searchSelectedIndex: 0,
+
+    // Help dialog state
+    isHelpOpen: false,
 
     // Icon picker state
     isIconPickerOpen: false,
@@ -670,6 +681,26 @@ export const useDocumentStore = create<DocumentState>()(
         state.searchQuery = '';
         state.searchResults = [];
         state.searchSelectedIndex = 0;
+      }),
+
+    // Help actions
+    openHelp: () =>
+      set((state) => {
+        state.isHelpOpen = true;
+        state.editingNodeId = null;
+      }),
+
+    closeHelp: () =>
+      set((state) => {
+        state.isHelpOpen = false;
+      }),
+
+    toggleHelp: () =>
+      set((state) => {
+        state.isHelpOpen = !state.isHelpOpen;
+        if (state.isHelpOpen) {
+          state.editingNodeId = null;
+        }
       }),
 
     setSearchQuery: (query) =>

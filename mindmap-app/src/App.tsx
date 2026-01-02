@@ -6,6 +6,7 @@ import { OutlineView } from './components/Outline';
 import { MindMapView } from './components/MindMap';
 import { SearchDialog } from './components/Search';
 import { IconPicker } from './components/IconPicker';
+import { HelpDialog } from './components/Help';
 import { useDocumentStore } from './store';
 import { useAutoSave } from './hooks';
 
@@ -20,6 +21,9 @@ function App() {
   const setViewMode = useDocumentStore((state) => state.setViewMode);
   const isSearchOpen = useDocumentStore((state) => state.isSearchOpen);
   const openSearch = useDocumentStore((state) => state.openSearch);
+  const isHelpOpen = useDocumentStore((state) => state.isHelpOpen);
+  const toggleHelp = useDocumentStore((state) => state.toggleHelp);
+  const editingNodeId = useDocumentStore((state) => state.editingNodeId);
   const currentFilePath = useDocumentStore((state) => state.currentFilePath);
   const isDirty = useDocumentStore((state) => state.isDirty);
 
@@ -41,10 +45,24 @@ function App() {
       });
   }, [currentFilePath, isDirty]);
 
-  // Handle global keyboard shortcuts (Ctrl+1, Ctrl+2, Ctrl+F)
+  // Handle global keyboard shortcuts (Ctrl+1, Ctrl+2, Ctrl+F, ?, Ctrl+/)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMod = e.ctrlKey || e.metaKey;
+
+      // Help shortcut: ? key (when not editing) or Cmd+/
+      if (e.key === '?' && !editingNodeId && !isSearchOpen) {
+        e.preventDefault();
+        toggleHelp();
+        return;
+      }
+
+      if (isMod && e.key === '/') {
+        e.preventDefault();
+        toggleHelp();
+        return;
+      }
+
       if (!isMod) return;
 
       if (e.key === '1') {
@@ -61,7 +79,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setViewMode, isSearchOpen, openSearch]);
+  }, [setViewMode, isSearchOpen, isHelpOpen, openSearch, toggleHelp, editingNodeId]);
 
   // Listen for Tauri menu events (View menu)
   useEffect(() => {
@@ -82,27 +100,41 @@ function App() {
       <header className="h-12 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700">
         <h1 className="text-lg font-semibold">Mind the Map</h1>
 
-        {/* Mode toggle */}
-        <div className="flex gap-1">
+        {/* Mode toggle and help */}
+        <div className="flex items-center gap-3">
+          {/* Mode toggle */}
+          <div className="flex gap-1">
+            <button
+              onClick={() => setViewMode('mindmap')}
+              className={`px-3 py-1 text-sm rounded ${
+                viewMode === 'mindmap'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              Map
+            </button>
+            <button
+              onClick={() => setViewMode('outline')}
+              className={`px-3 py-1 text-sm rounded ${
+                viewMode === 'outline'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              Outline
+            </button>
+          </div>
+
+          {/* Help button */}
           <button
-            onClick={() => setViewMode('mindmap')}
-            className={`px-3 py-1 text-sm rounded ${
-              viewMode === 'mindmap'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-            }`}
+            onClick={toggleHelp}
+            className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            title="Keyboard shortcuts (?)"
           >
-            Map
-          </button>
-          <button
-            onClick={() => setViewMode('outline')}
-            className={`px-3 py-1 text-sm rounded ${
-              viewMode === 'outline'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-            }`}
-          >
-            Outline
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </button>
         </div>
       </header>
@@ -117,6 +149,9 @@ function App() {
 
       {/* Icon picker dialog */}
       <IconPicker />
+
+      {/* Help dialog */}
+      <HelpDialog />
     </div>
   );
 }
