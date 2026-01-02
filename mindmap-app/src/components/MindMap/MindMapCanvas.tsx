@@ -410,11 +410,19 @@ function MindMapCanvas() {
       let dragStart = { x: 0, y: 0 };
       let stageStart = { x: 0, y: 0 };
 
+      // Prevent the native context menu so right-drag can be used for panning.
+      app.canvas.addEventListener('contextmenu', (e: MouseEvent) => {
+        e.preventDefault();
+      });
+
       app.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
-        // Only start panning if not dragging a node and using left or middle button
-        if ((e.button === 0 || e.button === 1) && !potentialDragRef.current) {
+        // Only start panning if not dragging a node and using left, middle, or right button
+        if ((e.button === 0 || e.button === 1 || e.button === 2) && !potentialDragRef.current) {
+          // Avoid browser defaults (e.g. right-click menu) interfering with drag
+          e.preventDefault();
           isDragging = true;
           isPanningRef.current = true;
+          app.canvas.style.cursor = 'grabbing';
           dragStart = { x: e.clientX, y: e.clientY };
           stageStart = { x: app.stage.x, y: app.stage.y };
         }
@@ -423,6 +431,7 @@ function MindMapCanvas() {
       app.canvas.addEventListener('pointermove', (e: PointerEvent) => {
         // Only pan if we're in panning mode and not dragging a node
         if (isDragging && !isDraggingNodeRef.current && !potentialDragRef.current) {
+          e.preventDefault();
           const dx = e.clientX - dragStart.x;
           const dy = e.clientY - dragStart.y;
           app.stage.x = stageStart.x + dx;
@@ -433,11 +442,13 @@ function MindMapCanvas() {
       app.canvas.addEventListener('pointerup', () => {
         isDragging = false;
         isPanningRef.current = false;
+        app.canvas.style.cursor = '';
       });
 
       app.canvas.addEventListener('pointerleave', () => {
         isDragging = false;
         isPanningRef.current = false;
+        app.canvas.style.cursor = '';
       });
 
       // Enable zoom
@@ -842,6 +853,8 @@ function MindMapCanvas() {
 
           // Add click handler to cycle icon
           iconContainer.on('pointerdown', (e) => {
+            const originalEvent = e.nativeEvent as PointerEvent | undefined;
+            if (originalEvent?.button === 2) return;
             e.stopPropagation();
             cycleIcon(nodeId, iconIndex);
           });
@@ -993,6 +1006,8 @@ function MindMapCanvas() {
 
         // Click handler to toggle collapse/expand
         indicatorContainer.on('pointerdown', (e) => {
+          const originalEvent = e.nativeEvent as PointerEvent | undefined;
+          if (originalEvent?.button === 2) return;
           e.stopPropagation();
           toggleCollapse(nodeId);
         });
@@ -1002,13 +1017,18 @@ function MindMapCanvas() {
 
       // Click handler with double-click detection and drag initiation
       container.on('pointerdown', (e) => {
+        const originalEvent = e.nativeEvent as PointerEvent | undefined;
+        if (originalEvent?.button === 2) {
+          // Let right-click/drag bubble to the canvas to pan.
+          return;
+        }
+
         e.stopPropagation();
         const now = Date.now();
         const lastClickTime = clickTimesRef.current.get(nodeId) || 0;
         const timeDiff = now - lastClickTime;
 
         // Get keyboard modifiers from the original event
-        const originalEvent = e.nativeEvent as PointerEvent;
         const ctrlKey = originalEvent?.ctrlKey || originalEvent?.metaKey || false;
         const shiftKey = originalEvent?.shiftKey || false;
 
@@ -1147,7 +1167,7 @@ function MindMapCanvas() {
       {/* PixiJS Canvas */}
       <div
         ref={containerRef}
-        className="w-full h-full"
+        className="w-full h-full cursor-grab"
         style={{ touchAction: 'none' }}
       />
 
