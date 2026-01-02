@@ -384,7 +384,7 @@ const switchMode = (mode: 'mindmap' | 'outline') => {
 | Ctrl+V | 貼り付け | クリップボードの内容を選択ノードの子として貼り付け |
 | Delete / Backspace | ノード削除 | ルートノードは削除不可 |
 | Space | 折りたたみ/展開 | 子ノードがある場合のみ |
-| Shift+Alt+Space | 全子孫を折りたたみ/展開 | 選択ノードと全ての子孫を一括操作（Macでは Shift+Option+Space） |
+| Shift+Alt+Space | 全子孫を折りたたみ/展開 | 3段階で循環: 全折りたたみ → 完了以外を展開 → 全展開（Macでは Shift+Option+Space） |
 | ↑ / ↓ / ← / → | ノード間移動 | ツリー構造に沿って移動 |
 
 ### 複数ノード選択

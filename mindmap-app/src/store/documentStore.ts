@@ -19,6 +19,10 @@ interface ClipboardData {
   sourceNodeIds: string[]; // Original node IDs (for cut operation)
 }
 
+// Collapse all state for three-way cycling
+// 'collapsed' -> 'expanded-except-completed' -> 'expanded' -> 'collapsed' ...
+type CollapseAllState = 'collapsed' | 'expanded-except-completed' | 'expanded';
+
 const MAX_HISTORY_SIZE = 50;
 
 // Generate unique ID
@@ -105,6 +109,9 @@ interface DocumentState {
 
   // Icon picker state
   isIconPickerOpen: boolean;
+
+  // Collapse all state for cycling
+  collapseAllState: CollapseAllState;
 
   // Clipboard state
   clipboard: ClipboardData | null;
@@ -218,6 +225,9 @@ export const useDocumentStore = create<DocumentState>()(
 
     // Icon picker state
     isIconPickerOpen: false,
+
+    // Collapse all state for cycling
+    collapseAllState: 'expanded' as CollapseAllState,
 
     // Clipboard state
     clipboard: null,
@@ -496,28 +506,52 @@ export const useDocumentStore = create<DocumentState>()(
         // Only toggle if node has children
         if (node.childIds.length === 0) return;
 
-        // Determine if we should collapse or expand all
-        // If the node itself is collapsed, expand all; otherwise, collapse all
-        const shouldExpand = node.isCollapsed;
+        // Helper to check if a node has a complete (done) task icon
+        const hasCompleteIcon = (n: Node): boolean => {
+          return n.icons?.some(icon => icon.type === 'task' && icon.value === 'done') ?? false;
+        };
+
+        // Cycle through three states: collapsed -> expanded-except-completed -> expanded -> collapsed
+        const currentState = state.collapseAllState;
+        let nextState: CollapseAllState;
+
+        if (currentState === 'collapsed') {
+          nextState = 'expanded-except-completed';
+        } else if (currentState === 'expanded-except-completed') {
+          nextState = 'expanded';
+        } else {
+          nextState = 'collapsed';
+        }
+
+        state.collapseAllState = nextState;
 
         // Helper to recursively set collapse state for a node and all its descendants
-        const setCollapseRecursive = (currentNodeId: string, collapse: boolean) => {
+        const setCollapseRecursive = (currentNodeId: string) => {
           const currentNode = state.nodes[currentNodeId];
           if (!currentNode) return;
 
           // Only set collapse state if node has children
           if (currentNode.childIds.length > 0) {
-            currentNode.isCollapsed = collapse;
+            if (nextState === 'collapsed') {
+              // Collapse all nodes
+              currentNode.isCollapsed = true;
+            } else if (nextState === 'expanded-except-completed') {
+              // Expand all except nodes with complete icon
+              currentNode.isCollapsed = hasCompleteIcon(currentNode);
+            } else {
+              // Expand all nodes
+              currentNode.isCollapsed = false;
+            }
           }
 
           // Process all children recursively
           for (const childId of currentNode.childIds) {
-            setCollapseRecursive(childId, collapse);
+            setCollapseRecursive(childId);
           }
         };
 
         // Apply to the selected node and all its descendants
-        setCollapseRecursive(nodeId, !shouldExpand);
+        setCollapseRecursive(nodeId);
       }),
 
     moveNode: (nodeId, newParentId, insertIndex) =>
