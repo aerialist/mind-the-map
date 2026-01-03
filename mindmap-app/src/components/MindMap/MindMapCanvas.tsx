@@ -59,6 +59,9 @@ const COLORS = {
   linkIcon: 0xa855f7, // Purple color for link icon
 };
 
+// Track the previous selected node ID for determining pan direction
+let prevMindmapSelectedNodeId: string | null = null;
+
 interface NodeLayout {
   x: number;
   y: number;
@@ -1209,6 +1212,114 @@ function MindMapCanvas() {
       render();
     }
   }, [isReady, render]);
+
+  // Auto-pan to keep selected node visible when navigating with keyboard
+  useEffect(() => {
+    const app = appRef.current;
+    if (!selectedNodeId || !app || !isReady) return;
+
+    // Only pan if selection changed (not on initial render)
+    if (prevMindmapSelectedNodeId === null) {
+      prevMindmapSelectedNodeId = selectedNodeId;
+      return;
+    }
+
+    // Determine pan direction based on previous selection
+    const prevLayout = layoutsRef.current.get(prevMindmapSelectedNodeId);
+
+    // Small delay to ensure layout is updated after render
+    const timeoutId = setTimeout(() => {
+      const layout = layoutsRef.current.get(selectedNodeId);
+      if (!layout) return;
+
+      const panDirection = (() => {
+        if (!prevLayout) return { horizontal: 'right' as const, vertical: 'down' as const };
+        return {
+          horizontal: layout.x < prevLayout.x ? 'left' as const : 'right' as const,
+          vertical: layout.y < prevLayout.y ? 'up' as const : 'down' as const,
+        };
+      })();
+
+      // Convert node world position to screen position
+      const scale = app.stage.scale.x;
+      const nodeScreenX = layout.x * scale + app.stage.x;
+      const nodeScreenY = layout.y * scale + app.stage.y;
+      const nodeScreenWidth = layout.width * scale;
+      const nodeScreenHeight = layout.height * scale;
+
+      // Get canvas dimensions - use screen dimensions (logical CSS pixels), not canvas dimensions (physical pixels)
+      const canvasWidth = app.screen.width;
+      const canvasHeight = app.screen.height;
+
+      // Define visible margins (leave some padding from edges)
+      const margin = 50;
+
+      // Check if node is visible (check if any part of the node is within the viewport)
+      const isLeftOfViewport = nodeScreenX + nodeScreenWidth < margin;
+      const isRightOfViewport = nodeScreenX > canvasWidth - margin;
+      const isAboveViewport = nodeScreenY + nodeScreenHeight < margin;
+      const isBelowViewport = nodeScreenY > canvasHeight - margin;
+
+      // Only pan if the node is out of view
+      if (!isLeftOfViewport && !isRightOfViewport && !isAboveViewport && !isBelowViewport) return;
+
+      // Calculate target stage position to bring node into view
+      // Position node at 1/3 of viewport based on direction
+      const oneThirdWidth = canvasWidth / 3;
+      const oneThirdHeight = canvasHeight / 3;
+
+      let targetStageX = app.stage.x;
+      let targetStageY = app.stage.y;
+
+      if (isLeftOfViewport || isRightOfViewport) {
+        if (panDirection.horizontal === 'left' || isLeftOfViewport) {
+          // Moving left or node is left: position at left 1/3
+          targetStageX = oneThirdWidth - layout.x * scale;
+        } else {
+          // Moving right or node is right: position at right 1/3
+          targetStageX = canvasWidth - oneThirdWidth - (layout.x + layout.width) * scale;
+        }
+      }
+
+      if (isAboveViewport || isBelowViewport) {
+        if (panDirection.vertical === 'up' || isAboveViewport) {
+          // Moving up or node is above: position at upper 1/3
+          targetStageY = oneThirdHeight - layout.y * scale;
+        } else {
+          // Moving down or node is below: position at lower 1/3
+          targetStageY = canvasHeight - oneThirdHeight - (layout.y + layout.height) * scale;
+        }
+      }
+
+      // Animate the pan smoothly
+      const startX = app.stage.x;
+      const startY = app.stage.y;
+      const deltaX = targetStageX - startX;
+      const deltaY = targetStageY - startY;
+      const duration = 150; // ms
+      const startTime = performance.now();
+
+      const animate = (currentTime: number) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // Ease-out cubic for smooth deceleration
+        const eased = 1 - Math.pow(1 - progress, 3);
+
+        app.stage.x = startX + deltaX * eased;
+        app.stage.y = startY + deltaY * eased;
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+
+      requestAnimationFrame(animate);
+    }, 0);
+
+    prevMindmapSelectedNodeId = selectedNodeId;
+
+    return () => clearTimeout(timeoutId);
+  }, [selectedNodeId, isReady]);
 
   // Handle keyboard events when canvas wrapper is focused (not editing)
   const handleWrapperKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {

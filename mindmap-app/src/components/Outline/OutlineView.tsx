@@ -4,6 +4,9 @@ import { useKeyboardNavigation } from '../../hooks/useKeyboardNavigation';
 import { useFileOperations } from '../../hooks/useFileOperations';
 import OutlineNode from './OutlineNode';
 
+// Track the previous selected node ID for determining scroll direction
+let prevSelectedNodeId: string | null = null;
+
 // Drag context for sharing drag state between nodes
 export interface DropTarget {
   parentId: string;      // The parent node where the dragged node will be inserted
@@ -43,6 +46,7 @@ function OutlineView() {
   const nodes = useDocumentStore((state) => state.nodes);
   const moveNode = useDocumentStore((state) => state.moveNode);
   const activeIconFilters = useDocumentStore((state) => state.activeIconFilters);
+  const selectedNodeId = useDocumentStore((state) => state.selectedNodeId);
 
   // Compute visible nodes based on active icon filters
   const visibleNodeIds = useMemo(
@@ -54,6 +58,79 @@ function OutlineView() {
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to keep selected node visible when navigating with keyboard
+  useEffect(() => {
+    if (!selectedNodeId || !containerRef.current) return;
+
+    // Only scroll if selection changed (not on initial render)
+    if (prevSelectedNodeId === null) {
+      prevSelectedNodeId = selectedNodeId;
+      return;
+    }
+
+    // Determine scroll direction based on previous selection
+    const scrollDirection = (() => {
+      if (!prevSelectedNodeId) return 'down';
+      
+      const container = containerRef.current;
+      if (!container) return 'down';
+      
+      const prevElement = container.querySelector(`[data-node-id="${prevSelectedNodeId}"]`);
+      const currElement = container.querySelector(`[data-node-id="${selectedNodeId}"]`);
+      
+      if (!prevElement || !currElement) return 'down';
+      
+      const prevRect = prevElement.getBoundingClientRect();
+      const currRect = currElement.getBoundingClientRect();
+      
+      return currRect.top < prevRect.top ? 'up' : 'down';
+    })();
+
+    prevSelectedNodeId = selectedNodeId;
+
+    // Find the selected node element
+    const nodeElement = containerRef.current.querySelector(`[data-node-id="${selectedNodeId}"]`);
+    if (!nodeElement) return;
+
+    const container = containerRef.current;
+    const containerRect = container.getBoundingClientRect();
+    const nodeRect = nodeElement.getBoundingClientRect();
+
+    // Check if node is fully visible within the container
+    const isAboveViewport = nodeRect.top < containerRect.top;
+    const isBelowViewport = nodeRect.bottom > containerRect.bottom;
+
+    // Only scroll if the node is out of view
+    if (!isAboveViewport && !isBelowViewport) return;
+
+    // Calculate target scroll position
+    // Position node at upper 1/3 when scrolling up, lower 1/3 when scrolling down
+    const containerHeight = containerRect.height;
+    const oneThird = containerHeight / 3;
+
+    let targetScrollTop: number;
+
+    if (scrollDirection === 'up' || isAboveViewport) {
+      // Scrolling up or node is above: position at upper 1/3
+      const nodeOffsetFromContainerTop = nodeRect.top - containerRect.top + container.scrollTop;
+      targetScrollTop = nodeOffsetFromContainerTop - oneThird;
+    } else {
+      // Scrolling down or node is below: position at lower 1/3
+      const nodeOffsetFromContainerTop = nodeRect.top - containerRect.top + container.scrollTop;
+      targetScrollTop = nodeOffsetFromContainerTop - (containerHeight - oneThird - nodeRect.height);
+    }
+
+    // Clamp to valid scroll range
+    const maxScrollTop = container.scrollHeight - containerHeight;
+    targetScrollTop = Math.max(0, Math.min(targetScrollTop, maxScrollTop));
+
+    // Smooth scroll to target position
+    container.scrollTo({
+      top: targetScrollTop,
+      behavior: 'smooth',
+    });
+  }, [selectedNodeId]);
 
   const startDrag = useCallback((nodeId: string) => {
     // Clear any text selection to prevent blue highlight during drag
