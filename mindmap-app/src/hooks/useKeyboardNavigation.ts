@@ -268,8 +268,18 @@ export const useKeyboardNavigation = () => {
 
         case 'ArrowRight':
           e.preventDefault();
-          // Go to first child (if exists and expanded)
-          nextNodeId = getFirstChildNodeId(nodes, selectedNodeId);
+          {
+            // If node has children and is collapsed, expand it first
+            const currentNode = nodes[selectedNodeId];
+            if (currentNode && currentNode.childIds.length > 0 && currentNode.isCollapsed) {
+              toggleCollapse(selectedNodeId);
+              // After expanding, navigate to first child
+              nextNodeId = currentNode.childIds[0];
+            } else {
+              // Go to first child (if exists and expanded)
+              nextNodeId = getFirstChildNodeId(nodes, selectedNodeId);
+            }
+          }
           break;
 
         case 'Enter':
