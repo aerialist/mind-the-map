@@ -195,12 +195,14 @@ function App() {
         <div className="flex-1 overflow-hidden">
           {viewMode === 'mindmap' ? <MindMapView /> : <OutlineView />}
         </div>
-        {/* Icon picker panel (right sidebar) */}
-        {isIconPickerOpen && <IconPicker />}
-        {/* Search panel (right sidebar) */}
-        {isSearchOpen && <SearchPanel />}
-        {/* Link panel (right sidebar) */}
-        {isLinkDialogOpen && <LinkPanel />}
+        {/* Right sidebar panels - stacked vertically */}
+        {(isIconPickerOpen || isSearchOpen || isLinkDialogOpen) && (
+          <div className="w-80 flex flex-col border-l border-gray-200 dark:border-gray-700">
+            {isIconPickerOpen && <IconPicker />}
+            {isSearchOpen && <SearchPanel />}
+            {isLinkDialogOpen && <LinkPanel />}
+          </div>
+        )}
       </main>
 
       {/* Help dialog */}

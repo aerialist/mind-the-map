@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { X, Tags } from 'lucide-react';
 import { useDocumentStore } from '../../store';
 import {
@@ -25,26 +25,7 @@ function IconPicker() {
 
   const hasMultipleSelection = selectedNodeIds.length > 1;
 
-  // Close on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        e.preventDefault();
-        e.stopPropagation();
-        closeIconPicker();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown, true);
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown, true);
-    };
-  }, [isOpen, closeIconPicker]);
-
-  // No click-outside-to-close - picker stays open until explicitly closed
+  // Panel stays open until explicitly closed (no Escape key, no click-outside)
 
   const handleIconClick = useCallback(
     (icon: NodeIcon) => {
@@ -79,7 +60,7 @@ function IconPicker() {
   const currentIcons = node?.icons || [];
 
   return (
-    <div className="w-80 h-full flex flex-col border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+    <div className="flex-1 min-h-0 flex flex-col border-t first:border-t-0 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2">
