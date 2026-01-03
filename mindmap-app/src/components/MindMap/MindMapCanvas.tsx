@@ -1254,41 +1254,57 @@ function MindMapCanvas() {
       // Define visible margins (leave some padding from edges)
       const margin = 50;
 
-      // Check if node is visible (check if any part of the node is within the viewport)
-      const isLeftOfViewport = nodeScreenX + nodeScreenWidth < margin;
-      const isRightOfViewport = nodeScreenX > canvasWidth - margin;
-      const isAboveViewport = nodeScreenY + nodeScreenHeight < margin;
-      const isBelowViewport = nodeScreenY > canvasHeight - margin;
+      // Check if any part of the node is outside the viewport (partial visibility)
+      const isPartiallyLeftOfViewport = nodeScreenX < margin;
+      const isPartiallyRightOfViewport = nodeScreenX + nodeScreenWidth > canvasWidth - margin;
+      const isPartiallyAboveViewport = nodeScreenY < margin;
+      const isPartiallyBelowViewport = nodeScreenY + nodeScreenHeight > canvasHeight - margin;
 
-      // Only pan if the node is out of view
-      if (!isLeftOfViewport && !isRightOfViewport && !isAboveViewport && !isBelowViewport) return;
+      // Check if node is completely outside viewport (for 1/3 positioning)
+      const isCompletelyLeftOfViewport = nodeScreenX + nodeScreenWidth < margin;
+      const isCompletelyRightOfViewport = nodeScreenX > canvasWidth - margin;
+      const isCompletelyAboveViewport = nodeScreenY + nodeScreenHeight < margin;
+      const isCompletelyBelowViewport = nodeScreenY > canvasHeight - margin;
 
-      // Calculate target stage position to bring node into view
-      // Position node at 1/3 of viewport based on direction
-      const oneThirdWidth = canvasWidth / 3;
-      const oneThirdHeight = canvasHeight / 3;
+      // Only pan if any part of the node is out of view
+      if (!isPartiallyLeftOfViewport && !isPartiallyRightOfViewport && 
+          !isPartiallyAboveViewport && !isPartiallyBelowViewport) return;
 
       let targetStageX = app.stage.x;
       let targetStageY = app.stage.y;
 
-      if (isLeftOfViewport || isRightOfViewport) {
-        if (panDirection.horizontal === 'left' || isLeftOfViewport) {
-          // Moving left or node is left: position at left 1/3
+      // Handle horizontal panning
+      if (isCompletelyLeftOfViewport || isCompletelyRightOfViewport) {
+        // Node is completely outside: position at 1/3 of viewport
+        const oneThirdWidth = canvasWidth / 3;
+        if (panDirection.horizontal === 'left' || isCompletelyLeftOfViewport) {
           targetStageX = oneThirdWidth - layout.x * scale;
         } else {
-          // Moving right or node is right: position at right 1/3
           targetStageX = canvasWidth - oneThirdWidth - (layout.x + layout.width) * scale;
         }
+      } else if (isPartiallyLeftOfViewport) {
+        // Node is partially outside on left: pan just enough to show it with margin
+        targetStageX = margin - layout.x * scale;
+      } else if (isPartiallyRightOfViewport) {
+        // Node is partially outside on right: pan just enough to show it with margin
+        targetStageX = canvasWidth - margin - (layout.x + layout.width) * scale;
       }
 
-      if (isAboveViewport || isBelowViewport) {
-        if (panDirection.vertical === 'up' || isAboveViewport) {
-          // Moving up or node is above: position at upper 1/3
+      // Handle vertical panning
+      if (isCompletelyAboveViewport || isCompletelyBelowViewport) {
+        // Node is completely outside: position at 1/3 of viewport
+        const oneThirdHeight = canvasHeight / 3;
+        if (panDirection.vertical === 'up' || isCompletelyAboveViewport) {
           targetStageY = oneThirdHeight - layout.y * scale;
         } else {
-          // Moving down or node is below: position at lower 1/3
           targetStageY = canvasHeight - oneThirdHeight - (layout.y + layout.height) * scale;
         }
+      } else if (isPartiallyAboveViewport) {
+        // Node is partially outside on top: pan just enough to show it with margin
+        targetStageY = margin - layout.y * scale;
+      } else if (isPartiallyBelowViewport) {
+        // Node is partially outside on bottom: pan just enough to show it with margin
+        targetStageY = canvasHeight - margin - (layout.y + layout.height) * scale;
       }
 
       // Animate the pan smoothly
