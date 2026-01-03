@@ -148,6 +148,9 @@ pub fn run() {
             let outline_mode = MenuItemBuilder::with_id("view_outline", "Outline")
                 .accelerator("CmdOrCtrl+2")
                 .build(app)?;
+            let fit_to_view = MenuItemBuilder::with_id("fit_to_view", "Fit to View")
+                .accelerator("CmdOrCtrl+0")
+                .build(app)?;
             let find = MenuItemBuilder::with_id("find", "Find...")
                 .accelerator("CmdOrCtrl+F")
                 .build(app)?;
@@ -155,6 +158,8 @@ pub fn run() {
             let view_menu = SubmenuBuilder::new(app, "View")
                 .item(&mindmap_mode)
                 .item(&outline_mode)
+                .separator()
+                .item(&fit_to_view)
                 .separator()
                 .item(&find)
                 .build()?;
@@ -291,6 +296,7 @@ pub fn run() {
                 "copy_for_miro" => Some("menu-copy-for-miro"),
                 "view_mindmap" => Some("menu-view-mindmap"),
                 "view_outline" => Some("menu-view-outline"),
+                "fit_to_view" => Some("menu-fit-to-view"),
                 "find" => Some("menu-find"),
                 "create_child" => Some("menu-create-child"),
                 "create_sibling" => Some("menu-create-sibling"),

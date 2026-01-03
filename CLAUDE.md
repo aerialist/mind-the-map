@@ -194,6 +194,7 @@ interface DocumentState {
 | Ctrl+Shift+S | Save As |
 | Ctrl+1 | Mind map view |
 | Ctrl+2 | Outline view |
+| Ctrl+0 | Fit tree to view (mind map) |
 | Ctrl+Z | Undo |
 | Ctrl+Shift+Z / Ctrl+Y | Redo |
 | ? / Ctrl+/ | Open help dialog |

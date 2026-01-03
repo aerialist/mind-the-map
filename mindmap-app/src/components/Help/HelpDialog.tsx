@@ -77,6 +77,7 @@ const shortcutSections: ShortcutSection[] = [
     shortcuts: [
       { keys: [`${modKey}+1`], description: 'Mind map view' },
       { keys: [`${modKey}+2`], description: 'Outline view' },
+      { keys: [`${modKey}+0`], description: 'Fit tree to view' },
       { keys: [`${modKey}+Z`], description: 'Undo' },
       { keys: [`${modKey}+${shiftKey}+Z`, `${modKey}+Y`], description: 'Redo' },
     ],

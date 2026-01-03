@@ -4,6 +4,8 @@ import { useDocumentStore, computeVisibleNodeIds } from '../../store';
 import type { Node, NodeMap } from '../../types';
 import { getIconDefinition } from '../../types';
 import { openLink } from '../../services/tauri';
+import { listen } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 // Editing state for overlay input
 interface EditingState {
@@ -1205,6 +1207,92 @@ function MindMapCanvas() {
 
     drawNodes(rootId);
   }, [nodes, rootId, visibleNodeIds, selectedNodeId, selectedNodeIds, selectNode, toggleNodeSelection, selectNodeRange, startEditingNode, toggleCollapse]);
+
+  // Fit the entire tree into the viewport with optimal zoom and pan
+  const fitToView = useCallback(() => {
+    const app = appRef.current;
+    const layouts = layoutsRef.current;
+    if (!app || layouts.size === 0) return;
+
+    // Calculate bounding box of all visible nodes
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    layouts.forEach((layout) => {
+      minX = Math.min(minX, layout.x);
+      minY = Math.min(minY, layout.y);
+      maxX = Math.max(maxX, layout.x + layout.width);
+      maxY = Math.max(maxY, layout.y + layout.height);
+    });
+
+    // Add padding around the tree
+    const padding = 50;
+    const treeWidth = maxX - minX + padding * 2;
+    const treeHeight = maxY - minY + padding * 2;
+
+    // Get viewport dimensions
+    const canvasWidth = app.screen.width;
+    const canvasHeight = app.screen.height;
+
+    // Calculate scale to fit the tree
+    const scaleX = canvasWidth / treeWidth;
+    const scaleY = canvasHeight / treeHeight;
+    let newScale = Math.min(scaleX, scaleY);
+
+    // Clamp scale to reasonable limits
+    newScale = Math.max(0.2, Math.min(newScale, 2));
+
+    // Calculate center of the tree in world coordinates
+    const treeCenterX = (minX + maxX) / 2;
+    const treeCenterY = (minY + maxY) / 2;
+
+    // Calculate target stage position to center the tree
+    const targetStageX = canvasWidth / 2 - treeCenterX * newScale;
+    const targetStageY = canvasHeight / 2 - treeCenterY * newScale;
+
+    // Animate the transition
+    const startX = app.stage.x;
+    const startY = app.stage.y;
+    const startScale = app.stage.scale.x;
+    const deltaX = targetStageX - startX;
+    const deltaY = targetStageY - startY;
+    const deltaScale = newScale - startScale;
+    const duration = 300; // ms
+    const startTime = performance.now();
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease-out cubic for smooth deceleration
+      const eased = 1 - Math.pow(1 - progress, 3);
+
+      app.stage.x = startX + deltaX * eased;
+      app.stage.y = startY + deltaY * eased;
+      app.stage.scale.set(startScale + deltaScale * eased);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, []);
+
+  // Listen for fit-to-view menu event
+  useEffect(() => {
+    const myLabel = getCurrentWindow().label;
+    const unlisten = listen<string>('menu-fit-to-view', (event) => {
+      if (event.payload === myLabel) {
+        fitToView();
+      }
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [fitToView]);
 
   // Re-render when data changes or app becomes ready
   useEffect(() => {

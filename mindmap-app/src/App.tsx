@@ -81,6 +81,13 @@ function App() {
       } else if (e.key === '2') {
         e.preventDefault();
         setViewMode('outline');
+      } else if (e.key === '0') {
+        // Fit to view - emit event for MindMapCanvas to handle
+        if (viewMode === 'mindmap') {
+          e.preventDefault();
+          const myLabel = getCurrentWindow().label;
+          getCurrentWindow().emit('menu-fit-to-view', myLabel);
+        }
       } else if (e.key === 'f') {
         e.preventDefault();
         toggleSearch();
@@ -92,7 +99,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setViewMode, isHelpOpen, toggleSearch, toggleHelp, editingNodeId, isLinkDialogOpen, openLinkDialog]);
+  }, [setViewMode, viewMode, isHelpOpen, toggleSearch, toggleHelp, editingNodeId, isLinkDialogOpen, openLinkDialog]);
 
   // Listen for Tauri menu events (View menu) - filter by window label in payload
   useEffect(() => {
