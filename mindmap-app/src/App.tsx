@@ -4,7 +4,7 @@ import { listen } from '@tauri-apps/api/event';
 import './App.css';
 import { OutlineView } from './components/Outline';
 import { MindMapView } from './components/MindMap';
-import { SearchDialog } from './components/Search';
+import { SearchPanel } from './components/Search';
 import { IconPicker } from './components/IconPicker';
 import { HelpDialog } from './components/Help';
 import { LinkDialog } from './components/LinkDialog';
@@ -21,7 +21,7 @@ function App() {
   const viewMode = useDocumentStore((state) => state.viewMode);
   const setViewMode = useDocumentStore((state) => state.setViewMode);
   const isSearchOpen = useDocumentStore((state) => state.isSearchOpen);
-  const openSearch = useDocumentStore((state) => state.openSearch);
+  const toggleSearch = useDocumentStore((state) => state.toggleSearch);
   const isHelpOpen = useDocumentStore((state) => state.isHelpOpen);
   const toggleHelp = useDocumentStore((state) => state.toggleHelp);
   const editingNodeId = useDocumentStore((state) => state.editingNodeId);
@@ -77,9 +77,9 @@ function App() {
       } else if (e.key === '2') {
         e.preventDefault();
         setViewMode('outline');
-      } else if (e.key === 'f' && !isSearchOpen) {
+      } else if (e.key === 'f') {
         e.preventDefault();
-        openSearch();
+        toggleSearch();
       } else if (e.key === 'k' && !isLinkDialogOpen) {
         e.preventDefault();
         openLinkDialog();
@@ -88,7 +88,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setViewMode, isSearchOpen, isHelpOpen, openSearch, toggleHelp, editingNodeId, isLinkDialogOpen, openLinkDialog]);
+  }, [setViewMode, isHelpOpen, toggleSearch, toggleHelp, editingNodeId, isLinkDialogOpen, openLinkDialog]);
 
   // Listen for Tauri menu events (View menu) - filter by window label in payload
   useEffect(() => {
@@ -101,14 +101,14 @@ function App() {
         if (event.payload === myLabel) setViewMode('outline');
       }),
       listen<string>('menu-find', (event) => {
-        if (event.payload === myLabel) openSearch();
+        if (event.payload === myLabel) toggleSearch();
       }),
     ];
 
     return () => {
       listeners.forEach((unlisten) => unlisten.then((fn) => fn()));
     };
-  }, [setViewMode, openSearch]);
+  }, [setViewMode, toggleSearch]);
 
   return (
     <div className="h-screen flex flex-col">
@@ -155,13 +155,14 @@ function App() {
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-hidden">
-        {viewMode === 'mindmap' ? <MindMapView /> : <OutlineView />}
+      {/* Main content with search panel */}
+      <main className="flex-1 overflow-hidden flex">
+        <div className="flex-1 overflow-hidden">
+          {viewMode === 'mindmap' ? <MindMapView /> : <OutlineView />}
+        </div>
+        {/* Search panel (right sidebar) */}
+        {isSearchOpen && <SearchPanel />}
       </main>
-
-      {/* Search dialog */}
-      <SearchDialog />
 
       {/* Icon picker dialog */}
       <IconPicker />

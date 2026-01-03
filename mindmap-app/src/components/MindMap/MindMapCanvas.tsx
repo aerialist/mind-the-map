@@ -1,6 +1,6 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
-import { useDocumentStore } from '../../store';
+import { useDocumentStore, computeVisibleNodeIds } from '../../store';
 import type { Node, NodeMap } from '../../types';
 import { getIconDefinition } from '../../types';
 import { openLink } from '../../services/tauri';
@@ -97,9 +97,15 @@ const measureTextWidth = (text: string): number => {
 // Calculate tree layout
 const calculateLayout = (
   nodes: NodeMap,
-  rootId: string
+  rootId: string,
+  visibleNodeIds?: Set<string>
 ): Map<string, NodeLayout> => {
   const layouts = new Map<string, NodeLayout>();
+
+  // Helper to check if a node should be visible
+  const isVisible = (nodeId: string): boolean => {
+    return !visibleNodeIds || visibleNodeIds.has(nodeId);
+  };
 
   // First pass: calculate node sizes using proper text measurement
   const getNodeWidth = (node: Node): number => {
@@ -122,25 +128,28 @@ const calculateLayout = (
     return Math.max(textWidth + iconsWidth + linkWidth + NODE_PADDING_X * 2, NODE_MIN_WIDTH);
   };
 
-  // Calculate subtree height
+  // Calculate subtree height (only considering visible nodes)
   const getSubtreeHeight = (nodeId: string): number => {
     const node = nodes[nodeId];
     if (!node) return 0;
 
-    if (node.isCollapsed || node.childIds.length === 0) {
+    // Get visible children
+    const visibleChildren = node.childIds.filter(isVisible);
+
+    if (node.isCollapsed || visibleChildren.length === 0) {
       return NODE_HEIGHT;
     }
 
     let totalHeight = 0;
-    for (const childId of node.childIds) {
+    for (const childId of visibleChildren) {
       totalHeight += getSubtreeHeight(childId);
     }
-    totalHeight += (node.childIds.length - 1) * VERTICAL_GAP;
+    totalHeight += (visibleChildren.length - 1) * VERTICAL_GAP;
 
     return Math.max(totalHeight, NODE_HEIGHT);
   };
 
-  // Layout nodes recursively
+  // Layout nodes recursively (only visible ones)
   const layoutNode = (nodeId: string, x: number, y: number): void => {
     const node = nodes[nodeId];
     if (!node) return;
@@ -150,7 +159,10 @@ const calculateLayout = (
 
     layouts.set(nodeId, { x, y, width, height });
 
-    if (node.isCollapsed || node.childIds.length === 0) {
+    // Get visible children
+    const visibleChildren = node.childIds.filter(isVisible);
+
+    if (node.isCollapsed || visibleChildren.length === 0) {
       return;
     }
 
@@ -158,7 +170,7 @@ const calculateLayout = (
     const subtreeHeight = getSubtreeHeight(nodeId);
     let childY = y - subtreeHeight / 2 + NODE_HEIGHT / 2;
 
-    for (const childId of node.childIds) {
+    for (const childId of visibleChildren) {
       const childSubtreeHeight = getSubtreeHeight(childId);
       const childCenterY = childY + childSubtreeHeight / 2 - NODE_HEIGHT / 2;
 
@@ -196,7 +208,14 @@ function MindMapCanvas() {
 
   const nodes = useDocumentStore((state) => state.nodes);
   const rootId = useDocumentStore((state) => state.rootId);
+  const activeIconFilters = useDocumentStore((state) => state.activeIconFilters);
   const selectedNodeId = useDocumentStore((state) => state.selectedNodeId);
+
+  // Compute visible nodes based on active icon filters
+  const visibleNodeIds = useMemo(
+    () => computeVisibleNodeIds(nodes, rootId, activeIconFilters),
+    [nodes, rootId, activeIconFilters]
+  );
   const selectedNodeIds = useDocumentStore((state) => state.selectedNodeIds);
   const selectNode = useDocumentStore((state) => state.selectNode);
   const toggleNodeSelection = useDocumentStore((state) => state.toggleNodeSelection);
@@ -785,10 +804,15 @@ function MindMapCanvas() {
     edgesContainer.removeChildren();
 
     // Calculate layout and store in ref for editing overlay positioning
-    const layouts = calculateLayout(nodes, rootId);
+    const layouts = calculateLayout(nodes, rootId, visibleNodeIds);
     layoutsRef.current = layouts;
 
-    // Draw edges first
+    // Helper to check if a node is visible
+    const isVisible = (nodeId: string): boolean => {
+      return visibleNodeIds.has(nodeId);
+    };
+
+    // Draw edges first (only for visible nodes)
     const drawEdges = (nodeId: string) => {
       const node = nodes[nodeId];
       if (!node || node.isCollapsed) return;
@@ -796,7 +820,9 @@ function MindMapCanvas() {
       const parentLayout = layouts.get(nodeId);
       if (!parentLayout) return;
 
-      for (const childId of node.childIds) {
+      // Only draw edges to visible children
+      const visibleChildren = node.childIds.filter(isVisible);
+      for (const childId of visibleChildren) {
         const childLayout = layouts.get(childId);
         if (!childLayout) continue;
 
@@ -1165,16 +1191,17 @@ function MindMapCanvas() {
 
       nodesContainer.addChild(container);
 
-      // Draw children if not collapsed
+      // Draw children if not collapsed (only visible ones)
       if (!node.isCollapsed) {
-        for (const childId of node.childIds) {
+        const visibleChildren = node.childIds.filter(isVisible);
+        for (const childId of visibleChildren) {
           drawNodes(childId);
         }
       }
     };
 
     drawNodes(rootId);
-  }, [nodes, rootId, selectedNodeId, selectedNodeIds, selectNode, toggleNodeSelection, selectNodeRange, startEditingNode, toggleCollapse]);
+  }, [nodes, rootId, visibleNodeIds, selectedNodeId, selectedNodeIds, selectNode, toggleNodeSelection, selectNodeRange, startEditingNode, toggleCollapse]);
 
   // Re-render when data changes or app becomes ready
   useEffect(() => {

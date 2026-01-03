@@ -387,6 +387,7 @@
         <a href="#features">Features</a>
         <a href="#getting-started">Guide</a>
         <a href="#shortcuts">Shortcuts</a>
+        <a href="#search-filter">Search & Filter</a>
         <a href="https://github.com/aerialist/mind-the-map" target="_blank">GitHub</a>
       </nav>
     </div>
@@ -450,6 +451,10 @@
           <p>Mark nodes with icons for status, priority, or categories. Press <kbd>I</kbd> to open the picker. Click icons to cycle through variants.</p>
         </div>
         <div class="feature-card">
+          <h3>Search & Filter</h3>
+          <p>Find nodes by text or filter by icons. Press <kbd>Ctrl</kbd>+<kbd>F</kbd> to open the panel. Icon filters hide non-matching nodes while keeping the tree structure.</p>
+        </div>
+        <div class="feature-card">
           <h3>Local Files</h3>
           <p>Your data stays on your machine in simple JSON files. No cloud, no account, no tracking. Auto-saves every 1 second.</p>
         </div>
@@ -489,7 +494,8 @@
           <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Move between sibling nodes</td></tr>
           <tr><td><kbd>←</kbd></td><td>Go to parent node (or collapse if expanded)</td></tr>
           <tr><td><kbd>→</kbd></td><td>Go to first child node (or expand if collapsed)</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Open search dialog</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Toggle Search & Filter panel</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>Add/edit node link</td></tr>
         </table>
 
         <h4>Creating & Editing Nodes</h4>
@@ -649,6 +655,59 @@
         </div>
       </div>
 
+      <div class="guide-section" id="search-filter">
+        <h3>Search & Filter</h3>
+        <p>Find nodes quickly and focus on what matters with the Search & Filter panel. Press <kbd>Ctrl</kbd>+<kbd>F</kbd> to toggle the panel open or closed.</p>
+
+        <h4>Text Search</h4>
+        <p>The Search section lets you find nodes by their text content:</p>
+        <ul>
+          <li>Type in the search box to find matching nodes</li>
+          <li>Results appear in a list below the search box</li>
+          <li>Use <kbd>↑</kbd> <kbd>↓</kbd> arrow keys to navigate results</li>
+          <li>Press <kbd>Enter</kbd> or click a result to select that node</li>
+          <li>The panel stays open so you can continue searching</li>
+        </ul>
+
+        <h4>Icon Filtering</h4>
+        <p>The Filter section lets you filter the document view by icons:</p>
+        <ul>
+          <li>Shows all icons that exist in your document, grouped by category</li>
+          <li>Click an icon to toggle it as a filter</li>
+          <li>When filters are active, only matching nodes are shown</li>
+          <li>Parent nodes remain visible to maintain tree structure</li>
+          <li>Multiple icons can be selected (shows nodes matching ANY selected icon)</li>
+          <li>Click "Clear" to remove all active filters</li>
+        </ul>
+
+        <div class="tip-box">
+          <strong>Tip:</strong> Use icon filtering to focus on specific tasks. For example, filter by Priority 1 to see only your highest-priority items, or filter by the "in progress" task icon to see what you're currently working on.
+        </div>
+
+        <div class="tip-box">
+          <strong>Note:</strong> Filtering works in both Mind Map and Outline views. Non-matching nodes are hidden but not deleted - clear the filter to see them again.
+        </div>
+      </div>
+
+      <div class="guide-section" id="links">
+        <h3>Node Links</h3>
+        <p>Add hyperlinks to nodes to reference external resources or other .mindmap files.</p>
+
+        <h4>Adding a Link</h4>
+        <ul>
+          <li>Select a node and press <kbd>Ctrl</kbd>+<kbd>K</kbd> to open the link dialog</li>
+          <li>Enter a URL (web link) or file path (.mindmap files open in new windows)</li>
+          <li>Linked nodes show purple text with an underline</li>
+          <li>Click the link icon on a node to edit or remove the link</li>
+        </ul>
+
+        <h4>Opening Links</h4>
+        <ul>
+          <li>Click on linked text to open the URL in your browser</li>
+          <li>Links to .mindmap files open in a new Mind the Map window</li>
+        </ul>
+      </div>
+
       <div class="guide-section" id="selection">
         <h3>Multi-Selection</h3>
         <p>Select multiple nodes to perform bulk operations like copy, delete, or add icons.</p>
@@ -745,6 +804,8 @@
           <li><strong>Quick capture:</strong> Press <kbd>Tab</kbd> or <kbd>Enter</kbd> while editing to create new nodes without stopping to save first</li>
           <li><strong>Bulk icons:</strong> Multi-select nodes, then open the icon picker to apply icons to all at once</li>
           <li><strong>Focus mode:</strong> Use Smart Collapse (<kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd>) to hide completed work</li>
+          <li><strong>Filter by priority:</strong> Use icon filtering (<kbd>Ctrl</kbd>+<kbd>F</kbd>) to show only nodes with specific icons like Priority 1 or In Progress</li>
+          <li><strong>Link maps together:</strong> Use <kbd>Ctrl</kbd>+<kbd>K</kbd> to add links to other .mindmap files - they open in new windows</li>
           <li><strong>Japanese input:</strong> IME composition is fully supported - Enter during conversion confirms the character, not the node</li>
           <li><strong>Undo everything:</strong> Up to 50 operations are saved in history, even across editing sessions</li>
           <li><strong>Cancel edits:</strong> Press <kbd>Ctrl</kbd>+<kbd>Escape</kbd> to abandon changes to a node</li>

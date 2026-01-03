@@ -1,3 +1,3 @@
 // Store exports
 
-export { useDocumentStore } from './documentStore';
+export { useDocumentStore, computeVisibleNodeIds } from './documentStore';

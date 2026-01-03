@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { useDocumentStore } from '../../store';
-import { useDragContext } from './OutlineView';
+import { useDragContext, useVisibleNodes } from './OutlineView';
 import { getIconDefinition } from '../../types';
 import { Tags, Link } from 'lucide-react';
 import { openLink } from '../../services/tauri';
@@ -30,6 +30,7 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   const openLinkDialog = useDocumentStore((state) => state.openLinkDialog);
 
   const { draggedNodeId, startDrag } = useDragContext();
+  const visibleNodes = useVisibleNodes();
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [editText, setEditText] = useState('');
@@ -287,9 +288,11 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
 
       {/* Children */}
       {!node.isCollapsed &&
-        node.childIds.map((childId) => (
-          <OutlineNode key={childId} nodeId={childId} depth={depth + 1} />
-        ))}
+        node.childIds
+          .filter((childId) => !visibleNodes || visibleNodes.has(childId))
+          .map((childId) => (
+            <OutlineNode key={childId} nodeId={childId} depth={depth + 1} />
+          ))}
     </div>
   );
 }

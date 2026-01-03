@@ -62,7 +62,8 @@ mind-the-map/
     │   │   ├── Outline/         # List view components
     │   │   ├── Help/            # Help dialog (cheat sheet)
     │   │   ├── IconPicker/      # Node icon selection
-    │   │   └── Search/          # Search dialog
+    │   │   ├── LinkDialog/      # Node link editor
+    │   │   └── Search/          # Search & Filter panel (right sidebar)
     │   │
     │   ├── hooks/               # Custom React hooks
     │   │   ├── useAutoSave.ts
@@ -131,6 +132,13 @@ interface DocumentState {
   isSearchOpen: boolean;
   isHelpOpen: boolean;
   isIconPickerOpen: boolean;
+  isLinkDialogOpen: boolean;
+
+  // Search & Filter
+  searchQuery: string;
+  searchResults: SearchResult[];
+  activeIconFilters: IconFilter[];  // Icon filters applied to document view
+  availableIcons: IconFilter[];     // Icons that exist in the document
 
   // History
   history: HistoryEntry[];
@@ -162,7 +170,8 @@ interface DocumentState {
 | → | Go to first child / expand |
 | Space | Toggle collapse |
 | Shift+Alt+Space | Smart collapse all (3-state) |
-| Ctrl+F | Open search |
+| Ctrl+F | Toggle Search & Filter panel |
+| Ctrl+K | Open link dialog |
 
 ### Clipboard
 | Key | Action |
@@ -231,6 +240,29 @@ Copies as TSV + HTML table format:
 - Respects `position.source === 'manual'` nodes
 - Calculates positions for `source === 'auto'` nodes only
 - Avoids overlaps between all nodes
+
+### Search & Filter Panel (Ctrl+F)
+The Search & Filter panel is a right sidebar with two distinct sections:
+
+**Search (text-based)**:
+- Text search through all node content
+- Results listed in sidebar for quick navigation
+- Click result to select and scroll to node
+- Panel stays open while working
+
+**Filter (icon-based)**:
+- Filters the document view directly (hides non-matching nodes)
+- Shows all icons present in the document, grouped by category
+- Multiple filters can be active simultaneously (OR logic)
+- Parent nodes remain visible to maintain tree context
+- Works in both Mind Map and Outline views
+- Uses `computeVisibleNodeIds()` helper to calculate visible set
+
+Key implementation:
+- `activeIconFilters`: Currently selected icon filters
+- `availableIcons`: All icons found in the document (refreshed on panel open)
+- `computeVisibleNodeIds()`: Returns Set of node IDs that should be visible
+- `VisibleNodesContext`: React context to pass visibility down the OutlineNode tree
 
 ---
 
@@ -337,8 +369,10 @@ pnpm tauri build      # Build for production
 | Global keyboard handling | `src/App.tsx` |
 | Mind map rendering | `src/components/MindMap/MindMapCanvas.tsx` |
 | Outline rendering | `src/components/Outline/OutlineView.tsx` |
+| Search & Filter panel | `src/components/Search/SearchPanel.tsx` |
 | Node operations | `src/core/operations/` |
 | Clipboard logic | `src/core/clipboard/` |
 | File I/O | `src/services/tauri/fileSystem.ts` |
 | Layout algorithm | `src/core/layout/layoutEngine.ts` |
 | Help dialog (cheat sheet) | `src/components/Help/HelpDialog.tsx` |
+| Link dialog | `src/components/LinkDialog/LinkDialog.tsx` |

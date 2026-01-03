@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
-import { useDocumentStore } from '../../store';
+import { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useDocumentStore, computeVisibleNodeIds } from '../../store';
 import { useKeyboardNavigation } from '../../hooks/useKeyboardNavigation';
 import { useFileOperations } from '../../hooks/useFileOperations';
 import OutlineNode from './OutlineNode';
@@ -31,10 +31,24 @@ export const useDragContext = () => {
   return context;
 };
 
+// Context for visible nodes (based on icon filters)
+const VisibleNodesContext = createContext<Set<string> | null>(null);
+
+export const useVisibleNodes = () => {
+  return useContext(VisibleNodesContext);
+};
+
 function OutlineView() {
   const rootId = useDocumentStore((state) => state.rootId);
   const nodes = useDocumentStore((state) => state.nodes);
   const moveNode = useDocumentStore((state) => state.moveNode);
+  const activeIconFilters = useDocumentStore((state) => state.activeIconFilters);
+
+  // Compute visible nodes based on active icon filters
+  const visibleNodeIds = useMemo(
+    () => computeVisibleNodeIds(nodes, rootId, activeIconFilters),
+    [nodes, rootId, activeIconFilters]
+  );
 
   // Drag state
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
@@ -209,27 +223,29 @@ function OutlineView() {
 
   return (
     <DragContext.Provider value={dragContextValue}>
-      <div className="h-full flex flex-col">
-        {/* Content */}
-        <div
-          ref={containerRef}
-          className={`flex-1 overflow-auto p-4 relative ${draggedNodeId ? 'select-none' : ''}`}
-        >
-          <OutlineNode nodeId={rootId} depth={0} />
+      <VisibleNodesContext.Provider value={visibleNodeIds}>
+        <div className="h-full flex flex-col">
+          {/* Content */}
+          <div
+            ref={containerRef}
+            className={`flex-1 overflow-auto p-4 relative ${draggedNodeId ? 'select-none' : ''}`}
+          >
+            <OutlineNode nodeId={rootId} depth={0} />
 
-          {/* Drop indicator line */}
-          {dropTarget && (
-            <div
-              className="absolute h-0.5 bg-blue-500 pointer-events-none z-10"
-              style={{
-                top: `${dropTarget.indicatorY}px`,
-                left: `${dropTarget.depth * 24 + 16}px`,
-                right: '16px',
-              }}
-            />
-          )}
+            {/* Drop indicator line */}
+            {dropTarget && (
+              <div
+                className="absolute h-0.5 bg-blue-500 pointer-events-none z-10"
+                style={{
+                  top: `${dropTarget.indicatorY}px`,
+                  left: `${dropTarget.depth * 24 + 16}px`,
+                  right: '16px',
+                }}
+              />
+            )}
+          </div>
         </div>
-      </div>
+      </VisibleNodesContext.Provider>
     </DragContext.Provider>
   );
 }

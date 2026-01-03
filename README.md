@@ -105,7 +105,8 @@ mind-the-map/
     │   │   ├── MindMap/         # PixiJS canvas rendering
     │   │   ├── Outline/         # Outline view components
     │   │   ├── IconPicker/      # Node icon picker
-    │   │   └── Search/          # Search dialog
+    │   │   ├── LinkDialog/      # Node link editor
+    │   │   └── Search/          # Search & Filter panel
     │   ├── store/               # Zustand state management
     │   ├── core/                # Core logic (UI-independent)
     │   ├── hooks/               # Custom React hooks
@@ -132,6 +133,13 @@ mind-the-map/
 - Collapse/Expand: `Space` for single node
 - Smart Collapse All: `Shift+Alt+Space` cycles through 3 states (collapsed → expanded except completed → fully expanded)
 - Node icons: `I` to open picker, click icons to cycle variants
+- Node links: `Ctrl+K` to add/edit hyperlinks
+
+### Search & Filter (`Ctrl+F`)
+- **Search**: Text-based search with results in sidebar, click to navigate
+- **Filter**: Icon-based filtering that hides non-matching nodes from view
+- Multiple icon filters can be combined (OR logic)
+- Parent nodes remain visible for context
 
 ### Clipboard
 - Copy/Cut/Paste: Standard shortcuts with hierarchy preservation

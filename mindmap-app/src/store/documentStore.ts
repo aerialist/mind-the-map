@@ -85,6 +85,12 @@ interface SearchResult {
   path: string[]; // Breadcrumb path from root to this node
 }
 
+// Icon filter for search - stores type and value to uniquely identify an icon
+interface IconFilter {
+  type: string;
+  value: string | number;
+}
+
 interface DocumentState {
   // Document data
   nodes: NodeMap;
@@ -106,6 +112,10 @@ interface DocumentState {
   searchQuery: string;
   searchResults: SearchResult[];
   searchSelectedIndex: number;
+
+  // Filter state (applies directly to document view)
+  activeIconFilters: IconFilter[]; // Currently active icon filters
+  availableIcons: IconFilter[]; // Icons that exist in the document
 
   // Help dialog state
   isHelpOpen: boolean;
@@ -154,9 +164,16 @@ interface DocumentState {
   // Search actions
   openSearch: () => void;
   closeSearch: () => void;
+  toggleSearch: () => void;
   setSearchQuery: (query: string) => void;
   selectSearchResult: (index: number) => void;
   navigateToSearchResult: () => void;
+  selectNodeFromSearch: (index: number) => void;
+
+  // Filter actions (applies to document view)
+  toggleActiveIconFilter: (filter: IconFilter) => void;
+  clearActiveIconFilters: () => void;
+  refreshAvailableIcons: () => void;
 
   // Help actions
   openHelp: () => void;
@@ -199,6 +216,150 @@ const cloneNodes = (nodes: NodeMap): NodeMap => {
   return JSON.parse(JSON.stringify(nodes));
 };
 
+// Helper to update search results based on query (text only, no icon filters)
+const updateSearchResults = (state: DocumentState) => {
+  const query = state.searchQuery;
+
+  // If no query, show no results
+  if (!query.trim()) {
+    state.searchResults = [];
+    return;
+  }
+
+  const lowerQuery = query.toLowerCase();
+  const results: SearchResult[] = [];
+
+  // Helper to get breadcrumb path for a node
+  const getPath = (nodeId: string): string[] => {
+    const path: string[] = [];
+    let currentId: string | null = nodeId;
+    while (currentId) {
+      const currentNode: Node | undefined = state.nodes[currentId];
+      if (!currentNode) break;
+      if (currentNode.content.type === 'text') {
+        path.unshift(currentNode.content.text);
+      }
+      currentId = currentNode.parentId;
+    }
+    return path;
+  };
+
+  // Traverse all nodes to find matches
+  const traverse = (nodeId: string): void => {
+    const traverseNode: Node | undefined = state.nodes[nodeId];
+    if (!traverseNode) return;
+
+    if (traverseNode.content.type === 'text') {
+      const text = traverseNode.content.text;
+      if (text.toLowerCase().includes(lowerQuery)) {
+        results.push({
+          nodeId,
+          text,
+          path: getPath(nodeId),
+        });
+      }
+    }
+
+    // Search all children regardless of collapse state
+    for (const childId of traverseNode.childIds) {
+      traverse(childId);
+    }
+  };
+
+  traverse(state.rootId);
+  state.searchResults = results;
+};
+
+// Helper to collect all unique icons from all nodes
+const collectAllIcons = (state: DocumentState): IconFilter[] => {
+  const iconSet = new Map<string, IconFilter>();
+  const collectIcons = (nodeId: string) => {
+    const node = state.nodes[nodeId];
+    if (!node) return;
+    if (node.icons) {
+      for (const icon of node.icons) {
+        const key = `${icon.type}:${icon.value}`;
+        if (!iconSet.has(key)) {
+          iconSet.set(key, { type: icon.type, value: icon.value });
+        }
+      }
+    }
+    for (const childId of node.childIds) {
+      collectIcons(childId);
+    }
+  };
+  collectIcons(state.rootId);
+  return Array.from(iconSet.values());
+};
+
+// Helper to compute visible node IDs based on active icon filters
+// A node is visible if it matches any filter OR if any descendant matches
+// When no filters are active, all nodes are visible
+export const computeVisibleNodeIds = (
+  nodes: NodeMap,
+  rootId: string,
+  activeIconFilters: IconFilter[]
+): Set<string> => {
+  // If no filters active, all nodes are visible
+  if (activeIconFilters.length === 0) {
+    const allNodes = new Set<string>();
+    const collectAll = (nodeId: string) => {
+      allNodes.add(nodeId);
+      const node = nodes[nodeId];
+      if (node) {
+        for (const childId of node.childIds) {
+          collectAll(childId);
+        }
+      }
+    };
+    collectAll(rootId);
+    return allNodes;
+  }
+
+  const visibleNodes = new Set<string>();
+
+  // Check if a node matches any active filter
+  const nodeMatchesFilter = (nodeId: string): boolean => {
+    const node = nodes[nodeId];
+    if (!node || !node.icons) return false;
+    return node.icons.some((icon) =>
+      activeIconFilters.some(
+        (filter) => filter.type === icon.type && filter.value === icon.value
+      )
+    );
+  };
+
+  // Recursively check if a node or any descendant matches
+  // Returns true if this subtree contains any matching nodes
+  const checkSubtree = (nodeId: string): boolean => {
+    const node = nodes[nodeId];
+    if (!node) return false;
+
+    // Check children first
+    let hasMatchingDescendant = false;
+    for (const childId of node.childIds) {
+      if (checkSubtree(childId)) {
+        hasMatchingDescendant = true;
+      }
+    }
+
+    // Node is visible if it matches or has matching descendants
+    const matches = nodeMatchesFilter(nodeId);
+    if (matches || hasMatchingDescendant) {
+      visibleNodes.add(nodeId);
+      return true;
+    }
+
+    return false;
+  };
+
+  // Always include root so tree structure is maintained
+  visibleNodes.add(rootId);
+  checkSubtree(rootId);
+
+  return visibleNodes;
+};
+
 // Helper to save current state to history
 const saveToHistory = (state: DocumentState) => {
   // Remove any future history if we're not at the end
@@ -238,6 +399,10 @@ export const useDocumentStore = create<DocumentState>()(
     searchQuery: '',
     searchResults: [],
     searchSelectedIndex: 0,
+
+    // Filter state
+    activeIconFilters: [],
+    availableIcons: [],
 
     // Help dialog state
     isHelpOpen: false,
@@ -684,6 +849,8 @@ export const useDocumentStore = create<DocumentState>()(
         state.searchResults = [];
         state.searchSelectedIndex = 0;
         state.editingNodeId = null;
+        // Refresh available icons when opening
+        state.availableIcons = collectAllIcons(state);
       }),
 
     closeSearch: () =>
@@ -692,6 +859,26 @@ export const useDocumentStore = create<DocumentState>()(
         state.searchQuery = '';
         state.searchResults = [];
         state.searchSelectedIndex = 0;
+      }),
+
+    toggleSearch: () =>
+      set((state) => {
+        if (state.isSearchOpen) {
+          // Close
+          state.isSearchOpen = false;
+          state.searchQuery = '';
+          state.searchResults = [];
+          state.searchSelectedIndex = 0;
+        } else {
+          // Open
+          state.isSearchOpen = true;
+          state.searchQuery = '';
+          state.searchResults = [];
+          state.searchSelectedIndex = 0;
+          state.editingNodeId = null;
+          // Refresh available icons when opening
+          state.availableIcons = collectAllIcons(state);
+        }
       }),
 
     // Help actions
@@ -718,54 +905,7 @@ export const useDocumentStore = create<DocumentState>()(
       set((state) => {
         state.searchQuery = query;
         state.searchSelectedIndex = 0;
-
-        if (!query.trim()) {
-          state.searchResults = [];
-          return;
-        }
-
-        const lowerQuery = query.toLowerCase();
-        const results: SearchResult[] = [];
-
-        // Helper to get breadcrumb path for a node
-        const getPath = (nodeId: string): string[] => {
-          const path: string[] = [];
-          let currentId: string | null = nodeId;
-          while (currentId) {
-            const currentNode: Node | undefined = state.nodes[currentId];
-            if (!currentNode) break;
-            if (currentNode.content.type === 'text') {
-              path.unshift(currentNode.content.text);
-            }
-            currentId = currentNode.parentId;
-          }
-          return path;
-        };
-
-        // Traverse all nodes to find matches
-        const traverse = (nodeId: string): void => {
-          const traverseNode: Node | undefined = state.nodes[nodeId];
-          if (!traverseNode) return;
-
-          if (traverseNode.content.type === 'text') {
-            const text = traverseNode.content.text;
-            if (text.toLowerCase().includes(lowerQuery)) {
-              results.push({
-                nodeId,
-                text,
-                path: getPath(nodeId),
-              });
-            }
-          }
-
-          // Search all children regardless of collapse state
-          for (const childId of traverseNode.childIds) {
-            traverse(childId);
-          }
-        };
-
-        traverse(state.rootId);
-        state.searchResults = results;
+        updateSearchResults(state);
       }),
 
     selectSearchResult: (index) =>
@@ -801,6 +941,56 @@ export const useDocumentStore = create<DocumentState>()(
         state.searchQuery = '';
         state.searchResults = [];
         state.searchSelectedIndex = 0;
+      }),
+
+    selectNodeFromSearch: (index) =>
+      set((state) => {
+        const result = state.searchResults[index];
+        if (!result) return;
+
+        // Update selected index
+        state.searchSelectedIndex = index;
+
+        // Expand all ancestors to make the node visible
+        let currentId: string | null = result.nodeId;
+        while (currentId) {
+          const currentNode: Node | undefined = state.nodes[currentId];
+          if (!currentNode) break;
+          if (currentNode.parentId) {
+            const parent: Node | undefined = state.nodes[currentNode.parentId];
+            if (parent && parent.isCollapsed) {
+              parent.isCollapsed = false;
+            }
+          }
+          currentId = currentNode.parentId;
+        }
+
+        // Select the node but keep search panel open
+        state.selectedNodeId = result.nodeId;
+        state.selectedNodeIds = [result.nodeId];
+      }),
+
+    // Filter actions (applies to document view)
+    toggleActiveIconFilter: (filter: IconFilter) =>
+      set((state) => {
+        const existingIndex = state.activeIconFilters.findIndex(
+          (f: IconFilter) => f.type === filter.type && f.value === filter.value
+        );
+        if (existingIndex >= 0) {
+          state.activeIconFilters.splice(existingIndex, 1);
+        } else {
+          state.activeIconFilters.push(filter);
+        }
+      }),
+
+    clearActiveIconFilters: () =>
+      set((state) => {
+        state.activeIconFilters = [];
+      }),
+
+    refreshAvailableIcons: () =>
+      set((state) => {
+        state.availableIcons = collectAllIcons(state);
       }),
 
     // Icon actions

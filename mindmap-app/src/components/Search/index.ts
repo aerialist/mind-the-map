@@ -1,1 +1,1 @@
-export { default as SearchDialog } from './SearchDialog';
+export { default as SearchPanel } from './SearchPanel';
