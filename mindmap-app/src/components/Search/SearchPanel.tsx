@@ -213,11 +213,26 @@ function SearchPanel() {
 
       {/* Search Section */}
       <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-1.5 mb-2">
-          <Search size={12} className="text-gray-400" />
-          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-            Search
-          </span>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <Search size={12} className="text-gray-400" />
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+              Search
+            </span>
+            {searchQuery && searchResults.length > 0 && (
+              <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
+                {searchResults.length} hit{searchResults.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400"
+            >
+              Clear
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-100 dark:bg-gray-700 rounded">
           <input
@@ -231,11 +246,6 @@ function SearchPanel() {
             placeholder="Search nodes..."
             className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400"
           />
-          {searchQuery && (
-            <span className="text-xs text-gray-400 shrink-0">
-              {searchResults.length}
-            </span>
-          )}
         </div>
       </div>
 
