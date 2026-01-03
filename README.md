@@ -104,7 +104,7 @@ mind-the-map/
     │   │   ├── Help/            # Help dialog (cheat sheet)
     │   │   ├── MindMap/         # PixiJS canvas rendering
     │   │   ├── Outline/         # Outline view components
-    │   │   ├── IconPicker/      # Node icon picker
+    │   │   ├── IconPicker/      # Icons panel (right sidebar)
     │   │   ├── LinkDialog/      # Node link editor
     │   │   └── Search/          # Search & Filter panel
     │   ├── store/               # Zustand state management

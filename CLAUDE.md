@@ -61,7 +61,7 @@ mind-the-map/
     │   │   │   └── EdgeRenderer.ts
     │   │   ├── Outline/         # List view components
     │   │   ├── Help/            # Help dialog (cheat sheet)
-    │   │   ├── IconPicker/      # Node icon selection
+    │   │   ├── IconPicker/      # Icons panel (right sidebar)
     │   │   ├── LinkDialog/      # Node link editor
     │   │   └── Search/          # Search & Filter panel (right sidebar)
     │   │
@@ -160,7 +160,7 @@ interface DocumentState {
 | Escape | Save and stop editing | |
 | Ctrl+Escape | Cancel editing | Discards changes |
 | Delete/Backspace | Delete node | Root protected |
-| I | Open icon picker | |
+| I | Toggle icons panel | |
 
 ### Navigation
 | Key | Action |

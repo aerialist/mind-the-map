@@ -10,6 +10,7 @@ import { HelpDialog } from './components/Help';
 import { LinkDialog } from './components/LinkDialog';
 import { useDocumentStore } from './store';
 import { useAutoSave, useInitialFileLoad } from './hooks';
+import { Filter } from 'lucide-react';
 
 const getFileNameFromPath = (filePath: string): string => {
   const normalized = filePath.replace(/\\/g, '/');
@@ -21,6 +22,7 @@ function App() {
   const viewMode = useDocumentStore((state) => state.viewMode);
   const setViewMode = useDocumentStore((state) => state.setViewMode);
   const isSearchOpen = useDocumentStore((state) => state.isSearchOpen);
+  const isIconPickerOpen = useDocumentStore((state) => state.isIconPickerOpen);
   const toggleSearch = useDocumentStore((state) => state.toggleSearch);
   const isHelpOpen = useDocumentStore((state) => state.isHelpOpen);
   const toggleHelp = useDocumentStore((state) => state.toggleHelp);
@@ -29,6 +31,8 @@ function App() {
   const isDirty = useDocumentStore((state) => state.isDirty);
   const isLinkDialogOpen = useDocumentStore((state) => state.isLinkDialogOpen);
   const openLinkDialog = useDocumentStore((state) => state.openLinkDialog);
+  const activeIconFilters = useDocumentStore((state) => state.activeIconFilters);
+  const clearActiveIconFilters = useDocumentStore((state) => state.clearActiveIconFilters);
 
   // Enable autosave (30 seconds after last change, only if file has been saved before)
   useAutoSave();
@@ -142,6 +146,30 @@ function App() {
             </button>
           </div>
 
+          {/* Filter active indicator */}
+          {activeIconFilters.length > 0 && !isSearchOpen && (
+            <button
+              onClick={toggleSearch}
+              className="flex items-center gap-1.5 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+              title="Click to open Search & Filter panel"
+            >
+              <Filter size={12} />
+              <span>{activeIconFilters.length} active</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearActiveIconFilters();
+                }}
+                className="ml-0.5 p-0.5 hover:bg-blue-300 dark:hover:bg-blue-700 rounded-full"
+                title="Clear all filters"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </button>
+          )}
+
           {/* Help button */}
           <button
             onClick={toggleHelp}
@@ -155,17 +183,16 @@ function App() {
         </div>
       </header>
 
-      {/* Main content with search panel */}
+      {/* Main content with side panels */}
       <main className="flex-1 overflow-hidden flex">
         <div className="flex-1 overflow-hidden">
           {viewMode === 'mindmap' ? <MindMapView /> : <OutlineView />}
         </div>
+        {/* Icon picker panel (right sidebar) */}
+        {isIconPickerOpen && <IconPicker />}
         {/* Search panel (right sidebar) */}
         {isSearchOpen && <SearchPanel />}
       </main>
-
-      {/* Icon picker dialog */}
-      <IconPicker />
 
       {/* Link dialog */}
       <LinkDialog />
