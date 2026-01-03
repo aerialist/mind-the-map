@@ -22,7 +22,6 @@ export const useKeyboardNavigation = () => {
   const selectedNodeId = useDocumentStore((state) => state.selectedNodeId);
   const selectedNodeIds = useDocumentStore((state) => state.selectedNodeIds);
   const editingNodeId = useDocumentStore((state) => state.editingNodeId);
-  const clipboard = useDocumentStore((state) => state.clipboard);
   const selectNode = useDocumentStore((state) => state.selectNode);
 
   // Track the last text we wrote to system clipboard
@@ -36,7 +35,6 @@ export const useKeyboardNavigation = () => {
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
   const toggleCollapseAll = useDocumentStore((state) => state.toggleCollapseAll);
   const openIconPicker = useDocumentStore((state) => state.openIconPicker);
-  const toggleLinkPanel = useDocumentStore((state) => state.toggleLinkPanel);
   const copyNodes = useDocumentStore((state) => state.copyNodes);
   const cutNodes = useDocumentStore((state) => state.cutNodes);
   const pasteNodes = useDocumentStore((state) => state.pasteNodes);
@@ -67,57 +65,8 @@ export const useKeyboardNavigation = () => {
         return;
       }
 
-      // Handle copy/cut/paste globally (even during editing for paste)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
-        // Copy - only when not editing and has selection
-        if (!editingNodeId && selectedNodeIds.length > 0) {
-          e.preventDefault();
-
-          // Collect nodes for the selected subtrees
-          const collectSubtree = (nodeId: string): Record<string, typeof nodes[string]> => {
-            const result: Record<string, typeof nodes[string]> = {};
-            const node = nodes[nodeId];
-            if (!node) return result;
-            result[nodeId] = node;
-            for (const childId of node.childIds) {
-              Object.assign(result, collectSubtree(childId));
-            }
-            return result;
-          };
-
-          const subtreeNodes: Record<string, typeof nodes[string]> = {};
-          for (const nodeId of selectedNodeIds) {
-            Object.assign(subtreeNodes, collectSubtree(nodeId));
-          }
-
-          // Generate HTML and plain text for system clipboard
-          const htmlContent = nodesToHtml(subtreeNodes, selectedNodeIds);
-          const textContent = nodesToPlainText(subtreeNodes, selectedNodeIds);
-
-          // Store the text for later comparison
-          lastWrittenClipboardTextRef.current = textContent;
-
-          // Write to system clipboard with both formats
-          try {
-            const clipboardItems = [
-              new ClipboardItem({
-                'text/plain': new Blob([textContent], { type: 'text/plain' }),
-                'text/html': new Blob([htmlContent], { type: 'text/html' }),
-              }),
-            ];
-            navigator.clipboard.write(clipboardItems).catch(() => {
-              // Fallback to text-only
-              navigator.clipboard.writeText(textContent).catch(() => {});
-            });
-          } catch {
-            // Fallback for browsers that don't support ClipboardItem
-            navigator.clipboard.writeText(textContent).catch(() => {});
-          }
-
-          copyNodes(selectedNodeIds);
-        }
-        return;
-      }
+      // Note: Copy/Cut/Paste (Cmd+C/X/V) are handled via native menu events (menu-copy, menu-cut, menu-paste)
+      // The native menu items trigger events that call performCopy/performCut/performPaste
 
       // Copy for Miro (Ctrl+Shift+M) - exports as table format for Miro's paste dialog
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'm' || e.key === 'M')) {
@@ -339,99 +288,217 @@ export const useKeyboardNavigation = () => {
       }
     };
 
-    // Handle paste event - this gives us access to clipboardData without permission prompts
-    const handlePaste = (e: ClipboardEvent) => {
-      // Skip if editing or no target selected
-      if (editingNodeId || !selectedNodeId) return;
+    // Note: Paste is handled via native menu event (menu-paste) which calls performPaste()
+    // This avoids duplicate handling and permission issues with clipboard API
 
-      // Skip if user is in an input or textarea
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      ) {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [nodes, selectedNodeId, selectedNodeIds, editingNodeId, selectNode, startEditing, createChildNode, createSiblingNode, createSiblingNodeAbove, deleteNode, toggleCollapse, toggleCollapseAll, openIconPicker, undo, redo]);
+
+  // Helper to collect nodes for subtrees
+  const collectSubtree = useCallback((nodeId: string): Record<string, typeof nodes[string]> => {
+    const result: Record<string, typeof nodes[string]> = {};
+    const node = nodes[nodeId];
+    if (!node) return result;
+    result[nodeId] = node;
+    for (const childId of node.childIds) {
+      Object.assign(result, collectSubtree(childId));
+    }
+    return result;
+  }, [nodes]);
+
+  // Copy selected nodes to clipboard
+  const performCopy = useCallback(() => {
+    const currentSelectedNodeIds = useDocumentStore.getState().selectedNodeIds;
+    const currentEditingNodeId = useDocumentStore.getState().editingNodeId;
+    const currentNodes = useDocumentStore.getState().nodes;
+
+    if (currentEditingNodeId || currentSelectedNodeIds.length === 0) return;
+
+    const subtreeNodes: Record<string, typeof currentNodes[string]> = {};
+    for (const nodeId of currentSelectedNodeIds) {
+      const collectNodes = (id: string): void => {
+        const node = currentNodes[id];
+        if (!node) return;
+        subtreeNodes[id] = node;
+        for (const childId of node.childIds) {
+          collectNodes(childId);
+        }
+      };
+      collectNodes(nodeId);
+    }
+
+    // Generate HTML and plain text for system clipboard
+    const htmlContent = nodesToHtml(subtreeNodes, currentSelectedNodeIds);
+    const textContent = nodesToPlainText(subtreeNodes, currentSelectedNodeIds);
+
+    // Update internal clipboard state synchronously
+    copyNodes(currentSelectedNodeIds);
+
+    // Write to system clipboard (async)
+    const writeToSystemClipboard = async () => {
+      try {
+        const clipboardItems = [
+          new ClipboardItem({
+            'text/plain': new Blob([textContent], { type: 'text/plain' }),
+            'text/html': new Blob([htmlContent], { type: 'text/html' }),
+          }),
+        ];
+        await navigator.clipboard.write(clipboardItems);
+        lastWrittenClipboardTextRef.current = textContent;
+      } catch {
+        try {
+          await navigator.clipboard.writeText(textContent);
+          lastWrittenClipboardTextRef.current = textContent;
+        } catch {
+          lastWrittenClipboardTextRef.current = null;
+        }
+      }
+    };
+    writeToSystemClipboard();
+  }, [copyNodes]);
+
+  // Cut selected nodes to clipboard
+  const performCut = useCallback(() => {
+    const currentSelectedNodeIds = useDocumentStore.getState().selectedNodeIds;
+    const currentEditingNodeId = useDocumentStore.getState().editingNodeId;
+    const currentNodes = useDocumentStore.getState().nodes;
+
+    if (currentEditingNodeId || currentSelectedNodeIds.length === 0) return;
+
+    // Filter out root node
+    const validNodeIds = currentSelectedNodeIds.filter(
+      (id) => currentNodes[id]?.parentId !== null
+    );
+    if (validNodeIds.length === 0) return;
+
+    const subtreeNodes: Record<string, typeof currentNodes[string]> = {};
+    for (const nodeId of validNodeIds) {
+      const collectNodes = (id: string): void => {
+        const node = currentNodes[id];
+        if (!node) return;
+        subtreeNodes[id] = node;
+        for (const childId of node.childIds) {
+          collectNodes(childId);
+        }
+      };
+      collectNodes(nodeId);
+    }
+
+    // Generate HTML and plain text for system clipboard
+    const htmlContent = nodesToHtml(subtreeNodes, validNodeIds);
+    const textContent = nodesToPlainText(subtreeNodes, validNodeIds);
+
+    // Cut nodes (updates internal clipboard and removes from tree)
+    cutNodes(validNodeIds);
+
+    // Write to system clipboard (async)
+    const writeToSystemClipboard = async () => {
+      try {
+        const clipboardItems = [
+          new ClipboardItem({
+            'text/plain': new Blob([textContent], { type: 'text/plain' }),
+            'text/html': new Blob([htmlContent], { type: 'text/html' }),
+          }),
+        ];
+        await navigator.clipboard.write(clipboardItems);
+        lastWrittenClipboardTextRef.current = textContent;
+      } catch {
+        try {
+          await navigator.clipboard.writeText(textContent);
+          lastWrittenClipboardTextRef.current = textContent;
+        } catch {
+          lastWrittenClipboardTextRef.current = null;
+        }
+      }
+    };
+    writeToSystemClipboard();
+  }, [cutNodes]);
+
+  // Paste from clipboard (internal or external)
+  const performPaste = useCallback(async () => {
+    const currentSelectedNodeId = useDocumentStore.getState().selectedNodeId;
+    const currentEditingNodeId = useDocumentStore.getState().editingNodeId;
+    const currentClipboard = useDocumentStore.getState().clipboard;
+
+    if (currentEditingNodeId || !currentSelectedNodeId) return;
+
+    // Read from system clipboard to check for external content
+    let textContent = '';
+    let htmlContent = '';
+    try {
+      textContent = await navigator.clipboard.readText();
+      // Try to read HTML if available
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        if (item.types.includes('text/html')) {
+          const blob = await item.getType('text/html');
+          htmlContent = await blob.text();
+          break;
+        }
+      }
+    } catch {
+      // Clipboard read failed, will use internal clipboard
+    }
+
+    // Determine if this is internal or external paste
+    const hasInternalClipboard = currentClipboard && currentClipboard.rootIds.length > 0;
+    const isInternalPaste = hasInternalClipboard && (
+      !textContent ||
+      !textContent.trim() ||
+      textContent === lastWrittenClipboardTextRef.current
+    );
+
+    if (isInternalPaste) {
+      // Use internal clipboard
+      pasteNodes(currentSelectedNodeId);
+    } else if (textContent && textContent.trim()) {
+      // External paste - try to parse structured content first
+
+      // Try parsing HTML (ul/li from Workflowy, etc.)
+      if (htmlContent) {
+        const parsedNodes = parseHtmlToNodes(htmlContent);
+        if (parsedNodes.length > 0) {
+          const { nodes: newNodes, rootIds } = parsedNodesToNodeMap(
+            parsedNodes,
+            currentSelectedNodeId
+          );
+          pasteNodesFromExternal(currentSelectedNodeId, newNodes, rootIds);
+          return;
+        }
+      }
+
+      // Try parsing indented text
+      const parsedNodes = parseIndentedTextToNodes(textContent);
+      if (parsedNodes.length > 1 || (parsedNodes.length === 1 && parsedNodes[0].children.length > 0)) {
+        // Has hierarchy - use structured paste
+        const { nodes: newNodes, rootIds } = parsedNodesToNodeMap(
+          parsedNodes,
+          currentSelectedNodeId
+        );
+        pasteNodesFromExternal(currentSelectedNodeId, newNodes, rootIds);
         return;
       }
 
-      e.preventDefault();
+      // Fallback to plain text paste
+      pasteNodesFromText(currentSelectedNodeId, textContent);
+    }
+  }, [pasteNodes, pasteNodesFromText, pasteNodesFromExternal]);
 
-      const clipboardData = e.clipboardData;
-      if (!clipboardData) return;
-
-      const hasInternalClipboard = clipboard && clipboard.rootIds.length > 0;
-      const htmlContent = clipboardData.getData('text/html');
-      const textContent = clipboardData.getData('text/plain');
-
-      // Check if content differs from what we last wrote
-      const systemTextDiffersFromLastWrite =
-        textContent &&
-        textContent.trim() &&
-        textContent !== lastWrittenClipboardTextRef.current;
-
-      if (systemTextDiffersFromLastWrite) {
-        // User copied something externally - try to parse HTML first
-        if (htmlContent) {
-          const parsedNodes = parseHtmlToNodes(htmlContent);
-          if (parsedNodes.length > 0) {
-            // Successfully parsed HTML structure
-            const { nodes: newNodes, rootIds } = parsedNodesToNodeMap(
-              parsedNodes,
-              selectedNodeId
-            );
-            pasteNodesFromExternal(selectedNodeId, newNodes, rootIds);
-            return;
-          }
-        }
-
-        // Try parsing indented text
-        if (textContent) {
-          const parsedNodes = parseIndentedTextToNodes(textContent);
-          if (parsedNodes.length > 1 || (parsedNodes.length === 1 && parsedNodes[0].children.length > 0)) {
-            // Has hierarchy - use structured paste
-            const { nodes: newNodes, rootIds } = parsedNodesToNodeMap(
-              parsedNodes,
-              selectedNodeId
-            );
-            pasteNodesFromExternal(selectedNodeId, newNodes, rootIds);
-            return;
-          }
-        }
-
-        // Fallback to plain text paste
-        if (textContent && textContent.trim()) {
-          pasteNodesFromText(selectedNodeId, textContent);
-        }
-      } else if (hasInternalClipboard) {
-        // Use internal clipboard (node copy/cut)
-        pasteNodes(selectedNodeId);
-      } else if (textContent && textContent.trim()) {
-        // Fallback: use system clipboard text
-        pasteNodesFromText(selectedNodeId, textContent);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('paste', handlePaste);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('paste', handlePaste);
-    };
-  }, [nodes, selectedNodeId, selectedNodeIds, editingNodeId, clipboard, selectNode, startEditing, createChildNode, createSiblingNode, createSiblingNodeAbove, deleteNode, toggleCollapse, toggleCollapseAll, openIconPicker, copyNodes, cutNodes, pasteNodes, pasteNodesFromText, pasteNodesFromExternal, undo, redo]);
+  // Store refs to callbacks so the menu event listener effect runs only once
+  // but still calls the latest version of each callback
+  const copyForMiroRef = useRef<() => void>(() => {});
+  const performCopyRef = useRef<() => void>(() => {});
+  const performCutRef = useRef<() => void>(() => {});
+  const performPasteRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const undoRef = useRef<() => void>(() => {});
+  const redoRef = useRef<() => void>(() => {});
 
   // Handle "Copy for Miro" menu event from Tauri
   const copyForMiro = useCallback(() => {
     if (selectedNodeIds.length === 0) return;
-
-    // Collect nodes for the selected subtrees
-    const collectSubtree = (nodeId: string): Record<string, typeof nodes[string]> => {
-      const result: Record<string, typeof nodes[string]> = {};
-      const node = nodes[nodeId];
-      if (!node) return result;
-      result[nodeId] = node;
-      for (const childId of node.childIds) {
-        Object.assign(result, collectSubtree(childId));
-      }
-      return result;
-    };
 
     const subtreeNodes: Record<string, typeof nodes[string]> = {};
     for (const nodeId of selectedNodeIds) {
@@ -458,64 +525,133 @@ export const useKeyboardNavigation = () => {
     } catch {
       navigator.clipboard.writeText(textContent).catch(() => {});
     }
-  }, [nodes, selectedNodeIds]);
+  }, [nodes, selectedNodeIds, collectSubtree]);
+
+  // Keep refs updated with latest callbacks
+  copyForMiroRef.current = copyForMiro;
+  performCopyRef.current = performCopy;
+  performCutRef.current = performCut;
+  performPasteRef.current = performPaste;
+  undoRef.current = undo;
+  redoRef.current = redo;
 
   useEffect(() => {
     // Listen for menu events from Tauri - filter by window label in payload
+    // Uses refs so this effect only runs ONCE on mount, preventing duplicate listeners
+    // Track if cleanup was called before listeners were set up (React StrictMode)
+    let isCancelled = false;
+    const unlistenFns: Array<() => void> = [];
+
     const myLabel = getCurrentWindow().label;
-    const listeners = [
+    const listenerPromises = [
       listen<string>('menu-copy-for-miro', (event) => {
-        if (event.payload === myLabel) copyForMiro();
+        if (!isCancelled && event.payload === myLabel) copyForMiroRef.current();
+      }),
+      listen<string>('menu-copy', (event) => {
+        if (!isCancelled && event.payload === myLabel) performCopyRef.current();
+      }),
+      listen<string>('menu-cut', (event) => {
+        if (!isCancelled && event.payload === myLabel) performCutRef.current();
+      }),
+      listen<string>('menu-paste', (event) => {
+        if (!isCancelled && event.payload === myLabel) performPasteRef.current();
+      }),
+      listen<string>('menu-undo', (event) => {
+        if (!isCancelled && event.payload === myLabel) undoRef.current();
+      }),
+      listen<string>('menu-redo', (event) => {
+        if (!isCancelled && event.payload === myLabel) redoRef.current();
       }),
       listen<string>('menu-create-child', (event) => {
-        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
-          createChildNode(selectedNodeId);
+        if (isCancelled || event.payload !== myLabel) return;
+        const state = useDocumentStore.getState();
+        if (state.selectedNodeId && !state.editingNodeId) {
+          state.createChildNode(state.selectedNodeId);
         }
       }),
       listen<string>('menu-create-sibling', (event) => {
-        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
-          createSiblingNode(selectedNodeId);
+        if (isCancelled || event.payload !== myLabel) return;
+        const state = useDocumentStore.getState();
+        if (state.selectedNodeId && !state.editingNodeId) {
+          state.createSiblingNode(state.selectedNodeId);
         }
       }),
       listen<string>('menu-create-sibling-above', (event) => {
-        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
-          createSiblingNodeAbove(selectedNodeId);
+        if (isCancelled || event.payload !== myLabel) return;
+        const state = useDocumentStore.getState();
+        if (state.selectedNodeId && !state.editingNodeId) {
+          state.createSiblingNodeAbove(state.selectedNodeId);
         }
       }),
       listen<string>('menu-edit-node', (event) => {
-        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
-          startEditing(selectedNodeId);
+        if (isCancelled || event.payload !== myLabel) return;
+        const state = useDocumentStore.getState();
+        if (state.selectedNodeId && !state.editingNodeId) {
+          state.startEditing(state.selectedNodeId);
         }
       }),
       listen<string>('menu-delete-node', (event) => {
-        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
-          deleteNode(selectedNodeId);
+        if (isCancelled || event.payload !== myLabel) return;
+        const state = useDocumentStore.getState();
+        if (state.selectedNodeId && !state.editingNodeId) {
+          state.deleteNode(state.selectedNodeId);
         }
       }),
       listen<string>('menu-toggle-collapse', (event) => {
-        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
-          toggleCollapse(selectedNodeId);
+        if (isCancelled || event.payload !== myLabel) return;
+        const state = useDocumentStore.getState();
+        if (state.selectedNodeId && !state.editingNodeId) {
+          state.toggleCollapse(state.selectedNodeId);
         }
       }),
       listen<string>('menu-toggle-collapse-all', (event) => {
-        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
-          toggleCollapseAll(selectedNodeId);
+        if (isCancelled || event.payload !== myLabel) return;
+        const state = useDocumentStore.getState();
+        if (state.selectedNodeId && !state.editingNodeId) {
+          state.toggleCollapseAll(state.selectedNodeId);
         }
       }),
       listen<string>('menu-open-icon-picker', (event) => {
-        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
-          openIconPicker();
+        if (isCancelled || event.payload !== myLabel) return;
+        const state = useDocumentStore.getState();
+        if (state.selectedNodeId && !state.editingNodeId) {
+          state.openIconPicker();
         }
       }),
       listen<string>('menu-add-link', (event) => {
-        if (event.payload === myLabel && selectedNodeId && !editingNodeId) {
-          toggleLinkPanel();
+        if (isCancelled || event.payload !== myLabel) return;
+        const state = useDocumentStore.getState();
+        if (state.selectedNodeId && !state.editingNodeId) {
+          state.toggleLinkPanel();
         }
       }),
     ];
 
+    // Collect unlisten functions as they resolve
+    listenerPromises.forEach((promise) => {
+      promise.then((unlistenFn) => {
+        if (isCancelled) {
+          // Effect was cancelled before this listener resolved - clean up immediately
+          unlistenFn();
+        } else {
+          unlistenFns.push(unlistenFn);
+        }
+      }).catch(() => {
+        // Ignore errors during listener setup
+      });
+    });
+
     return () => {
-      listeners.forEach((unlisten) => unlisten.then((fn) => fn()));
+      isCancelled = true;
+      // Clean up any listeners that have been set up
+      unlistenFns.forEach((fn) => {
+        try {
+          fn();
+        } catch {
+          // Ignore errors during cleanup
+        }
+      });
     };
-  }, [copyForMiro, selectedNodeId, editingNodeId, createChildNode, createSiblingNode, createSiblingNodeAbove, startEditing, deleteNode, toggleCollapse, toggleCollapseAll, openIconPicker, toggleLinkPanel]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - runs only once on mount, uses refs for latest callbacks
 };

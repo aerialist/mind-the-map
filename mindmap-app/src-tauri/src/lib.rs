@@ -125,17 +125,34 @@ pub fn run() {
                 .build()?;
 
             // === Edit menu items ===
+            // Use custom menu items for copy/cut/paste so JavaScript handles them
+            // (PredefinedMenuItem clipboard items intercept at OS level before JS sees them)
+            let undo_item = MenuItemBuilder::with_id("undo", "Undo")
+                .accelerator("CmdOrCtrl+Z")
+                .build(app)?;
+            let redo_item = MenuItemBuilder::with_id("redo", "Redo")
+                .accelerator("CmdOrCtrl+Shift+Z")
+                .build(app)?;
+            let cut_item = MenuItemBuilder::with_id("cut", "Cut")
+                .accelerator("CmdOrCtrl+X")
+                .build(app)?;
+            let copy_item = MenuItemBuilder::with_id("copy", "Copy")
+                .accelerator("CmdOrCtrl+C")
+                .build(app)?;
+            let paste_item = MenuItemBuilder::with_id("paste", "Paste")
+                .accelerator("CmdOrCtrl+V")
+                .build(app)?;
             let copy_for_miro = MenuItemBuilder::with_id("copy_for_miro", "Copy for Miro")
                 .accelerator("CmdOrCtrl+Shift+M")
                 .build(app)?;
 
             let edit_menu = SubmenuBuilder::new(app, "Edit")
-                .item(&PredefinedMenuItem::undo(app, None)?)
-                .item(&PredefinedMenuItem::redo(app, None)?)
+                .item(&undo_item)
+                .item(&redo_item)
                 .separator()
-                .item(&PredefinedMenuItem::cut(app, None)?)
-                .item(&PredefinedMenuItem::copy(app, None)?)
-                .item(&PredefinedMenuItem::paste(app, None)?)
+                .item(&cut_item)
+                .item(&copy_item)
+                .item(&paste_item)
                 .separator()
                 .item(&copy_for_miro)
                 .item(&PredefinedMenuItem::select_all(app, None)?)
@@ -293,6 +310,11 @@ pub fn run() {
                 "open" => Some("menu-open"),
                 "save" => Some("menu-save"),
                 "save_as" => Some("menu-save-as"),
+                "undo" => Some("menu-undo"),
+                "redo" => Some("menu-redo"),
+                "cut" => Some("menu-cut"),
+                "copy" => Some("menu-copy"),
+                "paste" => Some("menu-paste"),
                 "copy_for_miro" => Some("menu-copy-for-miro"),
                 "view_mindmap" => Some("menu-view-mindmap"),
                 "view_outline" => Some("menu-view-outline"),

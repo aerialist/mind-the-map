@@ -1283,15 +1283,27 @@ function MindMapCanvas() {
 
   // Listen for fit-to-view menu event
   useEffect(() => {
+    let isCancelled = false;
+    let unlistenFn: (() => void) | null = null;
+
     const myLabel = getCurrentWindow().label;
-    const unlisten = listen<string>('menu-fit-to-view', (event) => {
-      if (event.payload === myLabel) {
+    listen<string>('menu-fit-to-view', (event) => {
+      if (!isCancelled && event.payload === myLabel) {
         fitToView();
       }
-    });
+    }).then((fn) => {
+      if (isCancelled) {
+        fn();
+      } else {
+        unlistenFn = fn;
+      }
+    }).catch(() => {});
 
     return () => {
-      unlisten.then((fn) => fn());
+      isCancelled = true;
+      if (unlistenFn) {
+        try { unlistenFn(); } catch {}
+      }
     };
   }, [fitToView]);
 

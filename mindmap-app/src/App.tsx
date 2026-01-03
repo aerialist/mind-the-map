@@ -103,21 +103,35 @@ function App() {
 
   // Listen for Tauri menu events (View menu) - filter by window label in payload
   useEffect(() => {
+    let isCancelled = false;
+    const unlistenFns: Array<() => void> = [];
+
     const myLabel = getCurrentWindow().label;
-    const listeners = [
+    const listenerPromises = [
       listen<string>('menu-view-mindmap', (event) => {
-        if (event.payload === myLabel) setViewMode('mindmap');
+        if (!isCancelled && event.payload === myLabel) setViewMode('mindmap');
       }),
       listen<string>('menu-view-outline', (event) => {
-        if (event.payload === myLabel) setViewMode('outline');
+        if (!isCancelled && event.payload === myLabel) setViewMode('outline');
       }),
       listen<string>('menu-find', (event) => {
-        if (event.payload === myLabel) toggleSearch();
+        if (!isCancelled && event.payload === myLabel) toggleSearch();
       }),
     ];
 
+    listenerPromises.forEach((promise) => {
+      promise.then((unlistenFn) => {
+        if (isCancelled) {
+          unlistenFn();
+        } else {
+          unlistenFns.push(unlistenFn);
+        }
+      }).catch(() => {});
+    });
+
     return () => {
-      listeners.forEach((unlisten) => unlisten.then((fn) => fn()));
+      isCancelled = true;
+      unlistenFns.forEach((fn) => { try { fn(); } catch {} });
     };
   }, [setViewMode, toggleSearch]);
 

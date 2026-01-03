@@ -102,34 +102,48 @@ export const useFileOperations = () => {
 
   // Listen for Tauri menu events - filter by window label in payload
   useEffect(() => {
+    let isCancelled = false;
+    const unlistenFns: Array<() => void> = [];
+
     const myLabel = getCurrentWindow().label;
 
     // Use global listen but filter by target label in payload
-    const listeners = [
+    const listenerPromises = [
       listen<string>('menu-new', (event) => {
-        if (event.payload === myLabel) {
+        if (!isCancelled && event.payload === myLabel) {
           handleNew();
         }
       }),
       listen<string>('menu-open', (event) => {
-        if (event.payload === myLabel) {
+        if (!isCancelled && event.payload === myLabel) {
           handleOpen();
         }
       }),
       listen<string>('menu-save', (event) => {
-        if (event.payload === myLabel) {
+        if (!isCancelled && event.payload === myLabel) {
           handleSave();
         }
       }),
       listen<string>('menu-save-as', (event) => {
-        if (event.payload === myLabel) {
+        if (!isCancelled && event.payload === myLabel) {
           handleSaveAs();
         }
       }),
     ];
 
+    listenerPromises.forEach((promise) => {
+      promise.then((unlistenFn) => {
+        if (isCancelled) {
+          unlistenFn();
+        } else {
+          unlistenFns.push(unlistenFn);
+        }
+      }).catch(() => {});
+    });
+
     return () => {
-      listeners.forEach((unlisten) => unlisten.then((fn) => fn()));
+      isCancelled = true;
+      unlistenFns.forEach((fn) => { try { fn(); } catch {} });
     };
   }, [handleNew, handleOpen, handleSave, handleSaveAs]);
 

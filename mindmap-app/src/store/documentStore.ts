@@ -390,7 +390,7 @@ export const useDocumentStore = create<DocumentState>()(
     currentFilePath: null,
     isDirty: false,
     selectedNodeId: 'root',
-    selectedNodeIds: [],
+    selectedNodeIds: ['root'],
     editingNodeId: null,
     viewMode: 'outline',
     viewport: { x: 0, y: 0, zoom: 1 },
