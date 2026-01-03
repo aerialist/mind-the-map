@@ -233,6 +233,7 @@ function MindMapCanvas() {
   const stopEditing = useDocumentStore((state) => state.stopEditing);
   const moveNode = useDocumentStore((state) => state.moveNode);
   const openIconPicker = useDocumentStore((state) => state.openIconPicker);
+  const toggleLinkPanel = useDocumentStore((state) => state.toggleLinkPanel);
   const cycleIcon = useDocumentStore((state) => state.cycleIcon);
 
   // Check if ancestorId is an ancestor of descendantId
@@ -1066,8 +1067,8 @@ function MindMapCanvas() {
           const originalEvent = e.nativeEvent as PointerEvent | undefined;
           if (originalEvent?.button === 2) return;
           e.stopPropagation();
-          // Open link dialog to edit the link
-          useDocumentStore.getState().openLinkDialog();
+          // Open link panel to edit the link
+          useDocumentStore.getState().toggleLinkPanel();
         });
 
         const linkIcon = new Graphics();
@@ -1474,8 +1475,13 @@ function MindMapCanvas() {
       e.stopPropagation();
       // Open icon picker (uses currently selected node)
       openIconPicker();
+    } else if ((e.key === 'k' || e.key === 'K') && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      e.stopPropagation();
+      // Toggle link panel
+      toggleLinkPanel();
     }
-  }, [editing, selectedNodeId, nodes, createChildNode, createSiblingNode, createSiblingNodeAbove, startEditingNode, openIconPicker]);
+  }, [editing, selectedNodeId, nodes, createChildNode, createSiblingNode, createSiblingNodeAbove, startEditingNode, openIconPicker, toggleLinkPanel]);
 
   // Focus the wrapper when canvas is clicked (to receive keyboard events)
   const handleWrapperClick = useCallback(() => {

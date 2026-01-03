@@ -191,6 +191,7 @@ interface DocumentState {
   // Link actions
   openLinkDialog: () => void;
   closeLinkDialog: () => void;
+  toggleLinkPanel: () => void;
   setNodeLink: (nodeId: string, link: string | undefined) => void;
 
   // Clipboard actions
@@ -1087,6 +1088,14 @@ export const useDocumentStore = create<DocumentState>()(
     closeLinkDialog: () =>
       set((state) => {
         state.isLinkDialogOpen = false;
+      }),
+
+    toggleLinkPanel: () =>
+      set((state) => {
+        state.isLinkDialogOpen = !state.isLinkDialogOpen;
+        if (state.isLinkDialogOpen) {
+          state.editingNodeId = null;
+        }
       }),
 
     setNodeLink: (nodeId, link) =>

@@ -1,1 +1,1 @@
-export { default as LinkDialog } from './LinkDialog';
+export { default as LinkPanel } from './LinkPanel';

@@ -37,7 +37,7 @@ const shortcutSections: ShortcutSection[] = [
       { keys: [`${modKey}+Escape`], description: 'Cancel (discard changes)' },
       { keys: ['Delete', 'Backspace'], description: 'Delete node' },
       { keys: ['I'], description: 'Open icon picker' },
-      { keys: [`${modKey}+K`], description: 'Add/edit link' },
+      { keys: [`${modKey}+K`], description: 'Toggle Link panel' },
     ],
   },
   {
@@ -100,7 +100,7 @@ const tips = [
   'Smart Collapse cycles: Collapsed → Expanded (except ✓) → Fully Expanded',
   'Multi-select nodes, then use icon picker to apply icons to all at once',
   'Collapsed nodes show a count of hidden children',
-  'Add links to nodes with Ctrl+K. Click linked text to open URLs or files',
+  'Open Link panel with Ctrl+K. Click linked text to open URLs or files',
 ];
 
 function HelpDialog() {

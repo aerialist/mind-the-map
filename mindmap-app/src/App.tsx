@@ -7,7 +7,7 @@ import { MindMapView } from './components/MindMap';
 import { SearchPanel } from './components/Search';
 import { IconPicker } from './components/IconPicker';
 import { HelpDialog } from './components/Help';
-import { LinkDialog } from './components/LinkDialog';
+import { LinkPanel } from './components/LinkDialog';
 import { useDocumentStore } from './store';
 import { useAutoSave, useInitialFileLoad } from './hooks';
 import { Filter } from 'lucide-react';
@@ -30,7 +30,7 @@ function App() {
   const currentFilePath = useDocumentStore((state) => state.currentFilePath);
   const isDirty = useDocumentStore((state) => state.isDirty);
   const isLinkDialogOpen = useDocumentStore((state) => state.isLinkDialogOpen);
-  const openLinkDialog = useDocumentStore((state) => state.openLinkDialog);
+  const toggleLinkPanel = useDocumentStore((state) => state.toggleLinkPanel);
   const activeIconFilters = useDocumentStore((state) => state.activeIconFilters);
   const clearActiveIconFilters = useDocumentStore((state) => state.clearActiveIconFilters);
 
@@ -91,15 +91,15 @@ function App() {
       } else if (e.key === 'f') {
         e.preventDefault();
         toggleSearch();
-      } else if (e.key === 'k' && !isLinkDialogOpen) {
+      } else if (e.key === 'k') {
         e.preventDefault();
-        openLinkDialog();
+        toggleLinkPanel();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setViewMode, viewMode, isHelpOpen, toggleSearch, toggleHelp, editingNodeId, isLinkDialogOpen, openLinkDialog]);
+  }, [setViewMode, viewMode, isHelpOpen, toggleSearch, toggleHelp, editingNodeId, toggleLinkPanel]);
 
   // Listen for Tauri menu events (View menu) - filter by window label in payload
   useEffect(() => {
@@ -199,10 +199,9 @@ function App() {
         {isIconPickerOpen && <IconPicker />}
         {/* Search panel (right sidebar) */}
         {isSearchOpen && <SearchPanel />}
+        {/* Link panel (right sidebar) */}
+        {isLinkDialogOpen && <LinkPanel />}
       </main>
-
-      {/* Link dialog */}
-      <LinkDialog />
 
       {/* Help dialog */}
       <HelpDialog />
