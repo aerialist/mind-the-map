@@ -93,8 +93,154 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_deep_link::init())
         .invoke_handler(tauri::generate_handler![save_document, read_document])
         .setup(|app| {
+            // Handle file opens from macOS (when .mindmap file is double-clicked)
+            #[cfg(target_os = "macos")]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                let app_handle = app.handle().clone();
+                
+                // Register deep link handler
+                app.deep_link().register_all()?;
+                
+                // Check for URLs passed at startup (cold launch with file)
+                if let Ok(urls) = app.deep_link().get_current() {
+                    for url in urls.iter().flatten() {
+                        let url_str = url.as_str();
+                        let path = if url_str.starts_with("file://") {
+                            urlencoding::decode(url_str.strip_prefix("file://").unwrap_or(url_str))
+                                .unwrap_or_default()
+                                .to_string()
+                        } else {
+                            url_str.to_string()
+                        };
+                        
+                        if path.ends_with(".mindmap") {
+                            let app_handle_clone = app_handle.clone();
+                            let path_clone = path.clone();
+                            std::thread::spawn(move || {
+                                for _attempt in 1..=10 {
+                                    std::thread::sleep(std::time::Duration::from_millis(300));
+                                    if let Some(window) = app_handle_clone.get_webview_window("main") {
+                                        let encoded_path = urlencoding::encode(&path_clone);
+                                        let url = format!("tauri://localhost?file={}", encoded_path);
+                                        if let Ok(parsed_url) = url.parse() {
+                                            if window.navigate(parsed_url).is_ok() {
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                            break; // Only handle first file
+                        }
+                    }
+                }
+                
+                // Handle files opened while app is already running (warm launch)
+                app.deep_link().on_open_url(move |event| {
+                    for url in event.urls() {
+                        let url_str = url.as_str();
+                        
+                        // Convert file:// URL to local path (URL decode it)
+                        let path = if url_str.starts_with("file://") {
+                            urlencoding::decode(url_str.strip_prefix("file://").unwrap_or(url_str))
+                                .unwrap_or_default()
+                                .to_string()
+                        } else {
+                            url_str.to_string()
+                        };
+                        
+                        if path.ends_with(".mindmap") {
+                            if let Some(window) = app_handle.get_webview_window("main")
+                                .or_else(|| app_handle.webview_windows().values().next().cloned()) {
+                                let encoded_path = urlencoding::encode(&path);
+                                let url = format!("tauri://localhost?file={}", encoded_path);
+                                if let Ok(parsed_url) = url.parse() {
+                                    let _ = window.navigate(parsed_url);
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Check command line arguments at startup (when app is launched by double-clicking a file)
+                let app_handle_startup = app.handle().clone();
+                std::thread::spawn(move || {
+                    let args: Vec<String> = std::env::args().collect();
+                    
+                    for arg in args.iter().skip(1) {
+                        if arg.ends_with(".mindmap") && std::path::Path::new(arg).exists() {
+                            // Wait for window to be ready
+                            for _attempt in 1..=10 {
+                                std::thread::sleep(std::time::Duration::from_millis(300));
+                                
+                                if let Some(window) = app_handle_startup.get_webview_window("main") {
+                                    // URL encode the file path
+                                    let encoded_path = urlencoding::encode(arg);
+                                    
+                                    // Build URL with file parameter
+                                    let url = if cfg!(debug_assertions) {
+                                        format!("http://localhost:1420?file={}", encoded_path)
+                                    } else {
+                                        format!("tauri://localhost?file={}", encoded_path)
+                                    };
+                                    
+                                    // Navigate to URL with file parameter
+                                    if let Ok(parsed_url) = url.parse() {
+                                        if window.navigate(parsed_url).is_ok() {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            break; // Only open the first file
+                        }
+                    }
+                });
+            }
+
+            // Handle file opens from Windows (when .mindmap file is double-clicked)
+            // Windows passes the file path as a command-line argument
+            #[cfg(target_os = "windows")]
+            {
+                let app_handle_startup = app.handle().clone();
+                std::thread::spawn(move || {
+                    let args: Vec<String> = std::env::args().collect();
+                    
+                    for arg in args.iter().skip(1) {
+                        if arg.ends_with(".mindmap") && std::path::Path::new(arg).exists() {
+                            // Wait for window to be ready
+                            for _attempt in 1..=10 {
+                                std::thread::sleep(std::time::Duration::from_millis(300));
+                                
+                                if let Some(window) = app_handle_startup.get_webview_window("main") {
+                                    // URL encode the file path
+                                    let encoded_path = urlencoding::encode(arg);
+                                    
+                                    // Build URL with file parameter
+                                    let url = if cfg!(debug_assertions) {
+                                        format!("http://localhost:1420?file={}", encoded_path)
+                                    } else {
+                                        format!("https://tauri.localhost?file={}", encoded_path)
+                                    };
+                                    
+                                    // Navigate to URL with file parameter
+                                    if let Ok(parsed_url) = url.parse() {
+                                        if window.navigate(parsed_url).is_ok() {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            break; // Only open the first file
+                        }
+                    }
+                });
+            }
+
             // === File menu items ===
             let new_doc = MenuItemBuilder::with_id("new", "New")
                 .accelerator("CmdOrCtrl+N")

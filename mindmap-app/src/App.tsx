@@ -10,6 +10,7 @@ import { HelpDialog } from './components/Help';
 import { LinkPanel } from './components/LinkDialog';
 import { useDocumentStore } from './store';
 import { useAutoSave, useInitialFileLoad } from './hooks';
+import { openDocumentByPath } from './services/tauri/fileSystem';
 import { Filter, EyeOff } from 'lucide-react';
 
 const getFileNameFromPath = (filePath: string): string => {
@@ -136,6 +137,42 @@ function App() {
       unlistenFns.forEach((fn) => { try { fn(); } catch {} });
     };
   }, [setViewMode, toggleSearch]);
+
+  // Listen for file open events when app is already running (e.g., via deep link)
+  useEffect(() => {
+    const loadDocument = useDocumentStore.getState().loadDocument;
+    let isCancelled = false;
+    let unlistenFn: (() => void) | undefined;
+
+    listen<string>('open-file', async (event) => {
+      if (isCancelled) return;
+      const filePath = event.payload;
+      
+      if (!filePath || !filePath.endsWith('.mindmap')) return;
+
+      // Load the file
+      const result = await openDocumentByPath(filePath);
+      if (result.success && result.nodes && result.rootId) {
+        loadDocument(result.nodes, result.rootId, result.path || null);
+      } else {
+        console.error('Failed to load file from open event:', result.error);
+      }
+    }).then((fn) => {
+      if (isCancelled) {
+        fn();
+      } else {
+        unlistenFn = fn;
+      }
+    }).catch(() => {});
+
+    return () => {
+      isCancelled = true;
+      if (unlistenFn) {
+        try { unlistenFn(); } catch {}
+      }
+    };
+  }, []);
+
 
   return (
     <div className="h-screen flex flex-col">
