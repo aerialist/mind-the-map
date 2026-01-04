@@ -141,7 +141,7 @@ function IconPicker() {
           )}
 
           {/* Category tabs */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+          <div className="flex flex-wrap border-b border-gray-200 dark:border-gray-700">
             {categories.map((category) => (
               <button
                 key={category}
@@ -206,7 +206,6 @@ function IconPicker() {
           {/* Footer hints */}
           <div className="px-3 py-1.5 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-400 flex gap-3">
             <span>Click to add</span>
-            <span>Esc Close</span>
           </div>
         </>
       )}
