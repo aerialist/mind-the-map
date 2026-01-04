@@ -408,21 +408,39 @@
 
   <section class="guide" id="download" style="padding: 48px 0; background: var(--color-bg-alt);">
     <div class="container">
-      <h2 style="text-align: center; margin-bottom: 32px;">Download</h2>
-      <div style="display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;">
-        <a href="https://nightly.link/aerialist/mind-the-map/workflows/tauri-build/main/tauri-bundle-macos-latest.zip"
+      <h2 style="text-align: center; margin-bottom: 16px;">Download</h2>
+      <p style="text-align: center; margin-bottom: 32px; color: var(--color-text-muted);">
+        Download the latest stable release for your platform
+      </p>
+      <div style="display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px;">
+        <a href="https://github.com/aerialist/mind-the-map/releases/latest"
            class="btn btn-primary" style="min-width: 200px; text-align: center;">
-          macOS (Apple Silicon)
+          📦 Latest Release
         </a>
-        <a href="https://nightly.link/aerialist/mind-the-map/workflows/tauri-build/main/tauri-bundle-windows-latest.zip"
-           class="btn btn-primary" style="min-width: 200px; text-align: center;">
-          Windows
+        <a href="https://github.com/aerialist/mind-the-map/releases"
+           class="btn btn-secondary" style="min-width: 200px; text-align: center;">
+          📋 All Releases
         </a>
       </div>
-      <p style="text-align: center; margin-top: 24px; color: var(--color-text-muted); font-size: 0.9rem;">
-        Latest build from main branch. For stable releases, see
-        <a href="https://github.com/aerialist/mind-the-map/releases" style="color: var(--color-primary);">GitHub Releases</a>.
-      </p>
+      <div style="border-top: 1px solid var(--color-border); padding-top: 32px; margin-top: 32px;">
+        <p style="text-align: center; margin-bottom: 16px; color: var(--color-text-muted); font-size: 0.9rem;">
+          <strong>Development Builds</strong> (latest from main branch)
+        </p>
+        <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+          <a href="https://nightly.link/aerialist/mind-the-map/workflows/ci/main/tauri-bundle-macos-latest-aarch64-apple-darwin.zip"
+             class="btn btn-secondary" style="min-width: 180px; text-align: center; font-size: 0.9rem;">
+            macOS Apple Silicon
+          </a>
+          <a href="https://nightly.link/aerialist/mind-the-map/workflows/ci/main/tauri-bundle-macos-latest-x86_64-apple-darwin.zip"
+             class="btn btn-secondary" style="min-width: 180px; text-align: center; font-size: 0.9rem;">
+            macOS Intel
+          </a>
+          <a href="https://nightly.link/aerialist/mind-the-map/workflows/ci/main/tauri-bundle-windows-latest-x86_64-pc-windows-msvc.zip"
+             class="btn btn-secondary" style="min-width: 180px; text-align: center; font-size: 0.9rem;">
+            Windows
+          </a>
+        </div>
+      </div>
     </div>
   </section>
 

@@ -1,15 +1,15 @@
-name: Release
+name: CI Build
 
 on:
-  workflow_dispatch:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  release:
-    permissions:
-      contents: write
+  build:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -44,13 +44,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-      
-      - name: Import Code-Signing Certificates (macOS only)
-        if: matrix.os == 'macos-latest'
-        uses: apple-actions/import-codesign-certs@v2
-        with:
-          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
-          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           
       - name: Install dependencies (Ubuntu only)
         if: matrix.os == 'ubuntu-latest'
@@ -61,19 +54,12 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
         
-      - name: Build and Release
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - name: Build Tauri app
+        run: pnpm tauri build --target ${{ matrix.target }}
+        
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
-          projectPath: mindmap-app
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Mind the Map ${{ github.ref_name }}'
-          releaseBody: 'See the assets below to download the app for your platform.'
-          releaseDraft: true
-          prerelease: false
-          args: --target ${{ matrix.target }}
+          name: tauri-bundle-${{ matrix.os }}-${{ matrix.target }}
+          path: mindmap-app/src-tauri/target/${{ matrix.target }}/release/bundle
+          retention-days: 7

@@ -89,6 +89,73 @@ pnpm tauri build
 
 The built application will be available in `src-tauri/target/release/bundle/`.
 
+## Creating a Release
+
+### Automated Release (via GitHub Actions)
+
+1. **Update the version number** in `mindmap-app/src-tauri/tauri.conf.json`:
+   ```json
+   {
+     "version": "0.2.0"
+   }
+   ```
+
+2. **Commit and create a tag**:
+   ```bash
+   git add .
+   git commit -m "Release v0.2.0"
+   git tag v0.2.0
+   git push origin main
+   git push origin v0.2.0
+   ```
+
+3. **GitHub Actions will automatically**:
+   - Build for macOS (Apple Silicon & Intel) and Windows
+   - Create a GitHub Release draft
+   - Upload all installers as release assets
+
+4. **Publish the release**:
+   - Go to your GitHub repository's Releases page
+   - Review the draft release
+   - Edit the release notes if needed
+   - Click "Publish release"
+
+### Manual Release
+
+If you prefer to create releases manually:
+
+1. Build locally: `pnpm tauri build`
+2. Navigate to Releases on GitHub
+3. Click "Create a new release"
+4. Create a new tag (e.g., `v0.2.0`)
+5. Upload the built binaries from `src-tauri/target/release/bundle/`
+6. Write release notes and publish
+
+## CI/CD Workflows
+
+The project uses two GitHub Actions workflows:
+
+### 1. CI Build (Continuous Integration)
+- **Trigger**: Push to `main` branch or pull requests
+- **Purpose**: Validate that the code builds successfully on all platforms
+- **Platforms**: macOS (Apple Silicon & Intel), Windows
+- **Artifacts**: Available for download from GitHub Actions for 7 days
+
+Access development builds:
+- Visit the [Actions tab](https://github.com/aerialist/mind-the-map/actions/workflows/ci.yml)
+- Click on the latest successful workflow run
+- Download artifacts from the "Artifacts" section
+
+Or use direct links (via nightly.link):
+- [macOS Apple Silicon](https://nightly.link/aerialist/mind-the-map/workflows/ci/main/tauri-bundle-macos-latest-aarch64-apple-darwin.zip)
+- [macOS Intel](https://nightly.link/aerialist/mind-the-map/workflows/ci/main/tauri-bundle-macos-latest-x86_64-apple-darwin.zip)
+- [Windows](https://nightly.link/aerialist/mind-the-map/workflows/ci/main/tauri-bundle-windows-latest-x86_64-pc-windows-msvc.zip)
+
+### 2. Release Workflow
+- **Trigger**: Push tags matching `v*` (e.g., `v0.2.0`)
+- **Purpose**: Create official GitHub releases with installers
+- **Output**: Draft release with all platform builds attached
+
 ## Project Structure
 
 ```
