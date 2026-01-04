@@ -151,6 +151,8 @@ interface DocumentState {
   toggleCollapse: (nodeId: string) => void;
   toggleCollapseAll: (nodeId: string) => void;
   moveNode: (nodeId: string, newParentId: string, insertIndex: number) => void;
+  indentNode: (nodeId: string) => void;
+  outdentNode: (nodeId: string) => void;
 
   // File actions
   setFilePath: (path: string | null) => void;
@@ -790,6 +792,82 @@ export const useDocumentStore = create<DocumentState>()(
 
         // Expand new parent if collapsed
         newParent.isCollapsed = false;
+
+        state.isDirty = true;
+      }),
+
+    indentNode: (nodeId) =>
+      set((state) => {
+        const node = state.nodes[nodeId];
+        if (!node) return;
+
+        // Can't indent root node
+        if (!node.parentId) return;
+
+        const parent = state.nodes[node.parentId];
+        if (!parent) return;
+
+        // Find this node's index in parent's children
+        const nodeIndex = parent.childIds.indexOf(nodeId);
+        if (nodeIndex <= 0) return; // Can't indent if first child (no sibling above)
+
+        // Get the sibling node above
+        const newParentId = parent.childIds[nodeIndex - 1];
+        const newParent = state.nodes[newParentId];
+        if (!newParent) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        // Remove from current parent
+        parent.childIds.splice(nodeIndex, 1);
+
+        // Add as last child of the sibling above
+        newParent.childIds.push(nodeId);
+
+        // Update node's parent reference
+        node.parentId = newParentId;
+
+        // Expand new parent if collapsed
+        newParent.isCollapsed = false;
+
+        state.isDirty = true;
+      }),
+
+    outdentNode: (nodeId) =>
+      set((state) => {
+        const node = state.nodes[nodeId];
+        if (!node) return;
+
+        // Can't outdent root node
+        if (!node.parentId) return;
+
+        const parent = state.nodes[node.parentId];
+        if (!parent) return;
+
+        // Can't outdent if parent is root (would make it a sibling of root)
+        if (!parent.parentId) return;
+
+        const grandparent = state.nodes[parent.parentId];
+        if (!grandparent) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        // Remove from current parent
+        const nodeIndex = parent.childIds.indexOf(nodeId);
+        if (nodeIndex !== -1) {
+          parent.childIds.splice(nodeIndex, 1);
+        }
+
+        // Find parent's position in grandparent's children
+        const parentIndex = grandparent.childIds.indexOf(parent.id);
+
+        // Insert as sibling right after the parent
+        grandparent.childIds.splice(parentIndex + 1, 0, nodeId);
+
+        // Update node's parent reference
+        node.parentId = parent.parentId;
 
         state.isDirty = true;
       }),

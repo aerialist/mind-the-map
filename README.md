@@ -121,6 +121,7 @@ mind-the-map/
 
 ### Core Editing
 - Create nodes: `Tab` (child), `Enter` (sibling below), `Shift+Enter` (sibling above)
+- Indent/Outdent nodes: `Cmd+]` / `Cmd+[` (or `Ctrl+]` / `Ctrl+[`)
 - Edit nodes: `E`, `F2`, or double-click
 - Delete nodes: `Delete` or `Backspace`
 - Navigate: Arrow keys

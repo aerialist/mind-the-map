@@ -156,6 +156,8 @@ interface DocumentState {
 | Tab | Create child node | Works in edit mode too |
 | Enter | Create sibling below | Works in edit mode too |
 | Shift+Enter | Create sibling above | Works in edit mode too |
+| Cmd+] (Ctrl+]) | Indent node | Move to child of node above |
+| Cmd+[ (Ctrl+[) | Outdent node | Move to sibling of parent |
 | E / F2 | Start editing | Double-click also works |
 | Escape | Save and stop editing | |
 | Ctrl+Escape | Cancel editing | Discards changes |

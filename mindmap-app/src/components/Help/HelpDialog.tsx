@@ -21,7 +21,7 @@ const shortcutSections: ShortcutSection[] = [
     title: 'Navigation',
     shortcuts: [
       { keys: ['↑', '↓'], description: 'Move between siblings' },
-      { keys: ['←'], description: 'Go to parent / collapse' },
+      { keys: ['←'], description: 'Go to parent' },
       { keys: ['→'], description: 'Go to first child / expand' },
       { keys: [`${modKey}+F`], description: 'Search nodes' },
     ],
@@ -32,6 +32,8 @@ const shortcutSections: ShortcutSection[] = [
       { keys: ['Tab'], description: 'Create child node' },
       { keys: ['Enter'], description: 'Create sibling below' },
       { keys: [`${shiftKey}+Enter`], description: 'Create sibling above' },
+      { keys: [`${modKey}+]`], description: 'Indent node (move to child of node above)' },
+      { keys: [`${modKey}+[`], description: 'Outdent node (move to sibling of parent)' },
       { keys: ['E', 'F2'], description: 'Edit selected node' },
       { keys: ['Escape'], description: 'Save and stop editing' },
       { keys: [`${modKey}+Escape`], description: 'Cancel (discard changes)' },

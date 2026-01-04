@@ -35,6 +35,9 @@ export const useKeyboardNavigation = () => {
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
   const toggleCollapseAll = useDocumentStore((state) => state.toggleCollapseAll);
   const openIconPicker = useDocumentStore((state) => state.openIconPicker);
+  const indentNode = useDocumentStore((state) => state.indentNode);
+  const outdentNode = useDocumentStore((state) => state.outdentNode);
+  const updateNodeText = useDocumentStore((state) => state.updateNodeText);
   const copyNodes = useDocumentStore((state) => state.copyNodes);
   const cutNodes = useDocumentStore((state) => state.cutNodes);
   const pasteNodes = useDocumentStore((state) => state.pasteNodes);
@@ -182,6 +185,37 @@ export const useKeyboardNavigation = () => {
         return;
       }
 
+      // Handle indent/outdent globally (even during editing)
+      if ((e.ctrlKey || e.metaKey) && e.key === ']') {
+        if (selectedNodeId) {
+          e.preventDefault();
+          // If editing, save the current text from the input element first
+          if (editingNodeId === selectedNodeId) {
+            const inputElement = document.querySelector(`input[type="text"]:focus`) as HTMLInputElement;
+            if (inputElement) {
+              updateNodeText(selectedNodeId, inputElement.value);
+            }
+          }
+          indentNode(selectedNodeId);
+        }
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === '[') {
+        if (selectedNodeId) {
+          e.preventDefault();
+          // If editing, save the current text from the input element first
+          if (editingNodeId === selectedNodeId) {
+            const inputElement = document.querySelector(`input[type="text"]:focus`) as HTMLInputElement;
+            if (inputElement) {
+              updateNodeText(selectedNodeId, inputElement.value);
+            }
+          }
+          outdentNode(selectedNodeId);
+        }
+        return;
+      }
+
       // Skip if no node is selected
       if (!selectedNodeId) return;
 
@@ -295,7 +329,7 @@ export const useKeyboardNavigation = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [nodes, selectedNodeId, selectedNodeIds, editingNodeId, selectNode, startEditing, createChildNode, createSiblingNode, createSiblingNodeAbove, deleteNode, toggleCollapse, toggleCollapseAll, openIconPicker, undo, redo]);
+  }, [nodes, selectedNodeId, selectedNodeIds, editingNodeId, selectNode, startEditing, createChildNode, createSiblingNode, createSiblingNodeAbove, deleteNode, toggleCollapse, toggleCollapseAll, openIconPicker, indentNode, outdentNode, updateNodeText, undo, redo]);
 
   // Helper to collect nodes for subtrees
   const collectSubtree = useCallback((nodeId: string): Record<string, typeof nodes[string]> => {
