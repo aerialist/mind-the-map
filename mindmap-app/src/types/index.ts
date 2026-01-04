@@ -13,11 +13,15 @@ export type {
   IconCategory,
   IconDefinition,
   PriorityIcon,
-  TaskIcon,
+  StatusIcon,
   FlagIcon,
-  SmileyIcon,
-  ArrowIcon,
+  MoodIcon,
+  TimeIcon,
+  PeopleIcon,
+  CommunicationIcon,
+  DocumentIcon,
   SymbolIcon,
+  NoticeIcon,
 } from './icons';
 export {
   ICON_DEFINITIONS,
@@ -26,3 +30,4 @@ export {
   getNextIconInCategory,
   getAllIcons,
 } from './icons';
+export { getIconSvg, ICON_SVG_MAP, FALLBACK_ICON_SVG } from './iconSvg';

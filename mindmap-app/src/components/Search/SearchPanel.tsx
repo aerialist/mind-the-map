@@ -25,11 +25,15 @@ function SearchPanel() {
   const iconsByCategory = useMemo(() => {
     const grouped: Record<IconCategory, IconDefinition[]> = {
       priority: [],
-      task: [],
+      status: [],
       flag: [],
-      smiley: [],
-      arrow: [],
+      mood: [],
+      time: [],
+      people: [],
+      communication: [],
+      document: [],
       symbol: [],
+      notice: [],
     };
 
     for (const availableIcon of availableIcons) {

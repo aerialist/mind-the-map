@@ -694,9 +694,9 @@ export const useDocumentStore = create<DocumentState>()(
         // Only toggle if node has children
         if (node.childIds.length === 0) return;
 
-        // Helper to check if a node has a complete (done) task icon
+        // Helper to check if a node has a complete (done) status icon
         const hasCompleteIcon = (n: Node): boolean => {
-          return n.icons?.some(icon => icon.type === 'task' && icon.value === 'done') ?? false;
+          return n.icons?.some(icon => icon.type === 'status' && icon.value === 'done') ?? false;
         };
 
         // Cycle through three states: collapsed -> expanded-except-completed -> expanded -> collapsed

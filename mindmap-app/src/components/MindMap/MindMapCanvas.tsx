@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { useDocumentStore, computeVisibleNodeIds } from '../../store';
 import type { Node, NodeMap } from '../../types';
-import { getIconDefinition } from '../../types';
+import { getIconDefinition, getIconSvg } from '../../types';
 import { openLink } from '../../services/tauri';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -902,13 +902,16 @@ function MindMapCanvas() {
       const nodeIcons = node.icons || [];
       let iconOffset = NODE_PADDING_X;
       const ICON_SIZE = 14;
+      const LUCIDE_SIZE = 24; // Lucide icons are 24x24 by default
+      const ICON_SCALE = ICON_SIZE / LUCIDE_SIZE;
 
       if (nodeIcons.length > 0) {
         nodeIcons.forEach((icon, iconIndex) => {
           const def = getIconDefinition(icon);
           if (!def) return;
 
-          const iconColor = parseInt(def.color?.replace('#', '') || '6b7280', 16);
+          const iconColor = def.color || '#6b7280';
+          const iconColorHex = parseInt(iconColor.replace('#', ''), 16);
           const iconY = (layout.height - ICON_SIZE) / 2;
 
           // Create a container for the icon to handle clicks
@@ -926,13 +929,17 @@ function MindMapCanvas() {
             cycleIcon(nodeId, iconIndex);
           });
 
+          // Get SVG string for the icon and render it
+          const svgString = getIconSvg(icon.type, icon.value);
+          
+          // Parse and render the SVG using PixiJS Graphics
           const iconGraphics = new Graphics();
-
-          // Draw simple shapes based on icon type (positions relative to container)
+          
+          // Special handling for priority icons - show number overlay
           if (icon.type === 'priority') {
-            // Circle with number
+            // For priority, draw a filled circle with number
             iconGraphics.circle(ICON_SIZE / 2, ICON_SIZE / 2, ICON_SIZE / 2 - 1);
-            iconGraphics.fill(iconColor);
+            iconGraphics.fill(iconColorHex);
             // Add number text
             const numStyle = new TextStyle({
               fontSize: 9,
@@ -945,71 +952,24 @@ function MindMapCanvas() {
             numText.y = (ICON_SIZE - numText.height) / 2;
             iconContainer.addChild(iconGraphics);
             iconContainer.addChild(numText);
-          } else if (icon.type === 'task') {
-            // Checkbox shapes
-            const boxSize = ICON_SIZE - 2;
-            const boxX = 1;
-            const boxY = 1;
-            iconGraphics.roundRect(boxX, boxY, boxSize, boxSize, 2);
-            iconGraphics.stroke({ width: 1.5, color: iconColor });
-            if (icon.value === 'done') {
-              // Checkmark
-              iconGraphics.moveTo(boxX + 3, boxY + boxSize / 2);
-              iconGraphics.lineTo(boxX + boxSize / 2 - 1, boxY + boxSize - 3);
-              iconGraphics.lineTo(boxX + boxSize - 3, boxY + 3);
-              iconGraphics.stroke({ width: 2, color: iconColor });
-            } else if (icon.value === 'half') {
-              // Half fill
-              iconGraphics.rect(boxX + 2, boxY + boxSize / 2, boxSize - 4, boxSize / 2 - 2);
-              iconGraphics.fill(iconColor);
-            } else if (icon.value === 'quarter') {
-              // Quarter fill
-              iconGraphics.rect(boxX + 2, boxY + boxSize * 0.75 - 2, boxSize - 4, boxSize * 0.25);
-              iconGraphics.fill(iconColor);
-            } else if (icon.value === 'three-quarter') {
-              // Three quarter fill
-              iconGraphics.rect(boxX + 2, boxY + boxSize * 0.25, boxSize - 4, boxSize * 0.75 - 2);
-              iconGraphics.fill(iconColor);
-            }
-            iconContainer.addChild(iconGraphics);
-          } else if (icon.type === 'flag') {
-            // Flag shape
-            iconGraphics.moveTo(2, 2);
-            iconGraphics.lineTo(ICON_SIZE - 2, 2);
-            iconGraphics.lineTo(ICON_SIZE - 4, ICON_SIZE / 2);
-            iconGraphics.lineTo(ICON_SIZE - 2, ICON_SIZE - 4);
-            iconGraphics.lineTo(2, ICON_SIZE - 4);
-            iconGraphics.closePath();
-            iconGraphics.fill(iconColor);
-            iconContainer.addChild(iconGraphics);
-          } else if (icon.type === 'symbol' && icon.value === 'star') {
-            // Star shape
-            const cx = ICON_SIZE / 2;
-            const cy = ICON_SIZE / 2;
-            const outerR = ICON_SIZE / 2 - 1;
-            const innerR = outerR * 0.4;
-            for (let i = 0; i < 5; i++) {
-              const outerAngle = (i * 72 - 90) * Math.PI / 180;
-              const innerAngle = ((i * 72) + 36 - 90) * Math.PI / 180;
-              const outerX = cx + Math.cos(outerAngle) * outerR;
-              const outerY = cy + Math.sin(outerAngle) * outerR;
-              const innerX = cx + Math.cos(innerAngle) * innerR;
-              const innerY = cy + Math.sin(innerAngle) * innerR;
-              if (i === 0) {
-                iconGraphics.moveTo(outerX, outerY);
-              } else {
-                iconGraphics.lineTo(outerX, outerY);
-              }
-              iconGraphics.lineTo(innerX, innerY);
-            }
-            iconGraphics.closePath();
-            iconGraphics.fill(iconColor);
-            iconContainer.addChild(iconGraphics);
           } else {
-            // Default: simple colored circle for other icons
-            iconGraphics.circle(ICON_SIZE / 2, ICON_SIZE / 2, ICON_SIZE / 2 - 2);
-            iconGraphics.fill(iconColor);
-            iconContainer.addChild(iconGraphics);
+            // For all other icons, render the Lucide SVG
+            try {
+              // Create a colored version of the SVG by replacing stroke color
+              const coloredSvg = svgString
+                .replace(/stroke="currentColor"/g, `stroke="${iconColor}"`)
+                .replace(/fill="none"/g, 'fill="none"')
+                .replace(/stroke-width="2"/g, 'stroke-width="2.5"'); // Slightly thicker for visibility at small size
+              
+              iconGraphics.svg(coloredSvg);
+              iconGraphics.scale.set(ICON_SCALE);
+              iconContainer.addChild(iconGraphics);
+            } catch {
+              // Fallback to simple circle if SVG parsing fails
+              iconGraphics.circle(ICON_SIZE / 2, ICON_SIZE / 2, ICON_SIZE / 2 - 2);
+              iconGraphics.fill(iconColorHex);
+              iconContainer.addChild(iconGraphics);
+            }
           }
 
           container.addChild(iconContainer);

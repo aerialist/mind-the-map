@@ -102,8 +102,8 @@ interface Position {
 }
 
 interface NodeIcon {
-  category: 'priority' | 'task' | 'flag' | 'smiley' | 'arrow' | 'symbol';
-  value: string;               // e.g., '1', 'complete', 'red', 'happy'
+  type: 'priority' | 'status' | 'flag' | 'mood' | 'time' | 'people' | 'communication' | 'document' | 'symbol' | 'notice';
+  value: string | number;      // e.g., 1, 'done', 'red', 'positive'
 }
 ```
 
@@ -211,7 +211,7 @@ interface DocumentState {
 ### Smart Collapse (Shift+Alt+Space)
 Cycles through 3 states:
 1. **Collapsed**: All children hidden
-2. **Expanded except completed**: Shows all except nodes with ✓ task icon
+2. **Expanded except completed**: Shows all except nodes with Done status icon (✓)
 3. **Fully expanded**: Everything visible
 
 ### External Clipboard Support
@@ -277,9 +277,11 @@ Key implementation:
 
 ### Adding a New Icon Category
 
-1. Add to `NodeIcon` type in `types/index.ts`
-2. Add icons to `iconCategories` in `IconPicker/iconData.ts`
-3. Update icon rendering in `NodeRenderer.ts` and `OutlineNode.tsx`
+1. Add type and update `NodeIcon` union in `types/icons.ts`
+2. Add icon definitions to `ICON_DEFINITIONS` in `types/icons.ts`
+3. Add category label to `ICON_CATEGORY_LABELS` in `types/icons.ts`
+4. Add SVG imports and mapping in `types/iconSvg.ts` (for MindMap canvas rendering)
+5. Export new types from `types/index.ts`
 
 ### Adding a New Store Action
 

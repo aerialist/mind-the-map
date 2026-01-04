@@ -97,7 +97,7 @@ const tips = [
   'Use mouse wheel to zoom, Ctrl+wheel to pan vertically, Shift+wheel to pan horizontally',
   'Paste indented text or HTML lists to create structured nodes',
   'Click an icon on a node to cycle through variants in the same category',
-  'Smart Collapse cycles: Collapsed → Expanded (except ✓) → Fully Expanded',
+  'Smart Collapse cycles: Collapsed → Expanded (except Done ✓) → Fully Expanded',
   'Multi-select nodes, then use icon picker to apply icons to all at once',
   'Collapsed nodes show a count of hidden children',
   'Open Link panel with Ctrl+K. Click linked text to open URLs or files',
