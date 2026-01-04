@@ -245,7 +245,7 @@ Copies as TSV + HTML table format:
 - Avoids overlaps between all nodes
 
 ### Search & Filter Panel (Ctrl+F)
-The Search & Filter panel is a right sidebar with two distinct sections:
+The Search & Filter panel is a right sidebar with three distinct sections:
 
 **Search (text-based)**:
 - Text search through all node content
@@ -253,18 +253,23 @@ The Search & Filter panel is a right sidebar with two distinct sections:
 - Click result to select and scroll to node
 - Panel stays open while working
 
-**Filter (icon-based)**:
-- Filters the document view directly (hides non-matching nodes)
-- Shows all icons present in the document, grouped by category
+**Filter View (icon-based, blue)**:
+- Shows ONLY nodes with selected icons (and their ancestors for context)
 - Multiple filters can be active simultaneously (OR logic)
 - Parent nodes remain visible to maintain tree context
 - Works in both Mind Map and Outline views
-- Uses `computeVisibleNodeIds()` helper to calculate visible set
+
+**Hide View (icon-based, red)**:
+- Hides nodes with selected icons, showing everything else
+- Opposite behavior from Filter View
+- Can be used independently or combined with Filter View
+- When both are active: first apply hidden filters, then apply active filters
 
 Key implementation:
-- `activeIconFilters`: Currently selected icon filters
+- `activeIconFilters`: Currently selected icon filters (show only)
+- `hiddenIconFilters`: Currently selected hidden filters (hide)
 - `availableIcons`: All icons found in the document (refreshed on panel open)
-- `computeVisibleNodeIds()`: Returns Set of node IDs that should be visible
+- `computeVisibleNodeIds()`: Returns Set of node IDs that should be visible (handles both filter modes)
 - `VisibleNodesContext`: React context to pass visibility down the OutlineNode tree
 
 ---

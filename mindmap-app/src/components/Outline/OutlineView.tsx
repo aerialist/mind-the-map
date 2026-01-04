@@ -46,12 +46,13 @@ function OutlineView() {
   const nodes = useDocumentStore((state) => state.nodes);
   const moveNode = useDocumentStore((state) => state.moveNode);
   const activeIconFilters = useDocumentStore((state) => state.activeIconFilters);
+  const hiddenIconFilters = useDocumentStore((state) => state.hiddenIconFilters);
   const selectedNodeId = useDocumentStore((state) => state.selectedNodeId);
 
   // Compute visible nodes based on active icon filters
   const visibleNodeIds = useMemo(
-    () => computeVisibleNodeIds(nodes, rootId, activeIconFilters),
-    [nodes, rootId, activeIconFilters]
+    () => computeVisibleNodeIds(nodes, rootId, activeIconFilters, hiddenIconFilters),
+    [nodes, rootId, activeIconFilters, hiddenIconFilters]
   );
 
   // Drag state

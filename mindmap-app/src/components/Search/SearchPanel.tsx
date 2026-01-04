@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo } from 'react';
-import { X, Search, Filter } from 'lucide-react';
+import { X, Search, Filter, EyeOff } from 'lucide-react';
 import { useDocumentStore } from '../../store';
 import {
   ICON_DEFINITIONS,
@@ -14,12 +14,15 @@ function SearchPanel() {
   const searchResults = useDocumentStore((state) => state.searchResults);
   const searchSelectedIndex = useDocumentStore((state) => state.searchSelectedIndex);
   const activeIconFilters = useDocumentStore((state) => state.activeIconFilters);
+  const hiddenIconFilters = useDocumentStore((state) => state.hiddenIconFilters);
   const availableIcons = useDocumentStore((state) => state.availableIcons);
   const closeSearch = useDocumentStore((state) => state.closeSearch);
   const setSearchQuery = useDocumentStore((state) => state.setSearchQuery);
   const selectNodeFromSearch = useDocumentStore((state) => state.selectNodeFromSearch);
   const toggleActiveIconFilter = useDocumentStore((state) => state.toggleActiveIconFilter);
   const clearActiveIconFilters = useDocumentStore((state) => state.clearActiveIconFilters);
+  const toggleHiddenIconFilter = useDocumentStore((state) => state.toggleHiddenIconFilter);
+  const clearHiddenIconFilters = useDocumentStore((state) => state.clearHiddenIconFilters);
 
   // Group available icons by category
   const iconsByCategory = useMemo(() => {
@@ -50,6 +53,13 @@ function SearchPanel() {
   // Check if an icon filter is active
   const isIconFilterActive = (def: IconDefinition) => {
     return activeIconFilters.some(
+      (f: { type: string; value: string | number }) => f.type === def.type && f.value === def.value
+    );
+  };
+
+  // Check if an icon is hidden
+  const isIconHidden = (def: IconDefinition) => {
+    return hiddenIconFilters.some(
       (f: { type: string; value: string | number }) => f.type === def.type && f.value === def.value
     );
   };
@@ -187,6 +197,83 @@ function SearchPanel() {
                           className={`p-1 rounded transition-colors ${
                             active
                               ? 'bg-blue-100 dark:bg-blue-900 ring-1 ring-blue-400'
+                              : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                          }`}
+                          title={def.label}
+                        >
+                          {def.text ? (
+                            <span
+                              className="w-4 h-4 flex items-center justify-center text-xs font-bold"
+                              style={{ color: def.color }}
+                            >
+                              {def.text}
+                            </span>
+                          ) : (
+                            <Icon
+                              size={14}
+                              style={{ color: def.color }}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Hide Section */}
+      {availableIcons.length > 0 && (
+        <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <EyeOff size={12} className="text-gray-400" />
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                Hide View
+              </span>
+              {hiddenIconFilters.length > 0 && (
+                <span className="text-xs bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 px-1.5 py-0.5 rounded-full">
+                  {hiddenIconFilters.length} hidden
+                </span>
+              )}
+            </div>
+            {hiddenIconFilters.length > 0 && (
+              <button
+                onClick={clearHiddenIconFilters}
+                className="text-xs text-red-500 hover:text-red-600 dark:text-red-400"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            {(Object.keys(iconsByCategory) as IconCategory[]).map((category) => {
+              const icons = iconsByCategory[category];
+              if (icons.length === 0) return null;
+              return (
+                <div key={category} className="flex flex-wrap gap-1 items-center">
+                  <span className="text-xs text-gray-400 w-14 shrink-0">
+                    {ICON_CATEGORY_LABELS[category]}
+                  </span>
+                  <div className="flex flex-wrap gap-0.5">
+                    {icons.map((def) => {
+                      const Icon = def.icon;
+                      const hidden = isIconHidden(def);
+                      return (
+                        <button
+                          key={`${def.type}-${def.value}`}
+                          onClick={() =>
+                            toggleHiddenIconFilter({
+                              type: def.type,
+                              value: def.value,
+                            })
+                          }
+                          className={`p-1 rounded transition-colors ${
+                            hidden
+                              ? 'bg-red-100 dark:bg-red-900 ring-1 ring-red-400'
                               : 'hover:bg-gray-200 dark:hover:bg-gray-700'
                           }`}
                           title={def.label}

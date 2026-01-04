@@ -115,6 +115,7 @@ interface DocumentState {
 
   // Filter state (applies directly to document view)
   activeIconFilters: IconFilter[]; // Currently active icon filters
+  hiddenIconFilters: IconFilter[]; // Currently hidden icon filters
   availableIcons: IconFilter[]; // Icons that exist in the document
 
   // Help dialog state
@@ -175,6 +176,8 @@ interface DocumentState {
   // Filter actions (applies to document view)
   toggleActiveIconFilter: (filter: IconFilter) => void;
   clearActiveIconFilters: () => void;
+  toggleHiddenIconFilter: (filter: IconFilter) => void;
+  clearHiddenIconFilters: () => void;
   refreshAvailableIcons: () => void;
 
   // Help actions
@@ -301,24 +304,53 @@ const collectAllIcons = (state: DocumentState): IconFilter[] => {
 export const computeVisibleNodeIds = (
   nodes: NodeMap,
   rootId: string,
-  activeIconFilters: IconFilter[]
+  activeIconFilters: IconFilter[],
+  hiddenIconFilters: IconFilter[] = []
 ): Set<string> => {
-  // If no filters active, all nodes are visible
-  if (activeIconFilters.length === 0) {
-    const allNodes = new Set<string>();
-    const collectAll = (nodeId: string) => {
-      allNodes.add(nodeId);
-      const node = nodes[nodeId];
-      if (node) {
-        for (const childId of node.childIds) {
-          collectAll(childId);
-        }
+  // If no filters active, collect all nodes first
+  const allNodes = new Set<string>();
+  const collectAll = (nodeId: string) => {
+    allNodes.add(nodeId);
+    const node = nodes[nodeId];
+    if (node) {
+      for (const childId of node.childIds) {
+        collectAll(childId);
       }
+    }
+  };
+  collectAll(rootId);
+
+  // If hidden filters are active, remove matching nodes
+  if (hiddenIconFilters.length > 0) {
+    const nodeMatchesHiddenFilter = (nodeId: string): boolean => {
+      const node = nodes[nodeId];
+      if (!node || !node.icons) return false;
+      return node.icons.some((icon) =>
+        hiddenIconFilters.some(
+          (filter) => filter.type === icon.type && filter.value === icon.value
+        )
+      );
     };
-    collectAll(rootId);
+
+    // Remove nodes that match hidden filters
+    for (const nodeId of allNodes) {
+      if (nodeMatchesHiddenFilter(nodeId)) {
+        allNodes.delete(nodeId);
+      }
+    }
+
+    // If only hidden filters are active, return the filtered set
+    if (activeIconFilters.length === 0) {
+      return allNodes;
+    }
+  }
+
+  // If no active filters, return all (potentially filtered by hidden)
+  if (activeIconFilters.length === 0) {
     return allNodes;
   }
 
+  // Apply active filters (show only matching)
   const visibleNodes = new Set<string>();
 
   // Check if a node matches any active filter
@@ -337,6 +369,9 @@ export const computeVisibleNodeIds = (
   const checkSubtree = (nodeId: string): boolean => {
     const node = nodes[nodeId];
     if (!node) return false;
+
+    // Skip if node was hidden
+    if (!allNodes.has(nodeId)) return false;
 
     // Check children first
     let hasMatchingDescendant = false;
@@ -405,6 +440,7 @@ export const useDocumentStore = create<DocumentState>()(
 
     // Filter state
     activeIconFilters: [],
+    hiddenIconFilters: [],
     availableIcons: [],
 
     // Help dialog state
@@ -1065,6 +1101,23 @@ export const useDocumentStore = create<DocumentState>()(
     clearActiveIconFilters: () =>
       set((state) => {
         state.activeIconFilters = [];
+      }),
+
+    toggleHiddenIconFilter: (filter: IconFilter) =>
+      set((state) => {
+        const existingIndex = state.hiddenIconFilters.findIndex(
+          (f: IconFilter) => f.type === filter.type && f.value === filter.value
+        );
+        if (existingIndex >= 0) {
+          state.hiddenIconFilters.splice(existingIndex, 1);
+        } else {
+          state.hiddenIconFilters.push(filter);
+        }
+      }),
+
+    clearHiddenIconFilters: () =>
+      set((state) => {
+        state.hiddenIconFilters = [];
       }),
 
     refreshAvailableIcons: () =>
