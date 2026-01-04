@@ -29,11 +29,28 @@ To avoid SmartScreen warnings on Windows:
 
 ### 2. Create Code Signing Certificate
 
+**Find Keychain Access on macOS Sequoia:**
+```bash
+# Method 1: Open via Spotlight
+# Press Cmd+Space, type "Keychain Access", press Enter
+
+# Method 2: Open via Terminal
+open /Applications/Utilities/Keychain\ Access.app
+
+# Method 3: Navigate manually
+# Finder → Applications → Utilities → Keychain Access
+```
+
 **On your Mac:**
 ```bash
-# Open Keychain Access
+# Open Keychain Access (use methods above)
 # Go to: Keychain Access > Certificate Assistant > Request a Certificate from a Certificate Authority
-# Save the CSR file
+# Fill in:
+#   - User Email Address: (your Apple ID email)
+#   - Common Name: (your name or company name)
+#   - CA Email Address: (leave blank)
+#   - Request is: "Saved to disk"
+# Click Continue and save the CSR file
 ```
 
 **In Apple Developer Portal:**
@@ -42,14 +59,60 @@ To avoid SmartScreen warnings on Windows:
 3. Choose "Developer ID Application"
 4. Upload your CSR file
 5. Download the certificate (.cer file)
-6. Double-click to install in Keychain Access
+6. **Double-click to install in Keychain Access**
+
+**Install Apple Intermediate Certificates (CRITICAL):**
+```bash
+# Download Apple's intermediate certificates
+curl -O https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+curl -O https://www.apple.com/certificateauthority/AppleRootCA-G3.cer
+
+# Install them (will open dialogs - click "Add" for both)
+open DeveloperIDG2CA.cer
+open AppleRootCA-G3.cer
+```
+
+**Verify your certificate is trusted:**
+```bash
+# Check if your signing identity is now valid
+security find-identity -v -p codesigning
+
+# You should see:
+# 1) ABC123... "Developer ID Application: Your Name (TEAM_ID)"
+# 1 valid identities found
+```
+
+**If you see "0 valid identities found":**
+- Your certificate shows "not trusted" in Keychain Access
+- Missing intermediate certificates (install them as shown above)
+- Certificate and private key aren't properly paired
 
 ### 3. Export Certificate for GitHub
 
 **In Keychain Access:**
-1. Find "Developer ID Application: Your Name (TEAM_ID)"
-2. Right-click → Export
-3. Save as `.p12` file with a strong password
+1. **Look for the certificate with a triangle/arrow** next to it (this means it has a private key)
+2. **Expand the certificate** by clicking the triangle - you should see both:
+   - Certificate: "Developer ID Application: Your Name (TEAM_ID)"  
+   - Private key: "Your Name (TEAM_ID)"
+3. **Select the certificate entry** (the one with the triangle, not the private key line)
+4. Right-click → Export
+5. **Now .p12 should be available** - Save as `.p12` file with a strong password
+
+**Troubleshooting Export Issues:**
+```bash
+# If .p12 is still grayed out, check if the private key is there:
+security find-identity -v -p codesigning
+
+# You should see something like:
+# 1) ABC123... "Developer ID Application: Your Name (TEAM_ID)"
+
+# If you don't see it, the certificate/key pair wasn't installed properly
+```
+
+**If .p12 is still grayed out:**
+- The certificate wasn't properly matched with your original CSR
+- Try deleting the certificate and re-downloading/installing it
+- Make sure you're in the correct keychain (usually "login")
 4. Convert to base64:
 ```bash
 base64 -i /path/to/certificate.p12 | pbcopy
@@ -57,11 +120,19 @@ base64 -i /path/to/certificate.p12 | pbcopy
 
 ### 4. Create App-Specific Password for Notarization
 
-1. Go to https://appleid.apple.com/account/manage
-2. Sign in with your Apple ID
-3. Under "Sign-In and Security" → "App-Specific Passwords"
-4. Click "+" to generate a new password
-5. Save this password securely
+**Important: This is NOT in the Apple Developer portal. You need to go to Apple ID management:**
+
+1. Go to **https://appleid.apple.com/account/manage** (different from developer.apple.com)
+2. Sign in with your Apple ID (same one you use for Developer Program)
+3. Under **"Sign-In and Security"** → **"App-Specific Passwords"**
+4. Click **"+"** to generate a new password
+5. **Label it** something like "Tauri Notarization" 
+6. **Save this password securely** - you'll need it for GitHub secrets
+
+**If you don't see "App-Specific Passwords":**
+- Make sure you have 2FA enabled on your Apple ID (required)
+- Try refreshing the page
+- The option appears under the Security section
 
 ### 5. Get Your Signing Identity
 
@@ -87,18 +158,26 @@ Add these secrets:
 | `APPLE_PASSWORD` | (app-specific password) | App-specific password from step 4 |
 | `APPLE_TEAM_ID` | (10-character ID) | Your Team ID from Apple Developer |
 
-### 7. Update tauri.conf.json (Optional)
+### 7. Update tauri.conf.json (Optional - Usually Skip This)
 
-If you want to hardcode the signing identity (less flexible):
+**RECOMMENDATION: Skip this step** - Your GitHub Actions workflow already handles signing dynamically.
 
-```json
-"bundle": {
-  "macOS": {
-    "signingIdentity": "Developer ID Application: Your Name (TEAM_ID)",
-    "providerShortName": "TEAM_ID"
-  }
-}
-```
+**What this does:**
+- Hardcodes your signing identity in the config file
+- Forces Tauri to always use this specific certificate
+
+**When you might want it:**
+- Multiple developers with different certificates
+- Want to enforce a specific certificate locally
+- Complex team setups with certificate management
+
+**Why you should skip it:**
+- ❌ **Hardcodes sensitive info** in your repository
+- ❌ **Less flexible** - breaks if certificate changes
+- ❌ **GitHub Actions already handles it** via environment variables
+- ❌ **Your certificate details are in the repo** (not great for security)
+
+**Your GitHub Actions workflow is already configured correctly** with dynamic signing via secrets. No changes needed to tauri.conf.json!
 
 ## Testing
 
@@ -114,9 +193,34 @@ git push origin v0.1.1
 
 ## Troubleshooting
 
+### "0 valid identities found" / "Certificate is not trusted"
+**Most common issue:** Missing Apple intermediate certificates
+
+```bash
+# Download and install Apple intermediate certificates
+curl -O https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+curl -O https://www.apple.com/certificateauthority/AppleRootCA-G3.cer
+open DeveloperIDG2CA.cer  # Click "Add" when dialog appears
+open AppleRootCA-G3.cer   # Click "Add" when dialog appears
+
+# Verify it's fixed
+security find-identity -v -p codesigning
+```
+
+Other causes:
+- Certificate and private key aren't properly paired
+- Certificate wasn't created from your CSR
+- Wrong keychain (make sure it's in "login" keychain)
+
 ### "Developer ID Application not found"
 - Make sure the certificate is installed in Keychain Access
 - Check that the identity name in GitHub secrets matches exactly
+- Verify intermediate certificates are installed (see above)
+
+### ".p12 export is grayed out"
+- Certificate doesn't have private key attached
+- Must use the certificate created from YOUR CSR request
+- Delete certificate and recreate with proper CSR process
 
 ### "Failed to notarize"
 - Verify `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID` are correct

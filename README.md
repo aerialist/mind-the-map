@@ -89,6 +89,37 @@ pnpm tauri build
 
 The built application will be available in `src-tauri/target/release/bundle/`.
 
+## Version Management
+
+The project uses version numbers in three places that must be kept in sync:
+
+1. **`mindmap-app/package.json`** - Frontend package version
+2. **`mindmap-app/src-tauri/tauri.conf.json`** - Tauri app bundle version
+3. **`mindmap-app/src-tauri/Cargo.toml`** - Rust package version
+
+### Why Three Places?
+
+- **package.json**: Standard Node.js/npm package versioning for the frontend
+- **tauri.conf.json**: Used by Tauri for app bundle metadata and installers
+- **Cargo.toml**: Rust package version, used by the `get_app_version()` command to display in the About dialog
+
+### How to Update Version
+
+When releasing a new version, update all three files:
+
+```bash
+# 1. Update package.json
+sed -i '' 's/"version": ".*"/"version": "0.2.0"/' mindmap-app/package.json
+
+# 2. Update tauri.conf.json
+sed -i '' 's/"version": ".*"/"version": "0.2.0"/' mindmap-app/src-tauri/tauri.conf.json
+
+# 3. Update Cargo.toml
+sed -i '' 's/^version = ".*"/version = "0.2.0"/' mindmap-app/src-tauri/Cargo.toml
+```
+
+Or manually edit each file to change the version number to match.
+
 ## Creating a Release
 
 ### Automated Release (via GitHub Actions)

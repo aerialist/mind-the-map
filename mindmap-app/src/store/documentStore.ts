@@ -121,6 +121,9 @@ interface DocumentState {
   // Help dialog state
   isHelpOpen: boolean;
 
+  // About dialog state
+  isAboutOpen: boolean;
+
   // Icon picker state
   isIconPickerOpen: boolean;
 
@@ -184,6 +187,11 @@ interface DocumentState {
   openHelp: () => void;
   closeHelp: () => void;
   toggleHelp: () => void;
+
+  // About actions
+  openAbout: () => void;
+  closeAbout: () => void;
+  toggleAbout: () => void;
 
   // Icon actions
   openIconPicker: () => void;
@@ -445,6 +453,9 @@ export const useDocumentStore = create<DocumentState>()(
 
     // Help dialog state
     isHelpOpen: false,
+
+    // About dialog state
+    isAboutOpen: false,
 
     // Icon picker state
     isIconPickerOpen: false,
@@ -1012,6 +1023,25 @@ export const useDocumentStore = create<DocumentState>()(
       set((state) => {
         state.isHelpOpen = !state.isHelpOpen;
         if (state.isHelpOpen) {
+          state.editingNodeId = null;
+        }
+      }),
+
+    openAbout: () =>
+      set((state) => {
+        state.isAboutOpen = true;
+        state.editingNodeId = null;
+      }),
+
+    closeAbout: () =>
+      set((state) => {
+        state.isAboutOpen = false;
+      }),
+
+    toggleAbout: () =>
+      set((state) => {
+        state.isAboutOpen = !state.isAboutOpen;
+        if (state.isAboutOpen) {
           state.editingNodeId = null;
         }
       }),

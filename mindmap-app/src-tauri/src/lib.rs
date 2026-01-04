@@ -87,6 +87,34 @@ fn read_document(path: String) -> Result<String, String> {
     fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {}", e))
 }
 
+// Get app version
+#[tauri::command]
+fn get_app_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
+// Get platform information
+#[tauri::command]
+fn get_platform_info() -> String {
+    #[cfg(target_os = "macos")]
+    {
+        #[cfg(target_arch = "aarch64")]
+        return "macOS (Apple Silicon)".to_string();
+        
+        #[cfg(target_arch = "x86_64")]
+        return "macOS (Intel)".to_string();
+    }
+    
+    #[cfg(target_os = "windows")]
+    return "Windows".to_string();
+    
+    #[cfg(target_os = "linux")]
+    return "Linux".to_string();
+    
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    return std::env::consts::OS.to_string();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -94,7 +122,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_deep_link::init())
-        .invoke_handler(tauri::generate_handler![save_document, read_document])
+        .invoke_handler(tauri::generate_handler![save_document, read_document, get_app_version, get_platform_info])
         .setup(|app| {
             // Handle file opens from macOS (when .mindmap file is double-clicked)
             #[cfg(target_os = "macos")]
@@ -381,6 +409,14 @@ pub fn run() {
             // Store window menu reference for dynamic updates
             app.manage(WindowMenuState(Mutex::new(Some(window_menu.clone()))));
 
+            // === Help menu items ===
+            let about_item = MenuItemBuilder::with_id("about", "About Mind the Map")
+                .build(app)?;
+
+            let help_menu = SubmenuBuilder::new(app, "Help")
+                .item(&about_item)
+                .build()?;
+
             // Build the full menu bar
             let menu = MenuBuilder::new(app)
                 .item(&file_menu)
@@ -388,6 +424,7 @@ pub fn run() {
                 .item(&view_menu)
                 .item(&node_menu)
                 .item(&window_menu)
+                .item(&help_menu)
                 .build()?;
 
             app.set_menu(menu)?;
@@ -475,6 +512,7 @@ pub fn run() {
                 "toggle_collapse_all" => Some("menu-toggle-collapse-all"),
                 "open_icon_picker" => Some("menu-open-icon-picker"),
                 "add_link" => Some("menu-add-link"),
+                "about" => Some("menu-about"),
                 _ => None,
             };
 

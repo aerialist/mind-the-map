@@ -7,6 +7,7 @@ import { MindMapView } from './components/MindMap';
 import { SearchPanel } from './components/Search';
 import { IconPicker } from './components/IconPicker';
 import { HelpDialog } from './components/Help';
+import { AboutDialog } from './components/About';
 import { LinkPanel } from './components/LinkDialog';
 import { useDocumentStore } from './store';
 import { useAutoSave, useInitialFileLoad } from './hooks';
@@ -27,6 +28,7 @@ function App() {
   const toggleSearch = useDocumentStore((state) => state.toggleSearch);
   const isHelpOpen = useDocumentStore((state) => state.isHelpOpen);
   const toggleHelp = useDocumentStore((state) => state.toggleHelp);
+  const toggleAbout = useDocumentStore((state) => state.toggleAbout);
   const editingNodeId = useDocumentStore((state) => state.editingNodeId);
   const currentFilePath = useDocumentStore((state) => state.currentFilePath);
   const isDirty = useDocumentStore((state) => state.isDirty);
@@ -119,6 +121,9 @@ function App() {
       }),
       listen<string>('menu-find', (event) => {
         if (!isCancelled && event.payload === myLabel) toggleSearch();
+      }),
+      listen<string>('menu-about', (event) => {
+        if (!isCancelled && event.payload === myLabel) toggleAbout();
       }),
     ];
 
@@ -284,6 +289,9 @@ function App() {
 
       {/* Help dialog */}
       <HelpDialog />
+
+      {/* About dialog */}
+      <AboutDialog />
     </div>
   );
 }
