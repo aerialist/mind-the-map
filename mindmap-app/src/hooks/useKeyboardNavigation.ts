@@ -315,6 +315,16 @@ export const useKeyboardNavigation = () => {
     const currentEditingNodeId = useDocumentStore.getState().editingNodeId;
     const currentNodes = useDocumentStore.getState().nodes;
 
+    // Skip if user is focused on an input element (e.g., Link dialog input)
+    // Let the browser handle native copy in those cases
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement
+    ) {
+      return;
+    }
+
     if (currentEditingNodeId || currentSelectedNodeIds.length === 0) return;
 
     const subtreeNodes: Record<string, typeof currentNodes[string]> = {};
@@ -365,6 +375,16 @@ export const useKeyboardNavigation = () => {
     const currentSelectedNodeIds = useDocumentStore.getState().selectedNodeIds;
     const currentEditingNodeId = useDocumentStore.getState().editingNodeId;
     const currentNodes = useDocumentStore.getState().nodes;
+
+    // Skip if user is focused on an input element (e.g., Link dialog input)
+    // Let the browser handle native cut in those cases
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement
+    ) {
+      return;
+    }
 
     if (currentEditingNodeId || currentSelectedNodeIds.length === 0) return;
 
@@ -422,6 +442,56 @@ export const useKeyboardNavigation = () => {
     const currentSelectedNodeId = useDocumentStore.getState().selectedNodeId;
     const currentEditingNodeId = useDocumentStore.getState().editingNodeId;
     const currentClipboard = useDocumentStore.getState().clipboard;
+
+    // If user is focused on an input element (e.g., Link dialog input),
+    // paste clipboard text into the input since Tauri menu consumed the native event
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLInputElement) {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          const input = activeElement;
+          const start = input.selectionStart ?? input.value.length;
+          const end = input.selectionEnd ?? input.value.length;
+          const newValue = input.value.slice(0, start) + text + input.value.slice(end);
+          // Trigger React's onChange by using native input setter and dispatching event
+          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype,
+            'value'
+          )?.set;
+          nativeInputValueSetter?.call(input, newValue);
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          // Move cursor to end of pasted text
+          const newCursorPos = start + text.length;
+          input.setSelectionRange(newCursorPos, newCursorPos);
+        }
+      } catch {
+        // Clipboard read failed
+      }
+      return;
+    }
+    if (activeElement instanceof HTMLTextAreaElement) {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          const textarea = activeElement;
+          const start = textarea.selectionStart ?? textarea.value.length;
+          const end = textarea.selectionEnd ?? textarea.value.length;
+          const newValue = textarea.value.slice(0, start) + text + textarea.value.slice(end);
+          const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLTextAreaElement.prototype,
+            'value'
+          )?.set;
+          nativeTextAreaValueSetter?.call(textarea, newValue);
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          const newCursorPos = start + text.length;
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }
+      } catch {
+        // Clipboard read failed
+      }
+      return;
+    }
 
     if (currentEditingNodeId || !currentSelectedNodeId) return;
 
