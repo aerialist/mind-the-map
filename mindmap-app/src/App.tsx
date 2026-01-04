@@ -10,7 +10,7 @@ import { HelpDialog } from './components/Help';
 import { LinkPanel } from './components/LinkDialog';
 import { useDocumentStore } from './store';
 import { useAutoSave, useInitialFileLoad } from './hooks';
-import { Filter } from 'lucide-react';
+import { Filter, EyeOff } from 'lucide-react';
 
 const getFileNameFromPath = (filePath: string): string => {
   const normalized = filePath.replace(/\\/g, '/');
@@ -33,6 +33,8 @@ function App() {
   const toggleLinkPanel = useDocumentStore((state) => state.toggleLinkPanel);
   const activeIconFilters = useDocumentStore((state) => state.activeIconFilters);
   const clearActiveIconFilters = useDocumentStore((state) => state.clearActiveIconFilters);
+  const hiddenIconFilters = useDocumentStore((state) => state.hiddenIconFilters);
+  const clearHiddenIconFilters = useDocumentStore((state) => state.clearHiddenIconFilters);
 
   // Enable autosave (30 seconds after last change, only if file has been saved before)
   useAutoSave();
@@ -183,6 +185,30 @@ function App() {
                 }}
                 className="ml-0.5 p-0.5 hover:bg-blue-300 dark:hover:bg-blue-700 rounded-full"
                 title="Clear all filters"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </button>
+          )}
+
+          {/* Hidden filters indicator */}
+          {hiddenIconFilters.length > 0 && !isSearchOpen && (
+            <button
+              onClick={toggleSearch}
+              className="flex items-center gap-1.5 px-2 py-1 text-xs bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 rounded-full hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+              title="Click to open Search & Filter panel"
+            >
+              <EyeOff size={12} />
+              <span>{hiddenIconFilters.length} hidden</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearHiddenIconFilters();
+                }}
+                className="ml-0.5 p-0.5 hover:bg-red-300 dark:hover:bg-red-700 rounded-full"
+                title="Clear all hidden filters"
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
