@@ -466,7 +466,7 @@
         </div>
         <div class="feature-card">
           <h3>Icon Markers</h3>
-          <p>Mark nodes with icons for status, priority, or categories. Press <kbd>I</kbd> to open the picker. Click icons to cycle through variants.</p>
+          <p>Mark nodes with icons for status, priority, or categories. Press <kbd>I</kbd> to open the picker. Click any icon directly on a node to quickly cycle through variants in its category.</p>
         </div>
         <div class="feature-card">
           <h3>Search & Filter</h3>
@@ -635,14 +635,24 @@
         <h3>Icons & Markers</h3>
         <p>Add visual markers to nodes for status tracking, priorities, or categorization.</p>
 
-        <h4>Using Icons</h4>
+        <h4>Adding Icons</h4>
         <ul>
           <li>Press <kbd>I</kbd> to toggle the Icons panel (right sidebar)</li>
           <li>The panel stays open while you select different nodes</li>
           <li>Click an icon in the panel to add it to the selected node(s)</li>
-          <li>Click an existing icon on a node to cycle to the next variant</li>
-          <li>Each node can have one icon per category</li>
+          <li>Each node can have one icon per category (e.g., one Priority + one Status + one Flag)</li>
         </ul>
+
+        <h4>Cycling Through Icon Variants</h4>
+        <p>Click directly on an icon that's already on a node to cycle to the next variant within the same category:</p>
+        <ul>
+          <li><strong>Priority icons:</strong> Click to cycle through 1 → 2 → 3 → 4 → 5 → 1...</li>
+          <li><strong>Status icons:</strong> Click to cycle through Todo → In Progress → Done → Paused → Cancelled → Waiting → Locked → Todo...</li>
+          <li><strong>Flag icons:</strong> Click to cycle through Red → Orange → Yellow → Green → Blue → Purple → Black → Red...</li>
+          <li><strong>Mood icons:</strong> Click to cycle through Very Positive → Positive → Neutral → Negative → Very Negative → Very Positive...</li>
+          <li><strong>Other categories:</strong> Click to cycle through all available variants in the category</li>
+        </ul>
+        <p>This works in both Mind Map and Outline views, providing a quick way to update icon status without opening the Icons panel.</p>
 
         <h4>Icon Categories</h4>
         <div class="icon-grid">
@@ -686,6 +696,10 @@
             <h5>Notice</h5>
             <p>Info, Help, Warning, Error, Alert, Eye, Eye Off, Bug, Wrench, Shield, Shield Check. Attention markers.</p>
           </div>
+        </div>
+
+        <div class="tip-box">
+          <strong>Tip:</strong> Click directly on any icon on a node to quickly cycle through variants in that category. For example, click a Priority 1 icon to change it to Priority 2, then Priority 3, and so on. This is faster than opening the icon picker!
         </div>
 
         <div class="tip-box">
@@ -836,6 +850,7 @@
           <tr><th>Action</th><th>Effect</th></tr>
           <tr><td>Left-click</td><td>Select node</td></tr>
           <tr><td>Double-click</td><td>Edit node text</td></tr>
+          <tr><td>Click icon on node</td><td>Cycle to next variant in that icon's category</td></tr>
           <tr><td>Right-click + drag</td><td>Pan the canvas</td></tr>
           <tr><td>Mouse wheel</td><td>Zoom in/out</td></tr>
           <tr><td><kbd>Ctrl</kbd> + wheel</td><td>Pan vertically</td></tr>
@@ -850,6 +865,7 @@
 
         <ul>
           <li><strong>Quick capture:</strong> Press <kbd>Tab</kbd> or <kbd>Enter</kbd> while editing to create new nodes without stopping to save first</li>
+          <li><strong>Cycle icons quickly:</strong> Click directly on any icon on a node to cycle through variants (e.g., Priority 1 → 2 → 3 → 4 → 5, or Status Todo → In Progress → Done) without opening the Icons panel</li>
           <li><strong>Bulk icons:</strong> Multi-select nodes, then open the Icons panel to apply icons to all at once</li>
           <li><strong>Focus mode:</strong> Use Smart Collapse (<kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd>) to hide completed work</li>
           <li><strong>Filter by priority:</strong> Use icon filtering (<kbd>Ctrl</kbd>+<kbd>F</kbd>) to show only nodes with specific icons like Priority 1 or In Progress</li>
