@@ -1,8 +1,8 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { useDocumentStore, computeVisibleNodeIds } from '../../store';
-import type { Node, NodeMap } from '../../types';
-import { getIconDefinition, getIconSvg } from '../../types';
+import type { Node, NodeMap, NodeIcon } from '../../types';
+import { getIconDefinition, getIconSvg, sortIconsByDisplayOrder } from '../../types';
 import { openLink } from '../../services/tauri';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -900,13 +900,30 @@ function MindMapCanvas() {
 
       // Node icons
       const nodeIcons = node.icons || [];
+      const sortedIcons = sortIconsByDisplayOrder(nodeIcons);
+      // Create a map from sorted icon to its original index
+      const sortedIconToOriginalIndex = new Map<number, number>();
+      sortedIcons.forEach((sortedIcon: NodeIcon, sortedIdx: number) => {
+        // Find the first unused original icon that matches
+        for (let origIdx = 0; origIdx < nodeIcons.length; origIdx++) {
+          if (
+            nodeIcons[origIdx].type === sortedIcon.type &&
+            nodeIcons[origIdx].value === sortedIcon.value &&
+            !Array.from(sortedIconToOriginalIndex.values()).includes(origIdx)
+          ) {
+            sortedIconToOriginalIndex.set(sortedIdx, origIdx);
+            break;
+          }
+        }
+      });
+      
       let iconOffset = NODE_PADDING_X;
       const ICON_SIZE = 14;
       const LUCIDE_SIZE = 24; // Lucide icons are 24x24 by default
       const ICON_SCALE = ICON_SIZE / LUCIDE_SIZE;
 
-      if (nodeIcons.length > 0) {
-        nodeIcons.forEach((icon, iconIndex) => {
+      if (sortedIcons.length > 0) {
+        sortedIcons.forEach((icon: NodeIcon, iconIndex: number) => {
           const def = getIconDefinition(icon);
           if (!def) return;
 
@@ -921,12 +938,13 @@ function MindMapCanvas() {
           iconContainer.eventMode = 'static';
           iconContainer.cursor = 'pointer';
 
-          // Add click handler to cycle icon
+          // Add click handler to cycle icon using the original index
+          const originalIconIndex = sortedIconToOriginalIndex.get(iconIndex) ?? iconIndex;
           iconContainer.on('pointerdown', (e) => {
             const originalEvent = e.nativeEvent as PointerEvent | undefined;
             if (originalEvent?.button === 2) return;
             e.stopPropagation();
-            cycleIcon(nodeId, iconIndex);
+            cycleIcon(nodeId, originalIconIndex);
           });
 
           // Get SVG string for the icon and render it

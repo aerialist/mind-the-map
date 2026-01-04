@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { useDocumentStore } from '../../store';
 import { useDragContext, useVisibleNodes } from './OutlineView';
-import { getIconDefinition } from '../../types';
+import { getIconDefinition, sortIconsByDisplayOrder, type NodeIcon } from '../../types';
 import { Tags, Link } from 'lucide-react';
 import { openLink } from '../../services/tauri';
 
@@ -201,20 +201,39 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
         {/* Node icons */}
         {nodeIcons.length > 0 && (
           <span className="flex items-center gap-0.5 mr-1">
-            {nodeIcons.map((icon, index) => {
-              const def = getIconDefinition(icon);
-              if (!def) return null;
-              const IconComponent = def.icon;
-              return (
-                <button
-                  key={`${icon.type}-${index}`}
-                  className="relative cursor-pointer hover:opacity-70 transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    cycleIcon(nodeId, index);
-                  }}
-                  title={`${def.label} (click to cycle)`}
-                >
+            {(() => {
+              const sortedIcons = sortIconsByDisplayOrder(nodeIcons);
+              // Create a map from sorted icon to its original index
+              const sortedIconToOriginalIndex = new Map<number, number>();
+              sortedIcons.forEach((sortedIcon: NodeIcon, sortedIdx: number) => {
+                // Find the first unused original icon that matches
+                for (let origIdx = 0; origIdx < nodeIcons.length; origIdx++) {
+                  if (
+                    nodeIcons[origIdx].type === sortedIcon.type &&
+                    nodeIcons[origIdx].value === sortedIcon.value &&
+                    !Array.from(sortedIconToOriginalIndex.values()).includes(origIdx)
+                  ) {
+                    sortedIconToOriginalIndex.set(sortedIdx, origIdx);
+                    break;
+                  }
+                }
+              });
+              
+              return sortedIcons.map((icon: NodeIcon, index: number) => {
+                const def = getIconDefinition(icon);
+                if (!def) return null;
+                const IconComponent = def.icon;
+                const originalIconIndex = sortedIconToOriginalIndex.get(index) ?? index;
+                return (
+                  <button
+                    key={`${icon.type}-${index}`}
+                    className="relative cursor-pointer hover:opacity-70 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      cycleIcon(nodeId, originalIconIndex);
+                    }}
+                    title={`${def.label} (click to cycle)`}
+                  >
                   <IconComponent
                     className="w-4 h-4"
                     style={{ color: def.color }}
@@ -229,7 +248,8 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
                   )}
                 </button>
               );
-            })}
+              });
+            })()}
           </span>
         )}
 

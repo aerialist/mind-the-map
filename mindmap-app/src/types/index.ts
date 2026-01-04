@@ -29,5 +29,6 @@ export {
   getIconDefinition,
   getNextIconInCategory,
   getAllIcons,
+  sortIconsByDisplayOrder,
 } from './icons';
 export { getIconSvg, ICON_SVG_MAP, FALLBACK_ICON_SVG } from './iconSvg';

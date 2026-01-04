@@ -324,3 +324,31 @@ export const ICON_CATEGORY_LABELS: Record<IconCategory, string> = {
   symbol: 'Symbols',
   notice: 'Notice',
 };
+
+// Icon display order - categories are displayed in this order on nodes
+const ICON_DISPLAY_ORDER: IconCategory[] = [
+  'priority',
+  'status',
+  'flag',
+  'mood',
+  'time',
+  'people',
+  'communication',
+  'document',
+  'symbol',
+  'notice',
+];
+
+// Helper to sort icons by their category order for consistent display
+export const sortIconsByDisplayOrder = (icons: NodeIcon[]): NodeIcon[] => {
+  return [...icons].sort((a, b) => {
+    const orderA = ICON_DISPLAY_ORDER.indexOf(a.type as IconCategory);
+    const orderB = ICON_DISPLAY_ORDER.indexOf(b.type as IconCategory);
+    
+    // If category not found in order, place at end
+    const indexA = orderA === -1 ? ICON_DISPLAY_ORDER.length : orderA;
+    const indexB = orderB === -1 ? ICON_DISPLAY_ORDER.length : orderB;
+    
+    return indexA - indexB;
+  });
+};
