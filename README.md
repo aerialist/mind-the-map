@@ -231,7 +231,7 @@ mind-the-map/
 ### Organization
 - Collapse/Expand: `Space` for single node
 - Smart Collapse All: `Shift+Alt+Space` cycles through 3 states (collapsed → expanded except completed → fully expanded)
-- Node icons: `I` to open picker, click icons to cycle variants
+- Node icons: `I` to open picker, click any icon on a node to cycle through variants in its category
 - Node links: `Ctrl+K` to add/edit hyperlinks
 
 ### Search & Filter (`Ctrl+F`)

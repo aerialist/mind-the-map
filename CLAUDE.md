@@ -189,6 +189,14 @@ interface DocumentState {
 | Ctrl+Click | Toggle node in selection |
 | Shift+Click | Range select |
 
+### Mouse Actions
+| Action | Result |
+|--------|--------|
+| Double-click node | Start editing |
+| Click icon on node | Cycle to next variant in category |
+| Right-click + drag (Mind Map) | Pan canvas |
+| Mouse wheel (Mind Map) | Zoom in/out |
+
 ### File & View
 | Key | Action |
 |-----|--------|
