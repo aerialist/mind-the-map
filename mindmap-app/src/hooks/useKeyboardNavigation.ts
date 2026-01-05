@@ -27,6 +27,8 @@ export const useKeyboardNavigation = () => {
   // Track the last text we wrote to system clipboard
   // Used to detect if user copied something externally
   const lastWrittenClipboardTextRef = useRef<string | null>(null);
+  // Ref for performPaste callback, declared here so it's available to the keydown handler
+  // which is defined before performPaste due to hook execution order
   const performPasteRef = useRef<() => Promise<void>>(() => Promise.resolve());
   const startEditing = useDocumentStore((state) => state.startEditing);
   const createChildNode = useDocumentStore((state) => state.createChildNode);
@@ -177,12 +179,9 @@ export const useKeyboardNavigation = () => {
       // Handle Ctrl+V paste
       // Call performPaste directly to ensure consistent behavior across platforms
       // This matches the behavior of the Paste menu option
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
-        // Only intercept if we're not editing and have a target selected
-        if (!editingNodeId && selectedNodeId) {
-          e.preventDefault();
-          performPasteRef.current();
-        }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V') && !editingNodeId && selectedNodeId) {
+        e.preventDefault();
+        performPasteRef.current();
         return;
       }
 
