@@ -47,10 +47,36 @@ jobs:
       
       - name: Import Code-Signing Certificates (macOS only)
         if: matrix.os == 'macos-latest'
-        uses: apple-actions/import-codesign-certs@v2
-        with:
-          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
-          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        working-directory: .
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          # Create a temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          
+          # Create keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          
+          # Import certificate
+          echo "$APPLE_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          
+          # Allow codesign to access the keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          
+          # Add to search list (make it the default)
+          security list-keychain -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "$KEYCHAIN_PATH"
+          
+          # Verify
+          echo "=== Available signing identities ==="
+          security find-identity -v -p codesigning
+          echo "=== Keychain list ==="
+          security list-keychains -d user
           
       - name: Install dependencies (Ubuntu only)
         if: matrix.os == 'ubuntu-latest'

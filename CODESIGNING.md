@@ -113,10 +113,18 @@ security find-identity -v -p codesigning
 - The certificate wasn't properly matched with your original CSR
 - Try deleting the certificate and re-downloading/installing it
 - Make sure you're in the correct keychain (usually "login")
-4. Convert to base64:
+
+4. Convert to base64 (IMPORTANT - use this exact command):
 ```bash
-base64 -i /path/to/certificate.p12 | pbcopy
+# Use openssl base64 and remove line breaks (CRITICAL for GitHub Actions)
+openssl base64 -in /path/to/certificate.p12 -out /tmp/cert-base64.txt
+cat /tmp/cert-base64.txt | tr -d '\n' | pbcopy
+
+# This copies the base64 string to your clipboard
+# The tr -d '\n' removes line breaks which cause import failures in CI
 ```
+
+**⚠️ Common mistake:** Using just `base64 -i certificate.p12 | pbcopy` may include line breaks that break GitHub Actions!
 
 ### 4. Create App-Specific Password for Notarization
 
@@ -221,6 +229,24 @@ Other causes:
 - Certificate doesn't have private key attached
 - Must use the certificate created from YOUR CSR request
 - Delete certificate and recreate with proper CSR process
+
+### "no identity found" in GitHub Actions
+**The certificate wasn't properly imported in CI.** Common causes:
+
+1. **Base64 encoding has line breaks** - Re-export using:
+   ```bash
+   openssl base64 -in /path/to/certificate.p12 -out /tmp/cert-base64.txt
+   cat /tmp/cert-base64.txt | tr -d '\n' | pbcopy
+   ```
+   Then update the `APPLE_CERTIFICATE` secret with this new value.
+
+2. **Wrong password** - Verify `APPLE_CERTIFICATE_PASSWORD` matches exactly
+
+3. **Signing identity mismatch** - Verify `APPLE_SIGNING_IDENTITY` is exactly:
+   ```
+   Developer ID Application: Your Name (TEAM_ID)
+   ```
+   (No quotes, no extra spaces - must match `security find-identity` output exactly)
 
 ### "Failed to notarize"
 - Verify `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID` are correct
