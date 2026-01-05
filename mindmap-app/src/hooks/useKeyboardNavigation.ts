@@ -27,6 +27,7 @@ export const useKeyboardNavigation = () => {
   // Track the last text we wrote to system clipboard
   // Used to detect if user copied something externally
   const lastWrittenClipboardTextRef = useRef<string | null>(null);
+  const performPasteRef = useRef<() => Promise<void>>(() => Promise.resolve());
   const startEditing = useDocumentStore((state) => state.startEditing);
   const createChildNode = useDocumentStore((state) => state.createChildNode);
   const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
@@ -173,14 +174,14 @@ export const useKeyboardNavigation = () => {
         return;
       }
 
-      // For Ctrl+V, we don't handle it in keydown - let the native paste event handle it
-      // This avoids the permission popup from navigator.clipboard.read()
+      // Handle Ctrl+V paste
+      // Call performPaste directly to ensure consistent behavior across platforms
+      // This matches the behavior of the Paste menu option
       if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
         // Only intercept if we're not editing and have a target selected
-        // The actual paste handling is done in the 'paste' event listener below
         if (!editingNodeId && selectedNodeId) {
-          // Don't prevent default - let the paste event fire
-          // The paste event handler will handle the actual paste logic
+          e.preventDefault();
+          performPasteRef.current();
         }
         return;
       }
@@ -596,7 +597,6 @@ export const useKeyboardNavigation = () => {
   const copyForMiroRef = useRef<() => void>(() => {});
   const performCopyRef = useRef<() => void>(() => {});
   const performCutRef = useRef<() => void>(() => {});
-  const performPasteRef = useRef<() => Promise<void>>(() => Promise.resolve());
   const undoRef = useRef<() => void>(() => {});
   const redoRef = useRef<() => void>(() => {});
 
