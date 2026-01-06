@@ -43,7 +43,15 @@ export async function exportToPDF(
     // Convert blob to base64 for Tauri file write
     const arrayBuffer = await pdfBlob.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
-    const base64 = btoa(String.fromCharCode(...uint8Array));
+    
+    // Convert to base64 in chunks to avoid stack overflow on large PDFs
+    let base64 = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.slice(i, i + chunkSize);
+      base64 += String.fromCharCode(...chunk);
+    }
+    base64 = btoa(base64);
 
     // Write file using Tauri command
     await invoke('save_pdf', { path: filePath, content: base64 });
@@ -72,10 +80,11 @@ async function exportMindmapToPDF(): Promise<Blob> {
   }
 
   // Capture the canvas as an image
+  // Note: html2canvas types are incomplete, using explicit cast for options
   const canvasImage = await html2canvas(canvasContainer, {
     background: '#1a1a2e',
     logging: false,
-  } as any); // Type issue with html2canvas options
+  } as Parameters<typeof html2canvas>[1]);
 
   // Calculate PDF dimensions to fit the image
   const imgWidth = canvasImage.width;
