@@ -5,6 +5,8 @@ import {
   saveDocumentAs,
   openDocument,
 } from '../services/tauri/fileSystem';
+import { exportToPDF } from '../services/pdfExport';
+import { computeVisibleNodeIds } from '../store';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 
@@ -17,6 +19,9 @@ export const useFileOperations = () => {
   const markClean = useDocumentStore((state) => state.markClean);
   const loadDocument = useDocumentStore((state) => state.loadDocument);
   const newDocument = useDocumentStore((state) => state.newDocument);
+  const viewMode = useDocumentStore((state) => state.viewMode);
+  const activeIconFilters = useDocumentStore((state) => state.activeIconFilters);
+  const hiddenIconFilters = useDocumentStore((state) => state.hiddenIconFilters);
 
   // Save handler - saves to existing path or shows Save As dialog
   const handleSave = useCallback(async () => {
@@ -66,6 +71,15 @@ export const useFileOperations = () => {
     newDocument();
   }, [newDocument]);
 
+  // Print/Export PDF handler
+  const handlePrint = useCallback(async () => {
+    const visibleNodeIds = computeVisibleNodeIds(nodes, rootId, activeIconFilters, hiddenIconFilters);
+    const result = await exportToPDF(viewMode, nodes, rootId, visibleNodeIds);
+    if (!result.success && result.error !== 'Save cancelled') {
+      console.error('PDF export failed:', result.error);
+    }
+  }, [nodes, rootId, viewMode, activeIconFilters, hiddenIconFilters]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -93,12 +107,17 @@ export const useFileOperations = () => {
           e.preventDefault();
           handleNew();
           break;
+
+        case 'p':
+          e.preventDefault();
+          handlePrint();
+          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave, handleSaveAs, handleOpen, handleNew]);
+  }, [handleSave, handleSaveAs, handleOpen, handleNew, handlePrint]);
 
   // Listen for Tauri menu events - filter by window label in payload
   useEffect(() => {
@@ -129,6 +148,11 @@ export const useFileOperations = () => {
           handleSaveAs();
         }
       }),
+      listen<string>('menu-print', (event) => {
+        if (!isCancelled && event.payload === myLabel) {
+          handlePrint();
+        }
+      }),
     ];
 
     listenerPromises.forEach((promise) => {
@@ -145,13 +169,14 @@ export const useFileOperations = () => {
       isCancelled = true;
       unlistenFns.forEach((fn) => { try { fn(); } catch {} });
     };
-  }, [handleNew, handleOpen, handleSave, handleSaveAs]);
+  }, [handleNew, handleOpen, handleSave, handleSaveAs, handlePrint]);
 
   return {
     handleSave,
     handleSaveAs,
     handleOpen,
     handleNew,
+    handlePrint,
     isDirty,
     currentFilePath,
   };

@@ -1502,7 +1502,7 @@ function MindMapCanvas() {
       {/* PixiJS Canvas */}
       <div
         ref={containerRef}
-        className="w-full h-full cursor-grab"
+        className="w-full h-full cursor-grab pixi-canvas-container"
         style={{ touchAction: 'none' }}
       />
 

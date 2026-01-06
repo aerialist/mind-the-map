@@ -87,6 +87,30 @@ fn read_document(path: String) -> Result<String, String> {
     fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {}", e))
 }
 
+// Save PDF file (from base64 encoded content)
+#[tauri::command]
+fn save_pdf(path: String, content: String) -> Result<(), String> {
+    use std::io::Write;
+    
+    // Decode base64
+    let decoded = base64::decode(&content).map_err(|e| format!("Failed to decode base64: {}", e))?;
+    
+    let temp_path = format!("{}.tmp", path);
+
+    // Write to temp file first
+    let mut file = fs::File::create(&temp_path).map_err(|e| format!("Failed to create file: {}", e))?;
+    file.write_all(&decoded).map_err(|e| format!("Failed to write file: {}", e))?;
+
+    // Rename temp file to target (atomic on most file systems)
+    fs::rename(&temp_path, &path).map_err(|e| {
+        // Clean up temp file if rename fails
+        let _ = fs::remove_file(&temp_path);
+        format!("Failed to save file: {}", e)
+    })?;
+
+    Ok(())
+}
+
 // Get app version
 #[tauri::command]
 fn get_app_version() -> String {
@@ -122,7 +146,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_deep_link::init())
-        .invoke_handler(tauri::generate_handler![save_document, read_document, get_app_version, get_platform_info])
+        .invoke_handler(tauri::generate_handler![save_document, read_document, save_pdf, get_app_version, get_platform_info])
         .setup(|app| {
             // Handle file opens from macOS (when .mindmap file is double-clicked)
             #[cfg(target_os = "macos")]
@@ -285,6 +309,9 @@ pub fn run() {
             let save_as = MenuItemBuilder::with_id("save_as", "Save As...")
                 .accelerator("CmdOrCtrl+Shift+S")
                 .build(app)?;
+            let print_item = MenuItemBuilder::with_id("print", "Print / Export PDF...")
+                .accelerator("CmdOrCtrl+P")
+                .build(app)?;
 
             let file_menu = SubmenuBuilder::new(app, "File")
                 .item(&new_doc)
@@ -294,6 +321,8 @@ pub fn run() {
                 .separator()
                 .item(&save_doc)
                 .item(&save_as)
+                .separator()
+                .item(&print_item)
                 .separator()
                 .item(&PredefinedMenuItem::close_window(app, None)?)
                 .build()?;
@@ -493,6 +522,7 @@ pub fn run() {
                 "open" => Some("menu-open"),
                 "save" => Some("menu-save"),
                 "save_as" => Some("menu-save-as"),
+                "print" => Some("menu-print"),
                 "undo" => Some("menu-undo"),
                 "redo" => Some("menu-redo"),
                 "cut" => Some("menu-cut"),
