@@ -131,11 +131,17 @@ async function exportMindmapToPDF(): Promise<Blob> {
  * Convert SVG string to data URL for embedding in PDF
  */
 function svgToDataUrl(svgString: string, color: string): string {
-  // Add color to the SVG
-  const coloredSvg = svgString.replace('<svg', `<svg fill="${color}"`);
-  // Encode as base64
-  const base64 = btoa(coloredSvg);
-  return `data:image/svg+xml;base64,${base64}`;
+  try {
+    // Add color to the SVG - only replace first occurrence to avoid issues with nested SVGs
+    const coloredSvg = svgString.replace(/<svg/, `<svg fill="${color}"`);
+    // Use URI encoding instead of btoa to handle any special characters
+    const encoded = encodeURIComponent(coloredSvg);
+    return `data:image/svg+xml;charset=utf-8,${encoded}`;
+  } catch (error) {
+    console.error('Failed to convert SVG to data URL:', error);
+    // Return a fallback empty SVG
+    return 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E';
+  }
 }
 
 /**
@@ -157,6 +163,9 @@ async function exportOutlineToPDF(
   const margin = 15;
   const lineHeight = 7;
   const indentSize = 5;
+  const iconSize = 4; // Icon size in mm
+  const iconSpacing = 1; // Space between icons in mm
+  const iconTextOffset = 0.5; // Vertical offset for centering text on icons (mm)
   let yPosition = margin;
 
   // Helper to add new page if needed
@@ -190,8 +199,6 @@ async function exportOutlineToPDF(
     }
 
     // Render icons if present
-    const iconSize = 4; // Icon size in mm
-    const iconSpacing = 1; // Space between icons in mm
     let currentX = xPosition;
     
     if (node.icons && node.icons.length > 0) {
@@ -214,7 +221,7 @@ async function exportOutlineToPDF(
             if (def.text) {
               pdf.setFontSize(6);
               pdf.setTextColor(color);
-              pdf.text(def.text, currentX + iconSize / 2, yPosition - 0.5, { align: 'center' });
+              pdf.text(def.text, currentX + iconSize / 2, yPosition - iconTextOffset, { align: 'center' });
               pdf.setTextColor(0, 0, 0); // Reset color
               pdf.setFontSize(depth === 0 ? 16 : 11); // Reset font size
             }
