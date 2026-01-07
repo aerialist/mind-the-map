@@ -3,7 +3,7 @@ import html2canvas from 'html2canvas';
 import { save } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import type { NodeMap } from '../types';
-import { getIconDefinition, sortIconsByDisplayOrder } from '../types';
+import { getIconDefinition, sortIconsByDisplayOrder, getIconSvg } from '../types';
 
 /**
  * Export the current view as a PDF
@@ -128,6 +128,17 @@ async function exportMindmapToPDF(): Promise<Blob> {
 }
 
 /**
+ * Convert SVG string to data URL for embedding in PDF
+ */
+function svgToDataUrl(svgString: string, color: string): string {
+  // Add color to the SVG
+  const coloredSvg = svgString.replace('<svg', `<svg fill="${color}"`);
+  // Encode as base64
+  const base64 = btoa(coloredSvg);
+  return `data:image/svg+xml;base64,${base64}`;
+}
+
+/**
  * Export outline view as structured PDF
  */
 async function exportOutlineToPDF(
@@ -168,7 +179,6 @@ async function exportOutlineToPDF(
     checkPageBreak();
 
     const xPosition = margin + (depth * indentSize);
-    const maxTextWidth = pageWidth - xPosition - margin;
 
     // Set font based on depth (root is larger/bold)
     if (depth === 0) {
@@ -180,25 +190,57 @@ async function exportOutlineToPDF(
     }
 
     // Render icons if present
-    let iconText = '';
+    const iconSize = 4; // Icon size in mm
+    const iconSpacing = 1; // Space between icons in mm
+    let currentX = xPosition;
+    
     if (node.icons && node.icons.length > 0) {
       const sortedIcons = sortIconsByDisplayOrder(node.icons);
-      iconText = sortedIcons.map(icon => {
+      
+      for (const icon of sortedIcons) {
         const def = getIconDefinition(icon);
-        // Use the label for text representation, or text if available
-        return def ? (def.text || def.label.split(' - ')[0]) : '';
-      }).filter(Boolean).join(' ') + ' ';
+        if (def) {
+          // Get SVG string for the icon
+          const svgString = getIconSvg(icon.type, icon.value);
+          if (svgString) {
+            const color = def.color || '#000000';
+            const dataUrl = svgToDataUrl(svgString, color);
+            
+            // Add icon image to PDF
+            checkPageBreak();
+            pdf.addImage(dataUrl, 'SVG', currentX, yPosition - iconSize + 1, iconSize, iconSize);
+            
+            // If icon has text (like priority numbers), overlay it
+            if (def.text) {
+              pdf.setFontSize(6);
+              pdf.setTextColor(color);
+              pdf.text(def.text, currentX + iconSize / 2, yPosition - 0.5, { align: 'center' });
+              pdf.setTextColor(0, 0, 0); // Reset color
+              pdf.setFontSize(depth === 0 ? 16 : 11); // Reset font size
+            }
+            
+            currentX += iconSize + iconSpacing;
+          }
+        }
+      }
+      
+      // Add space after icons
+      currentX += 2;
     }
 
     // Render text (with word wrapping)
     const nodeText = node.content.type === 'text' ? node.content.text : '[image]';
-    const fullText = iconText + nodeText;
-    const lines = pdf.splitTextToSize(fullText, maxTextWidth);
+    const availableTextWidth = pageWidth - currentX - margin;
+    const lines = pdf.splitTextToSize(nodeText, availableTextWidth);
     
     for (let i = 0; i < lines.length; i++) {
       checkPageBreak();
-      pdf.text(lines[i], xPosition, yPosition);
+      pdf.text(lines[i], currentX, yPosition);
       yPosition += lineHeight;
+      // After first line, reset X position to node indent (not after icons)
+      if (i === 0) {
+        currentX = xPosition;
+      }
     }
 
     // Add link indicator if node has a link
