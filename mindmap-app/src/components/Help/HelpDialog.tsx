@@ -72,6 +72,7 @@ const shortcutSections: ShortcutSection[] = [
       { keys: [`${modKey}+O`], description: 'Open document' },
       { keys: [`${modKey}+S`], description: 'Save document' },
       { keys: [`${modKey}+${shiftKey}+S`], description: 'Save as...' },
+      { keys: [`${modKey}+P`], description: 'Print / Export PDF' },
     ],
   },
   {

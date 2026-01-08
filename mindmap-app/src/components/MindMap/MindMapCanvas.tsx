@@ -422,6 +422,7 @@ function MindMapCanvas() {
         antialias: true,
         resolution: window.devicePixelRatio || 1,
         autoDensity: true,
+        preserveDrawingBuffer: true, // Required for canvas export to PDF
       });
 
       if (!mounted) {
@@ -440,6 +441,9 @@ function MindMapCanvas() {
       appRef.current = app;
       nodesContainerRef.current = nodesContainer;
       edgesContainerRef.current = edgesContainer;
+
+      // Expose PixiJS Application globally for PDF export
+      (window as any).__pixiApp = app;
 
       // Enable pan
       let isDragging = false;
@@ -813,6 +817,21 @@ function MindMapCanvas() {
     // Calculate layout and store in ref for editing overlay positioning
     const layouts = calculateLayout(nodes, rootId, visibleNodeIds);
     layoutsRef.current = layouts;
+
+    // Expose layout data globally for PDF export
+    (window as any).__mindmapNodeLayouts = layouts;
+
+    // Expose viewport state for PDF export
+    const app = appRef.current;
+    if (app) {
+      (window as any).__mindmapViewport = {
+        x: app.stage.x,
+        y: app.stage.y,
+        scale: app.stage.scale.x,
+        canvasWidth: app.screen.width,
+        canvasHeight: app.screen.height,
+      };
+    }
 
     // Helper to check if a node is visible
     const isVisible = (nodeId: string): boolean => {
@@ -1502,7 +1521,7 @@ function MindMapCanvas() {
       {/* PixiJS Canvas */}
       <div
         ref={containerRef}
-        className="w-full h-full cursor-grab"
+        className="w-full h-full cursor-grab pixi-canvas-container"
         style={{ touchAction: 'none' }}
       />
 

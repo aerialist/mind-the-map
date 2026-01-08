@@ -544,6 +544,7 @@
           <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Open document</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Save document</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Save as...</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>Print / Export PDF</td></tr>
         </table>
 
         <h4>View & History</h4>
@@ -824,6 +825,50 @@
         </div>
       </div>
 
+      <div class="guide-section" id="pdf-export">
+        <h3>PDF Export</h3>
+        <p>Export your mind map as a high-quality PDF document to share, print, or archive.</p>
+
+        <h4>How to Export</h4>
+        <ul>
+          <li>Press <kbd>Ctrl</kbd>+<kbd>P</kbd> or select <strong>File → Print / Export PDF</strong></li>
+          <li>For <strong>Mind Map view</strong>: A dialog will ask how many pages wide you want the export (default: 1)</li>
+          <li>Choose a location and filename for your PDF (defaults to current file name with .pdf extension)</li>
+          <li>The PDF is generated based on your current view and settings</li>
+        </ul>
+
+        <h4>Mind Map View Export</h4>
+        <p>Exports the visual mind map as a high-resolution image (300 DPI) across multiple pages:</p>
+        <ul>
+          <li><strong>Multi-page support</strong> - Large maps are automatically tiled across pages in landscape A4 format</li>
+          <li><strong>Clickable links</strong> - Nodes with links are clickable in the PDF and open in your browser</li>
+          <li><strong>High resolution</strong> - Crisp text and graphics suitable for printing</li>
+          <li><strong>Consistent quality</strong> - Same output regardless of window size</li>
+        </ul>
+
+        <h4>Outline View Export</h4>
+        <p>Exports as a structured text document in portrait A4 format:</p>
+        <ul>
+          <li><strong>Hierarchical structure</strong> - Indentation shows node relationships</li>
+          <li><strong>Visual indicators</strong> - Bullet dots (•) for leaf nodes, triangles (▶/▼) for parent nodes showing collapse state</li>
+          <li><strong>Icons rendered</strong> - All icons are converted to images and displayed with proper colors</li>
+          <li><strong>Japanese text support</strong> - Full Unicode support using NotoSans font</li>
+          <li><strong>Multi-page</strong> - Automatically paginated with proper page breaks</li>
+        </ul>
+
+        <h4>What's Preserved</h4>
+        <p>PDF export preserves the state of your mind map exactly as displayed:</p>
+        <ul>
+          <li><strong>Expand/Collapse State</strong> - Only visible nodes are included in the PDF</li>
+          <li><strong>Icon Filters</strong> - If you have icon filters active, only matching nodes are exported</li>
+          <li><strong>Hidden Filters</strong> - Nodes matching hidden filters are excluded from the export</li>
+        </ul>
+
+        <div class="tip-box">
+          <strong>Tip:</strong> Use Smart Collapse (<kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd>) or icon filters before exporting to create focused PDF views showing only relevant content.
+        </div>
+      </div>
+
       <div class="guide-section" id="files">
         <h3>File Management</h3>
 
@@ -840,6 +885,7 @@
           <tr><td>Open</td><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Opens a .mindmap file</td></tr>
           <tr><td>Save</td><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Saves to current file (or prompts if new)</td></tr>
           <tr><td>Save As</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Save with a new name</td></tr>
+          <tr><td>Print / Export PDF</td><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>Export as high-quality PDF with clickable links (Mind Map: multi-page image; Outline: structured text with Japanese support)</td></tr>
         </table>
       </div>
 
