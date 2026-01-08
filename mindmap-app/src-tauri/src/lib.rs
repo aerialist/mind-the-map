@@ -1,15 +1,23 @@
 use std::fs;
 use std::path::Path;
 use std::sync::Mutex;
+use serde::Serialize;
 use tauri::menu::{CheckMenuItem, MenuBuilder, MenuItemBuilder, SubmenuBuilder, PredefinedMenuItem, Submenu};
-use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 use uuid::Uuid;
 
-// Track the last focused window label
-struct FocusedWindow(Mutex<Option<String>>);
+// Track the active window label
+struct AppState {
+    active_label: Mutex<Option<String>>,
+}
 
 // Store reference to Window submenu for dynamic updates
 struct WindowMenuState(Mutex<Option<Submenu<tauri::Wry>>>);
+
+#[derive(Clone, Serialize)]
+struct CommandDispatchPayload {
+    id: String,
+}
 
 // Helper function to rebuild the Window menu with current windows
 fn rebuild_window_menu(app: &AppHandle) {
@@ -18,8 +26,8 @@ fn rebuild_window_menu(app: &AppHandle) {
     
     // Get focused window label
     let focused_label = app
-        .try_state::<FocusedWindow>()
-        .and_then(|state| state.0.lock().ok()?.clone())
+        .try_state::<AppState>()
+        .and_then(|state| state.active_label.lock().ok()?.clone())
         .unwrap_or_default();
     
     // Clear existing items (limit iterations to prevent infinite loop)
@@ -139,6 +147,15 @@ fn get_platform_info() -> String {
     return std::env::consts::OS.to_string();
 }
 
+// Track the currently active window label from the frontend
+#[tauri::command]
+fn window_activated(label: String, app: AppHandle, state: State<AppState>) {
+    if let Ok(mut active_label) = state.active_label.lock() {
+        *active_label = Some(label);
+    }
+    rebuild_window_menu(&app);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -146,7 +163,14 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_deep_link::init())
-        .invoke_handler(tauri::generate_handler![save_document, read_document, save_pdf, get_app_version, get_platform_info])
+        .invoke_handler(tauri::generate_handler![
+            save_document,
+            read_document,
+            save_pdf,
+            get_app_version,
+            get_platform_info,
+            window_activated
+        ])
         .setup(|app| {
             // Handle file opens from macOS (when .mindmap file is double-clicked)
             #[cfg(target_os = "macos")]
@@ -386,13 +410,10 @@ pub fn run() {
 
             // === Node menu items ===
             let create_child = MenuItemBuilder::with_id("create_child", "Create Child")
-                .accelerator("Tab")
                 .build(app)?;
             let create_sibling = MenuItemBuilder::with_id("create_sibling", "Create Sibling")
-                .accelerator("Enter")
                 .build(app)?;
             let create_sibling_above = MenuItemBuilder::with_id("create_sibling_above", "Create Sibling Above")
-                .accelerator("Shift+Enter")
                 .build(app)?;
             let edit_node = MenuItemBuilder::with_id("edit_node", "Edit")
                 .accelerator("F2")
@@ -458,8 +479,10 @@ pub fn run() {
 
             app.set_menu(menu)?;
 
-            // Initialize focused window tracker with the main window
-            app.manage(FocusedWindow(Mutex::new(Some("main".to_string()))));
+            // Initialize active window tracker with the main window
+            app.manage(AppState {
+                active_label: Mutex::new(Some("main".to_string())),
+            });
 
             Ok(())
         })
@@ -467,8 +490,8 @@ pub fn run() {
             match event {
                 WindowEvent::Focused(focused) if *focused => {
                     // Track window focus changes
-                    if let Some(state) = window.try_state::<FocusedWindow>() {
-                        if let Ok(mut label) = state.0.lock() {
+                    if let Some(state) = window.try_state::<AppState>() {
+                        if let Ok(mut label) = state.active_label.lock() {
                             *label = Some(window.label().to_string());
                         }
                     }
@@ -517,53 +540,59 @@ pub fn run() {
                 return;
             }
 
-            let event_name = match event.id().as_ref() {
-                "new" => Some("menu-new"),
-                "open" => Some("menu-open"),
-                "save" => Some("menu-save"),
-                "save_as" => Some("menu-save-as"),
-                "print" => Some("menu-print"),
-                "undo" => Some("menu-undo"),
-                "redo" => Some("menu-redo"),
-                "cut" => Some("menu-cut"),
-                "copy" => Some("menu-copy"),
-                "paste" => Some("menu-paste"),
-                "copy_for_miro" => Some("menu-copy-for-miro"),
-                "view_mindmap" => Some("menu-view-mindmap"),
-                "view_outline" => Some("menu-view-outline"),
-                "fit_to_view" => Some("menu-fit-to-view"),
-                "find" => Some("menu-find"),
-                "create_child" => Some("menu-create-child"),
-                "create_sibling" => Some("menu-create-sibling"),
-                "create_sibling_above" => Some("menu-create-sibling-above"),
-                "edit_node" => Some("menu-edit-node"),
-                "delete_node" => Some("menu-delete-node"),
-                "toggle_collapse" => Some("menu-toggle-collapse"),
-                "toggle_collapse_all" => Some("menu-toggle-collapse-all"),
-                "open_icon_picker" => Some("menu-open-icon-picker"),
-                "add_link" => Some("menu-add-link"),
-                "about" => Some("menu-about"),
+            let command_id = match event.id().as_ref() {
+                "new" => Some("file.new"),
+                "open" => Some("file.open"),
+                "save" => Some("file.save"),
+                "save_as" => Some("file.saveAs"),
+                "print" => Some("file.print"),
+                "undo" => Some("edit.undo"),
+                "redo" => Some("edit.redo"),
+                "cut" => Some("edit.cut"),
+                "copy" => Some("edit.copy"),
+                "paste" => Some("edit.paste"),
+                "copy_for_miro" => Some("edit.copyForMiro"),
+                "view_mindmap" => Some("view.mindmap"),
+                "view_outline" => Some("view.outline"),
+                "fit_to_view" => Some("view.fitToView"),
+                "find" => Some("view.find"),
+                "create_child" => Some("node.createChild"),
+                "create_sibling" => Some("node.createSibling"),
+                "create_sibling_above" => Some("node.createSiblingAbove"),
+                "edit_node" => Some("node.edit"),
+                "delete_node" => Some("node.delete"),
+                "toggle_collapse" => Some("node.toggleCollapse"),
+                "toggle_collapse_all" => Some("node.toggleCollapseAll"),
+                "open_icon_picker" => Some("node.openIconPicker"),
+                "add_link" => Some("node.addLink"),
+                "about" => Some("app.about.toggle"),
                 _ => None,
             };
 
-            if let Some(name) = event_name {
+            if let Some(id) = command_id {
                 // Get the last focused window from our tracker
                 let target_label = app
-                    .try_state::<FocusedWindow>()
-                    .and_then(|state| state.0.lock().ok()?.clone());
+                    .try_state::<AppState>()
+                    .and_then(|state| state.active_label.lock().ok()?.clone());
+
+                let payload_id = id.to_string();
 
                 if let Some(ref label) = target_label {
                     if let Some(window) = app.get_webview_window(label) {
-                        // Emit with the target window label as payload so frontend can filter
-                        let _ = window.emit(name, label.clone());
+                        let _ = window.emit(
+                            "command:dispatch",
+                            CommandDispatchPayload { id: payload_id.clone() },
+                        );
                         return;
                     }
                 }
 
                 // Fallback: send to the first available window
                 if let Some(window) = app.webview_windows().values().next() {
-                    let label = window.label().to_string();
-                    let _ = window.emit(name, label);
+                    let _ = window.emit(
+                        "command:dispatch",
+                        CommandDispatchPayload { id: payload_id },
+                    );
                 }
             }
         })

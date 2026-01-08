@@ -31,7 +31,7 @@ const shortcutSections: ShortcutSection[] = [
     shortcuts: [
       { keys: ['Tab'], description: 'Create child node' },
       { keys: ['Enter'], description: 'Create sibling below' },
-      { keys: [`${shiftKey}+Enter`], description: 'Create sibling above' },
+      { keys: [`${shiftKey}+Enter`], description: 'Create sibling above (ignored while editing)' },
       { keys: [`${modKey}+]`], description: 'Indent node (move to child of node above)' },
       { keys: [`${modKey}+[`], description: 'Outdent node (move to sibling of parent)' },
       { keys: ['E', 'F2'], description: 'Edit selected node' },

@@ -48,8 +48,6 @@ mind-the-map/
     │   │   └── selectors.ts     # Memoized selectors
     │   │
     │   ├── core/                # Pure logic (no React)
-    │   │   ├── operations/      # Node CRUD operations
-    │   │   ├── layout/          # Tree layout algorithm
     │   │   ├── navigation/      # Keyboard navigation logic
     │   │   ├── clipboard/       # Copy/paste with external app support
     │   │   └── serialization/   # JSON file format
@@ -70,12 +68,17 @@ mind-the-map/
     │   │   ├── useKeyboardNavigation.ts
     │   │   └── useFileOperations.ts
     │   │
-    │   └── services/tauri/      # Tauri API wrappers
-    │       ├── fileSystem.ts
-    │       └── dialogs.ts
+    │   ├── services/            # App-level services
+    │   │   ├── commandBus.ts    # Command bus + default handlers
+    │   │   └── tauri/           # Tauri API wrappers
+    │   │       ├── fileSystem.ts
+    │   │       └── index.ts
+    │   │
+    │   └── utils/
+    │       └── nodeInputHandlers.ts  # Shared input/textarea key handling
     │
     └── src-tauri/               # Rust backend
-        └── src/commands/        # File I/O commands
+        └── src/                 # Tauri app entry (menus, commands)
 ```
 
 ---
@@ -155,7 +158,7 @@ interface DocumentState {
 |-----|--------|-------|
 | Tab | Create child node | Works in edit mode too |
 | Enter | Create sibling below | Works in edit mode too |
-| Shift+Enter | Create sibling above | Works in edit mode too |
+| Shift+Enter | Create sibling above | Ignored while editing an input |
 | Cmd+] (Ctrl+]) | Indent node | Move to child of node above |
 | Cmd+[ (Ctrl+[) | Outdent node | Move to sibling of parent |
 | E / F2 | Start editing | Double-click also works |
@@ -216,7 +219,14 @@ interface DocumentState {
 ### IME Support (Japanese/Chinese Input)
 - `compositionstart`/`compositionend` events track IME state
 - Enter during composition confirms character, not node operation
-- Check `isComposing` before handling Enter key
+- Use `handleNodeInputKeyDown` in `src/utils/nodeInputHandlers.ts` to share IME-safe behavior across inputs
+
+### Command Bus & Active Window Routing
+- All actions are expressed as command IDs (e.g., `node.createChild`, `file.save`)
+- Frontend calls `dispatch(commandId, args?)` from `src/services/commandBus.ts`
+- Rust resolves the active window label, then emits `command:dispatch` to that window
+- Frontend notifies Rust of focus via `window_activated` and `getCurrentWindow().onFocusChanged`
+- Default command handlers live in `src/services/commandBus.ts`; components can add handlers via `registerCommandHandler`
 
 ### Smart Collapse (Shift+Alt+Space)
 Cycles through 3 states:
@@ -247,7 +257,7 @@ Copies as TSV + HTML table format:
   - Shift + wheel: Horizontal pan
 
 ### Tree Layout Algorithm
-- Located in `core/layout/`
+- Implemented inside `src/components/MindMap/MindMapCanvas.tsx`
 - Respects `position.source === 'manual'` nodes
 - Calculates positions for `source === 'auto'` nodes only
 - Avoids overlaps between all nodes
@@ -286,9 +296,11 @@ Key implementation:
 
 ### Adding a New Keyboard Shortcut
 
-1. Add handler in `App.tsx` (global) or component (local)
-2. Update `HelpDialog.tsx` shortcut list
-3. Update `docs/index.html` user manual
+1. Add a command handler in `src/services/commandBus.ts` (or `registerCommandHandler` in a component)
+2. Wire the shortcut to `dispatch(commandId)` in `App.tsx` or the relevant component
+3. If coming from a native menu item, map the menu ID to the command ID in `src-tauri/src/lib.rs`
+4. Update `HelpDialog.tsx` shortcut list
+5. Update `docs/index.html` user manual
 
 ### Adding a New Icon Category
 
@@ -385,12 +397,14 @@ pnpm tauri build      # Build for production
 | Main state + actions | `src/store/documentStore.ts` |
 | Type definitions | `src/types/index.ts` |
 | Global keyboard handling | `src/App.tsx` |
+| Command bus + routing | `src/services/commandBus.ts` |
+| Shared input key handling | `src/utils/nodeInputHandlers.ts` |
 | Mind map rendering | `src/components/MindMap/MindMapCanvas.tsx` |
 | Outline rendering | `src/components/Outline/OutlineView.tsx` |
 | Search & Filter panel | `src/components/Search/SearchPanel.tsx` |
-| Node operations | `src/core/operations/` |
 | Clipboard logic | `src/core/clipboard/` |
+| Navigation logic | `src/core/navigation/` |
+| Serialization | `src/core/serialization/` |
 | File I/O | `src/services/tauri/fileSystem.ts` |
-| Layout algorithm | `src/core/layout/layoutEngine.ts` |
 | Help dialog (cheat sheet) | `src/components/Help/HelpDialog.tsx` |
-| Link dialog | `src/components/LinkDialog/LinkDialog.tsx` |
+| Link dialog | `src/components/LinkDialog/LinkPanel.tsx` |

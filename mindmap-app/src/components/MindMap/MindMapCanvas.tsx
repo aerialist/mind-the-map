@@ -4,8 +4,8 @@ import { useDocumentStore, computeVisibleNodeIds } from '../../store';
 import type { Node, NodeMap, NodeIcon } from '../../types';
 import { getIconDefinition, getIconSvg, sortIconsByDisplayOrder } from '../../types';
 import { openLink } from '../../services/tauri';
-import { listen } from '@tauri-apps/api/event';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { dispatch, registerCommandHandler } from '../../services/commandBus';
+import { handleNodeInputKeyDown } from '../../utils/nodeInputHandlers';
 
 // Editing state for overlay input
 interface EditingState {
@@ -227,14 +227,9 @@ function MindMapCanvas() {
   const toggleNodeSelection = useDocumentStore((state) => state.toggleNodeSelection);
   const selectNodeRange = useDocumentStore((state) => state.selectNodeRange);
   const updateNodeText = useDocumentStore((state) => state.updateNodeText);
-  const createChildNode = useDocumentStore((state) => state.createChildNode);
-  const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
-  const createSiblingNodeAbove = useDocumentStore((state) => state.createSiblingNodeAbove);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
   const stopEditing = useDocumentStore((state) => state.stopEditing);
   const moveNode = useDocumentStore((state) => state.moveNode);
-  const openIconPicker = useDocumentStore((state) => state.openIconPicker);
-  const toggleLinkPanel = useDocumentStore((state) => state.toggleLinkPanel);
   const cycleIcon = useDocumentStore((state) => state.cycleIcon);
 
   // Check if ancestorId is an ancestor of descendantId
@@ -598,67 +593,58 @@ function MindMapCanvas() {
   const handleEditKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!editing) return;
 
-    // Ignore all keys during IME composition (e.g., Japanese input)
-    // During IME composition, keyCode is 229 or key is 'Process'
-    if (e.nativeEvent.isComposing || isComposingRef.current || e.keyCode === 229 || e.key === 'Process') {
-      return; // Let IME handle the key
-    }
-
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      // Save the current text
-      updateNodeText(editing.nodeId, editing.text);
-
-      // Create sibling if not root
-      const node = nodes[editing.nodeId];
-      if (node?.parentId) {
-        if (e.shiftKey) {
-          createSiblingNodeAbove(editing.nodeId);
+    handleNodeInputKeyDown(e, {
+      isComposing: isComposingRef.current,
+      onCreateSibling: () => {
+        updateNodeText(editing.nodeId, editing.text);
+        const node = nodes[editing.nodeId];
+        if (node?.parentId) {
+          dispatch('node.createSibling', { nodeId: editing.nodeId });
+          setEditing(null);
+          setTimeout(() => {
+            const newSelectedId = useDocumentStore.getState().selectedNodeId;
+            if (newSelectedId && newSelectedId !== editing.nodeId) {
+              startEditingNode(newSelectedId);
+            }
+          }, 0);
         } else {
-          createSiblingNode(editing.nodeId);
+          setEditing(null);
+          stopEditing();
         }
-        // After creating sibling, start editing the new node
-        // The new node will be selected, we need to wait for the state update
+      },
+      onCreateChild: () => {
+        updateNodeText(editing.nodeId, editing.text);
+        dispatch('node.createChild', { nodeId: editing.nodeId });
         setEditing(null);
-        // Use setTimeout to let the state update, then start editing the new selected node
         setTimeout(() => {
           const newSelectedId = useDocumentStore.getState().selectedNodeId;
           if (newSelectedId && newSelectedId !== editing.nodeId) {
             startEditingNode(newSelectedId);
           }
         }, 0);
-      } else {
-        setEditing(null);
-        stopEditing();
-      }
-    } else if (e.key === 'Tab') {
-      e.preventDefault();
-      // Save the current text
-      updateNodeText(editing.nodeId, editing.text);
-      // Create child node
-      createChildNode(editing.nodeId);
-      setEditing(null);
-      // Start editing the new child
-      setTimeout(() => {
-        const newSelectedId = useDocumentStore.getState().selectedNodeId;
-        if (newSelectedId && newSelectedId !== editing.nodeId) {
-          startEditingNode(newSelectedId);
-        }
-      }, 0);
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      if (e.ctrlKey) {
-        // Ctrl+Escape: Cancel editing (don't save)
-        setEditing(null);
-        stopEditing();
-      } else {
-        // Escape: Save and exit editing mode
+      },
+      onFocusParent: () => {
+        const parentId = nodes[editing.nodeId]?.parentId ?? null;
+        if (!parentId) return;
         updateNodeText(editing.nodeId, editing.text);
+        dispatch('node.focusParent', { nodeId: editing.nodeId });
         setEditing(null);
-        stopEditing();
-      }
-    }
-  }, [editing, nodes, updateNodeText, createSiblingNode, createSiblingNodeAbove, createChildNode, startEditingNode, stopEditing]);
+        setTimeout(() => {
+          startEditingNode(parentId);
+        }, 0);
+      },
+      onEscape: (mode) => {
+        if (mode === 'cancel') {
+          setEditing(null);
+          stopEditing();
+        } else {
+          updateNodeText(editing.nodeId, editing.text);
+          setEditing(null);
+          stopEditing();
+        }
+      },
+    });
+  }, [editing, nodes, updateNodeText, startEditingNode, stopEditing]);
 
   // Handle IME composition events
   const handleCompositionStart = useCallback(() => {
@@ -1279,29 +1265,13 @@ function MindMapCanvas() {
     requestAnimationFrame(animate);
   }, []);
 
-  // Listen for fit-to-view menu event
+  // Handle fit-to-view command from menu/shortcuts
   useEffect(() => {
-    let isCancelled = false;
-    let unlistenFn: (() => void) | null = null;
-
-    const myLabel = getCurrentWindow().label;
-    listen<string>('menu-fit-to-view', (event) => {
-      if (!isCancelled && event.payload === myLabel) {
-        fitToView();
-      }
-    }).then((fn) => {
-      if (isCancelled) {
-        fn();
-      } else {
-        unlistenFn = fn;
-      }
-    }).catch(() => {});
-
+    const unregister = registerCommandHandler('view.fitToView', () => {
+      fitToView();
+    });
     return () => {
-      isCancelled = true;
-      if (unlistenFn) {
-        try { unlistenFn(); } catch {}
-      }
+      unregister();
     };
   }, [fitToView]);
 
@@ -1447,9 +1417,7 @@ function MindMapCanvas() {
     if (e.key === 'Tab') {
       e.preventDefault();
       e.stopPropagation();
-      // Create child node
-      createChildNode(selectedNodeId);
-      // Start editing the new node after state update
+      dispatch('node.createChild', { nodeId: selectedNodeId });
       setTimeout(() => {
         const newSelectedId = useDocumentStore.getState().selectedNodeId;
         if (newSelectedId && newSelectedId !== selectedNodeId) {
@@ -1459,15 +1427,13 @@ function MindMapCanvas() {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
-      // Create sibling node (only if not root)
       const node = nodes[selectedNodeId];
       if (node?.parentId) {
         if (e.shiftKey) {
-          createSiblingNodeAbove(selectedNodeId);
+          dispatch('node.createSiblingAbove', { nodeId: selectedNodeId });
         } else {
-          createSiblingNode(selectedNodeId);
+          dispatch('node.createSibling', { nodeId: selectedNodeId });
         }
-        // Start editing the new node after state update
         setTimeout(() => {
           const newSelectedId = useDocumentStore.getState().selectedNodeId;
           if (newSelectedId && newSelectedId !== selectedNodeId) {
@@ -1478,20 +1444,18 @@ function MindMapCanvas() {
     } else if (e.key === 'e' || e.key === 'E' || e.key === 'F2') {
       e.preventDefault();
       e.stopPropagation();
-      // Start editing the selected node
+      dispatch('node.edit', { nodeId: selectedNodeId });
       startEditingNode(selectedNodeId);
     } else if (e.key === 'i' || e.key === 'I') {
       e.preventDefault();
       e.stopPropagation();
-      // Open icon picker (uses currently selected node)
-      openIconPicker();
+      dispatch('node.openIconPicker');
     } else if ((e.key === 'k' || e.key === 'K') && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       e.stopPropagation();
-      // Toggle link panel
-      toggleLinkPanel();
+      dispatch('node.addLink');
     }
-  }, [editing, selectedNodeId, nodes, createChildNode, createSiblingNode, createSiblingNodeAbove, startEditingNode, openIconPicker, toggleLinkPanel]);
+  }, [editing, selectedNodeId, nodes, startEditingNode]);
 
   // Focus the wrapper when canvas is clicked (to receive keyboard events)
   const handleWrapperClick = useCallback(() => {

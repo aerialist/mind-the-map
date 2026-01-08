@@ -4,6 +4,8 @@ import { useDragContext, useVisibleNodes } from './OutlineView';
 import { getIconDefinition, sortIconsByDisplayOrder, type NodeIcon } from '../../types';
 import { Tags, Link } from 'lucide-react';
 import { openLink } from '../../services/tauri';
+import { dispatch } from '../../services/commandBus';
+import { handleNodeInputKeyDown } from '../../utils/nodeInputHandlers';
 
 interface OutlineNodeProps {
   nodeId: string;
@@ -21,9 +23,6 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   const startEditing = useDocumentStore((state) => state.startEditing);
   const stopEditing = useDocumentStore((state) => state.stopEditing);
   const updateNodeText = useDocumentStore((state) => state.updateNodeText);
-  const createSiblingNode = useDocumentStore((state) => state.createSiblingNode);
-  const createSiblingNodeAbove = useDocumentStore((state) => state.createSiblingNodeAbove);
-  const createChildNode = useDocumentStore((state) => state.createChildNode);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
   const openIconPicker = useDocumentStore((state) => state.openIconPicker);
   const cycleIcon = useDocumentStore((state) => state.cycleIcon);
@@ -101,42 +100,34 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Ignore all keys during IME composition (e.g., Japanese input)
-    // During IME composition, keyCode is 229 or key is 'Process'
-    if (e.nativeEvent.isComposing || isComposingRef.current || e.keyCode === 229 || e.key === 'Process') {
-      return; // Let IME handle the key
-    }
-
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      // Save the current text and create sibling node
-      updateNodeText(nodeId, editText);
-      // For root node, just stop editing (can't create sibling of root)
-      if (node?.parentId) {
-        if (e.shiftKey) {
-          createSiblingNodeAbove(nodeId);
-        } else {
-          createSiblingNode(nodeId);
-        }
-      } else {
-        stopEditing();
-      }
-    } else if (e.key === 'Tab') {
-      e.preventDefault();
-      // Save the current text and create child node
-      updateNodeText(nodeId, editText);
-      createChildNode(nodeId);
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      if (e.ctrlKey) {
-        // Ctrl+Escape: Cancel editing (don't save)
-        stopEditing();
-      } else {
-        // Escape: Save and exit editing mode
+    handleNodeInputKeyDown(e, {
+      isComposing: isComposingRef.current,
+      onCreateSibling: () => {
         updateNodeText(nodeId, editText);
-        stopEditing();
-      }
-    }
+        if (node?.parentId) {
+          dispatch('node.createSibling', { nodeId });
+        } else {
+          stopEditing();
+        }
+      },
+      onCreateChild: () => {
+        updateNodeText(nodeId, editText);
+        dispatch('node.createChild', { nodeId });
+      },
+      onFocusParent: () => {
+        if (!node?.parentId) return;
+        updateNodeText(nodeId, editText);
+        dispatch('node.focusParent', { nodeId });
+      },
+      onEscape: (mode) => {
+        if (mode === 'cancel') {
+          stopEditing();
+        } else {
+          updateNodeText(nodeId, editText);
+          stopEditing();
+        }
+      },
+    });
   };
 
   const handleCompositionStart = () => {

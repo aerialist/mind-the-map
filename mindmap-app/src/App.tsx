@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 import './App.css';
 import { OutlineView } from './components/Outline';
 import { MindMapView } from './components/MindMap';
@@ -13,6 +14,7 @@ import { useDocumentStore } from './store';
 import { useAutoSave, useInitialFileLoad } from './hooks';
 import { openDocumentByPath } from './services/tauri/fileSystem';
 import { Filter, EyeOff } from 'lucide-react';
+import { dispatch, type CommandPayload } from './services/commandBus';
 
 const getFileNameFromPath = (filePath: string): string => {
   const normalized = filePath.replace(/\\/g, '/');
@@ -26,14 +28,11 @@ function App() {
   const isSearchOpen = useDocumentStore((state) => state.isSearchOpen);
   const isIconPickerOpen = useDocumentStore((state) => state.isIconPickerOpen);
   const toggleSearch = useDocumentStore((state) => state.toggleSearch);
-  const isHelpOpen = useDocumentStore((state) => state.isHelpOpen);
   const toggleHelp = useDocumentStore((state) => state.toggleHelp);
-  const toggleAbout = useDocumentStore((state) => state.toggleAbout);
   const editingNodeId = useDocumentStore((state) => state.editingNodeId);
   const currentFilePath = useDocumentStore((state) => state.currentFilePath);
   const isDirty = useDocumentStore((state) => state.isDirty);
   const isLinkDialogOpen = useDocumentStore((state) => state.isLinkDialogOpen);
-  const toggleLinkPanel = useDocumentStore((state) => state.toggleLinkPanel);
   const activeIconFilters = useDocumentStore((state) => state.activeIconFilters);
   const clearActiveIconFilters = useDocumentStore((state) => state.clearActiveIconFilters);
   const hiddenIconFilters = useDocumentStore((state) => state.hiddenIconFilters);
@@ -68,13 +67,13 @@ function App() {
       // Help shortcut: ? key (when not editing) or Cmd+/
       if (e.key === '?' && !editingNodeId && !isSearchOpen) {
         e.preventDefault();
-        toggleHelp();
+        dispatch('app.help.toggle');
         return;
       }
 
       if (isMod && e.key === '/') {
         e.preventDefault();
-        toggleHelp();
+        dispatch('app.help.toggle');
         return;
       }
 
@@ -82,66 +81,83 @@ function App() {
 
       if (e.key === '1') {
         e.preventDefault();
-        setViewMode('mindmap');
+        dispatch('view.mindmap');
       } else if (e.key === '2') {
         e.preventDefault();
-        setViewMode('outline');
+        dispatch('view.outline');
       } else if (e.key === '0') {
         // Fit to view - emit event for MindMapCanvas to handle
         if (viewMode === 'mindmap') {
           e.preventDefault();
-          const myLabel = getCurrentWindow().label;
-          getCurrentWindow().emit('menu-fit-to-view', myLabel);
+          dispatch('view.fitToView');
         }
       } else if (e.key === 'f') {
         e.preventDefault();
-        toggleSearch();
+        dispatch('view.find');
       } else if (e.key === 'k') {
         e.preventDefault();
-        toggleLinkPanel();
+        dispatch('node.addLink');
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setViewMode, viewMode, isHelpOpen, toggleSearch, toggleHelp, editingNodeId, toggleLinkPanel]);
+  }, [viewMode, isSearchOpen, editingNodeId]);
 
-  // Listen for Tauri menu events (View menu) - filter by window label in payload
+  // Listen for command dispatch events from Rust
   useEffect(() => {
     let isCancelled = false;
-    const unlistenFns: Array<() => void> = [];
+    let unlistenFn: (() => void) | undefined;
 
-    const myLabel = getCurrentWindow().label;
-    const listenerPromises = [
-      listen<string>('menu-view-mindmap', (event) => {
-        if (!isCancelled && event.payload === myLabel) setViewMode('mindmap');
-      }),
-      listen<string>('menu-view-outline', (event) => {
-        if (!isCancelled && event.payload === myLabel) setViewMode('outline');
-      }),
-      listen<string>('menu-find', (event) => {
-        if (!isCancelled && event.payload === myLabel) toggleSearch();
-      }),
-      listen<string>('menu-about', (event) => {
-        if (!isCancelled && event.payload === myLabel) toggleAbout();
-      }),
-    ];
-
-    listenerPromises.forEach((promise) => {
-      promise.then((unlistenFn) => {
-        if (isCancelled) {
-          unlistenFn();
-        } else {
-          unlistenFns.push(unlistenFn);
-        }
-      }).catch(() => {});
-    });
+    listen<CommandPayload>('command:dispatch', (event) => {
+      if (isCancelled) return;
+      const payload = event.payload;
+      if (!payload?.id) return;
+      dispatch(payload.id, payload.args);
+    }).then((fn) => {
+      if (isCancelled) {
+        fn();
+      } else {
+        unlistenFn = fn;
+      }
+    }).catch(() => {});
 
     return () => {
       isCancelled = true;
-      unlistenFns.forEach((fn) => { try { fn(); } catch {} });
+      if (unlistenFn) {
+        try { unlistenFn(); } catch {}
+      }
     };
-  }, [setViewMode, toggleSearch]);
+  }, []);
+
+  // Report window focus to Rust for active window routing
+  useEffect(() => {
+    let unlistenFn: (() => void) | undefined;
+
+    try {
+      const windowHandle = getCurrentWindow();
+      const label = windowHandle.label;
+
+      const notifyActive = () => {
+        invoke('window_activated', { label }).catch(() => {});
+      };
+
+      notifyActive();
+      windowHandle.onFocusChanged(({ payload: focused }) => {
+        if (focused) notifyActive();
+      }).then((fn) => {
+        unlistenFn = fn;
+      }).catch(() => {});
+    } catch {
+      // Ignore when not running in Tauri
+    }
+
+    return () => {
+      if (unlistenFn) {
+        try { unlistenFn(); } catch {}
+      }
+    };
+  }, []);
 
   // Listen for file open events when app is already running (e.g., via deep link)
   useEffect(() => {
