@@ -74,11 +74,11 @@ export const useFileOperations = () => {
   // Print/Export PDF handler
   const handlePrint = useCallback(async () => {
     const visibleNodeIds = computeVisibleNodeIds(nodes, rootId, activeIconFilters, hiddenIconFilters);
-    const result = await exportToPDF(viewMode, nodes, rootId, visibleNodeIds);
+    const result = await exportToPDF(viewMode, nodes, rootId, visibleNodeIds, currentFilePath);
     if (!result.success && result.error !== 'Save cancelled') {
       console.error('PDF export failed:', result.error);
     }
-  }, [nodes, rootId, viewMode, activeIconFilters, hiddenIconFilters]);
+  }, [nodes, rootId, viewMode, activeIconFilters, hiddenIconFilters, currentFilePath]);
 
   // Keyboard shortcuts
   useEffect(() => {
