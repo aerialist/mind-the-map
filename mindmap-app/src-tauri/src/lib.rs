@@ -2,70 +2,19 @@ use std::fs;
 use std::path::Path;
 use std::sync::Mutex;
 use serde::Serialize;
-use tauri::menu::{CheckMenuItem, MenuBuilder, MenuItemBuilder, SubmenuBuilder, PredefinedMenuItem, Submenu};
-use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder, WindowEvent};
-use uuid::Uuid;
+use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder, PredefinedMenuItem};
+use tauri::{Emitter, Manager, State, WindowEvent};
 
 // Track the active window label
 struct AppState {
     active_label: Mutex<Option<String>>,
 }
 
-// Store reference to Window submenu for dynamic updates
-struct WindowMenuState(Mutex<Option<Submenu<tauri::Wry>>>);
-
 #[derive(Clone, Serialize)]
 struct CommandDispatchPayload {
     id: String,
 }
 
-// Helper function to rebuild the Window menu with current windows
-fn rebuild_window_menu(app: &AppHandle) {
-    let Some(menu_state) = app.try_state::<WindowMenuState>() else { return };
-    let Some(window_menu) = menu_state.0.lock().ok().and_then(|m| m.clone()) else { return };
-    
-    // Get focused window label
-    let focused_label = app
-        .try_state::<AppState>()
-        .and_then(|state| state.active_label.lock().ok()?.clone())
-        .unwrap_or_default();
-    
-    // Clear existing items (limit iterations to prevent infinite loop)
-    for _ in 0..100 {
-        if window_menu.remove_at(0).is_err() {
-            break;
-        }
-    }
-    
-    // Add standard items
-    if let Ok(minimize) = PredefinedMenuItem::minimize(app, None) {
-        let _ = window_menu.append(&minimize);
-    }
-    if let Ok(maximize) = PredefinedMenuItem::maximize(app, None) {
-        let _ = window_menu.append(&maximize);
-    }
-    if let Ok(sep) = PredefinedMenuItem::separator(app) {
-        let _ = window_menu.append(&sep);
-    }
-    
-    // Add window list
-    let windows = app.webview_windows();
-    let mut window_labels: Vec<_> = windows.keys().cloned().collect();
-    window_labels.sort(); // Sort for consistent ordering
-    
-    for label in window_labels {
-        if let Some(window) = windows.get(&label) {
-            let title = window.title().unwrap_or_else(|_| label.clone());
-            let is_focused = label == focused_label;
-            
-            // Create check menu item with window label as ID (prefixed to avoid conflicts)
-            let menu_id = format!("window-select:{}", label);
-            if let Ok(item) = CheckMenuItem::with_id(app, &menu_id, &title, true, is_focused, None::<&str>) {
-                let _ = window_menu.append(&item);
-            }
-        }
-    }
-}
 
 // Save document to file (atomic write using temp file + rename)
 #[tauri::command]
@@ -149,11 +98,10 @@ fn get_platform_info() -> String {
 
 // Track the currently active window label from the frontend
 #[tauri::command]
-fn window_activated(label: String, app: AppHandle, state: State<AppState>) {
+fn window_activated(label: String, state: State<AppState>) {
     if let Ok(mut active_label) = state.active_label.lock() {
         *active_label = Some(label);
     }
-    rebuild_window_menu(&app);
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -318,37 +266,65 @@ pub fn run() {
             }
 
             // === File menu items ===
-            let new_doc = MenuItemBuilder::with_id("new", "New")
+            let new_doc = MenuItemBuilder::with_id("new", "New Document")
                 .accelerator("CmdOrCtrl+N")
-                .build(app)?;
-            let new_window = MenuItemBuilder::with_id("new_window", "New Window")
-                .accelerator("CmdOrCtrl+Shift+N")
                 .build(app)?;
             let open_doc = MenuItemBuilder::with_id("open", "Open...")
                 .accelerator("CmdOrCtrl+O")
                 .build(app)?;
+            let open_recent_placeholder = MenuItemBuilder::with_id("open_recent_placeholder", "No Recent Files")
+                .enabled(false)
+                .build(app)?;
+            let open_recent_menu = SubmenuBuilder::new(app, "Open Recent")
+                .item(&open_recent_placeholder)
+                .build()?;
             let save_doc = MenuItemBuilder::with_id("save", "Save")
                 .accelerator("CmdOrCtrl+S")
                 .build(app)?;
             let save_as = MenuItemBuilder::with_id("save_as", "Save As...")
                 .accelerator("CmdOrCtrl+Shift+S")
                 .build(app)?;
-            let print_item = MenuItemBuilder::with_id("print", "Print / Export PDF...")
+            let export_pdf = MenuItemBuilder::with_id("export_pdf", "Export as PDF")
+                .accelerator("CmdOrCtrl+Shift+E")
+                .build(app)?;
+            let export_markdown = MenuItemBuilder::with_id("export_markdown", "Export as Markdown")
+                .enabled(false)
+                .build(app)?;
+            let export_plain_text = MenuItemBuilder::with_id("export_plain_text", "Export as Plain Text")
+                .enabled(false)
+                .build(app)?;
+            let export_image = MenuItemBuilder::with_id("export_image", "Export as Image (Mindmap)")
+                .enabled(false)
+                .build(app)?;
+            let export_menu = SubmenuBuilder::new(app, "Export")
+                .item(&export_pdf)
+                .item(&export_markdown)
+                .item(&export_plain_text)
+                .item(&export_image)
+                .build()?;
+            let print_item = MenuItemBuilder::with_id("print", "Print...")
                 .accelerator("CmdOrCtrl+P")
+                .build(app)?;
+            let preferences_item = MenuItemBuilder::with_id("preferences", "Preferences...")
+                .accelerator("CmdOrCtrl+,")
+                .enabled(false)
                 .build(app)?;
 
             let file_menu = SubmenuBuilder::new(app, "File")
                 .item(&new_doc)
-                .item(&new_window)
-                .separator()
                 .item(&open_doc)
+                .item(&open_recent_menu)
                 .separator()
                 .item(&save_doc)
                 .item(&save_as)
                 .separator()
+                .item(&export_menu)
+                .separator()
                 .item(&print_item)
                 .separator()
-                .item(&PredefinedMenuItem::close_window(app, None)?)
+                .item(&preferences_item)
+                .separator()
+                .item(&PredefinedMenuItem::quit(app, None)?)
                 .build()?;
 
             // === Edit menu items ===
@@ -369,8 +345,50 @@ pub fn run() {
             let paste_item = MenuItemBuilder::with_id("paste", "Paste")
                 .accelerator("CmdOrCtrl+V")
                 .build(app)?;
-            let copy_for_miro = MenuItemBuilder::with_id("copy_for_miro", "Copy for Miro")
-                .accelerator("CmdOrCtrl+Shift+M")
+            let paste_as_child = MenuItemBuilder::with_id("paste_as_child", "Paste as Child")
+                .accelerator("CmdOrCtrl+Shift+V")
+                .build(app)?;
+            let duplicate_node = MenuItemBuilder::with_id("duplicate_node", "Duplicate Node")
+                .accelerator("CmdOrCtrl+D")
+                .enabled(false)
+                .build(app)?;
+            let delete_node = MenuItemBuilder::with_id("delete_node", "Delete Node")
+                .accelerator("CmdOrCtrl+Backspace")
+                .build(app)?;
+            let delete_node_with_children = MenuItemBuilder::with_id("delete_node_with_children", "Delete Node & Children")
+                .accelerator("CmdOrCtrl+Shift+Backspace")
+                .enabled(false)
+                .build(app)?;
+            let select_all_siblings = MenuItemBuilder::with_id("select_all_siblings", "Select All Siblings")
+                .accelerator("CmdOrCtrl+Shift+A")
+                .enabled(false)
+                .build(app)?;
+            let select_all_children = MenuItemBuilder::with_id("select_all_children", "Select All Children")
+                .accelerator("CmdOrCtrl+Alt+A")
+                .enabled(false)
+                .build(app)?;
+            let find_item = MenuItemBuilder::with_id("find", "Find...")
+                .accelerator("CmdOrCtrl+F")
+                .build(app)?;
+            let find_next = MenuItemBuilder::with_id("find_next", "Find Next")
+                .accelerator("CmdOrCtrl+G")
+                .enabled(false)
+                .build(app)?;
+            let find_previous = MenuItemBuilder::with_id("find_previous", "Find Previous")
+                .accelerator("CmdOrCtrl+Shift+G")
+                .enabled(false)
+                .build(app)?;
+            let go_to_node = MenuItemBuilder::with_id("go_to_node", "Go to Node...")
+                .accelerator("CmdOrCtrl+Shift+P")
+                .enabled(false)
+                .build(app)?;
+            let jump_daily_note = MenuItemBuilder::with_id("jump_daily_note", "Jump to Daily Note")
+                .accelerator("CmdOrCtrl+Shift+D")
+                .enabled(false)
+                .build(app)?;
+            let recent_nodes = MenuItemBuilder::with_id("recent_nodes", "Recent Nodes")
+                .accelerator("CmdOrCtrl+R")
+                .enabled(false)
                 .build(app)?;
 
             let edit_menu = SubmenuBuilder::new(app, "Edit")
@@ -380,100 +398,361 @@ pub fn run() {
                 .item(&cut_item)
                 .item(&copy_item)
                 .item(&paste_item)
+                .item(&paste_as_child)
                 .separator()
-                .item(&copy_for_miro)
-                .item(&PredefinedMenuItem::select_all(app, None)?)
+                .item(&duplicate_node)
+                .item(&delete_node)
+                .item(&delete_node_with_children)
+                .separator()
+                .item(&PredefinedMenuItem::select_all(app, Some("Select All (in text)"))?)
+                .item(&select_all_siblings)
+                .item(&select_all_children)
+                .separator()
+                .item(&find_item)
+                .item(&find_next)
+                .item(&find_previous)
+                .separator()
+                .item(&go_to_node)
+                .item(&jump_daily_note)
+                .item(&recent_nodes)
                 .build()?;
 
-            // === View menu items ===
-            let mindmap_mode = MenuItemBuilder::with_id("view_mindmap", "Mind Map")
-                .accelerator("CmdOrCtrl+1")
+            // === Insert menu items ===
+            let insert_sibling_below = MenuItemBuilder::with_id("insert_sibling_below", "New Sibling Node Below")
+                .accelerator("Enter")
                 .build(app)?;
-            let outline_mode = MenuItemBuilder::with_id("view_outline", "Outline")
-                .accelerator("CmdOrCtrl+2")
+            let insert_sibling_above = MenuItemBuilder::with_id("insert_sibling_above", "New Sibling Node Above")
+                .accelerator("CmdOrCtrl+Shift+Enter")
                 .build(app)?;
-            let fit_to_view = MenuItemBuilder::with_id("fit_to_view", "Fit to View")
-                .accelerator("CmdOrCtrl+0")
+            let insert_child = MenuItemBuilder::with_id("insert_child", "New Child Node")
+                .accelerator("Tab")
                 .build(app)?;
-            let find = MenuItemBuilder::with_id("find", "Find...")
-                .accelerator("CmdOrCtrl+F")
+            let line_break = MenuItemBuilder::with_id("line_break", "Line Break (in node)")
+                .accelerator("Shift+Enter")
+                .enabled(false)
+                .build(app)?;
+            let insert_link = MenuItemBuilder::with_id("insert_link", "Link...")
+                .accelerator("CmdOrCtrl+K")
+                .build(app)?;
+            let insert_tag = MenuItemBuilder::with_id("insert_tag", "Tag")
+                .accelerator("CmdOrCtrl+T")
+                .enabled(false)
+                .build(app)?;
+            let insert_note = MenuItemBuilder::with_id("insert_note", "Note")
+                .accelerator("CmdOrCtrl+Shift+N")
+                .enabled(false)
+                .build(app)?;
+            let insert_icon = MenuItemBuilder::with_id("insert_icon", "Icon...")
+                .accelerator("CmdOrCtrl+Shift+I")
+                .build(app)?;
+            let insert_checkbox = MenuItemBuilder::with_id("insert_checkbox", "Checkbox")
+                .accelerator("CmdOrCtrl+Shift+C")
+                .enabled(false)
+                .build(app)?;
+            let insert_color_style = MenuItemBuilder::with_id("insert_color_style", "Color/Style...")
+                .accelerator("CmdOrCtrl+Shift+K")
+                .enabled(false)
+                .build(app)?;
+            let insert_priority = MenuItemBuilder::with_id("insert_priority", "Priority")
+                .accelerator("CmdOrCtrl+Shift+P")
+                .enabled(false)
                 .build(app)?;
 
-            let view_menu = SubmenuBuilder::new(app, "View")
-                .item(&mindmap_mode)
-                .item(&outline_mode)
+            let insert_menu = SubmenuBuilder::new(app, "Insert")
+                .item(&insert_sibling_below)
+                .item(&insert_sibling_above)
+                .item(&insert_child)
                 .separator()
-                .item(&fit_to_view)
+                .item(&line_break)
                 .separator()
-                .item(&find)
+                .item(&insert_link)
+                .item(&insert_tag)
+                .item(&insert_note)
+                .separator()
+                .item(&insert_icon)
+                .item(&insert_checkbox)
+                .item(&insert_color_style)
+                .item(&insert_priority)
+                .build()?;
+
+            // === Format menu items ===
+            let format_bold = MenuItemBuilder::with_id("format_bold", "Bold")
+                .accelerator("CmdOrCtrl+B")
+                .enabled(false)
+                .build(app)?;
+            let format_italic = MenuItemBuilder::with_id("format_italic", "Italic")
+                .accelerator("CmdOrCtrl+I")
+                .enabled(false)
+                .build(app)?;
+            let format_underline = MenuItemBuilder::with_id("format_underline", "Underline")
+                .accelerator("CmdOrCtrl+U")
+                .enabled(false)
+                .build(app)?;
+            let format_strikethrough = MenuItemBuilder::with_id("format_strikethrough", "Strikethrough")
+                .accelerator("CmdOrCtrl+Shift+X")
+                .enabled(false)
+                .build(app)?;
+            let format_code = MenuItemBuilder::with_id("format_code", "Code")
+                .accelerator("CmdOrCtrl+E")
+                .enabled(false)
+                .build(app)?;
+            let format_clear = MenuItemBuilder::with_id("format_clear", "Clear Formatting")
+                .accelerator("CmdOrCtrl+\\")
+                .enabled(false)
+                .build(app)?;
+
+            let format_menu = SubmenuBuilder::new(app, "Format")
+                .item(&format_bold)
+                .item(&format_italic)
+                .item(&format_underline)
+                .item(&format_strikethrough)
+                .item(&format_code)
+                .separator()
+                .item(&format_clear)
                 .build()?;
 
             // === Node menu items ===
-            let create_child = MenuItemBuilder::with_id("create_child", "Create Child")
+            let node_indent = MenuItemBuilder::with_id("node_indent", "Indent")
+                .accelerator("CmdOrCtrl+]")
                 .build(app)?;
-            let create_sibling = MenuItemBuilder::with_id("create_sibling", "Create Sibling")
+            let node_outdent = MenuItemBuilder::with_id("node_outdent", "Outdent")
+                .accelerator("CmdOrCtrl+[")
                 .build(app)?;
-            let create_sibling_above = MenuItemBuilder::with_id("create_sibling_above", "Create Sibling Above")
+            let node_move_up = MenuItemBuilder::with_id("node_move_up", "Move Node Up")
+                .accelerator("CmdOrCtrl+Shift+Up")
+                .enabled(false)
                 .build(app)?;
-            let edit_node = MenuItemBuilder::with_id("edit_node", "Edit")
-                .accelerator("F2")
+            let node_move_down = MenuItemBuilder::with_id("node_move_down", "Move Node Down")
+                .accelerator("CmdOrCtrl+Shift+Down")
+                .enabled(false)
                 .build(app)?;
-            let delete_node = MenuItemBuilder::with_id("delete_node", "Delete")
-                .accelerator("Backspace")
+            let node_move_left = MenuItemBuilder::with_id("node_move_left", "Move Node Left (Outdent)")
+                .accelerator("CmdOrCtrl+Shift+Left")
+                .enabled(false)
                 .build(app)?;
-            let toggle_collapse = MenuItemBuilder::with_id("toggle_collapse", "Expand/Collapse")
+            let node_move_right = MenuItemBuilder::with_id("node_move_right", "Move Node Right (Indent)")
+                .accelerator("CmdOrCtrl+Shift+Right")
+                .enabled(false)
+                .build(app)?;
+            let node_toggle_collapse = MenuItemBuilder::with_id("node_toggle_collapse", "Expand/Collapse")
                 .accelerator("Space")
                 .build(app)?;
-            let toggle_collapse_all = MenuItemBuilder::with_id("toggle_collapse_all", "Expand/Collapse All")
-                .accelerator("Shift+Alt+Space")
+            let node_expand_all = MenuItemBuilder::with_id("node_expand_all", "Expand All Children")
+                .accelerator("CmdOrCtrl+Alt+Right")
+                .enabled(false)
                 .build(app)?;
-            let open_icon_picker = MenuItemBuilder::with_id("open_icon_picker", "Add Icon...")
-                .accelerator("I")
+            let node_collapse_all = MenuItemBuilder::with_id("node_collapse_all", "Collapse All Children")
+                .accelerator("CmdOrCtrl+Alt+Left")
+                .enabled(false)
                 .build(app)?;
-            let add_link = MenuItemBuilder::with_id("add_link", "Add Link...")
-                .accelerator("CmdOrCtrl+K")
+            let node_zoom_to = MenuItemBuilder::with_id("node_zoom_to", "Zoom to Node (Focus)")
+                .accelerator("CmdOrCtrl+.")
+                .enabled(false)
+                .build(app)?;
+            let node_zoom_out = MenuItemBuilder::with_id("node_zoom_out", "Zoom Out from Node")
+                .accelerator("CmdOrCtrl+,")
+                .enabled(false)
+                .build(app)?;
+            let node_jump_root = MenuItemBuilder::with_id("node_jump_root", "Jump to Root")
+                .accelerator("CmdOrCtrl+Home")
+                .enabled(false)
                 .build(app)?;
 
             let node_menu = SubmenuBuilder::new(app, "Node")
-                .item(&create_child)
-                .item(&create_sibling)
-                .item(&create_sibling_above)
+                .item(&node_indent)
+                .item(&node_outdent)
                 .separator()
-                .item(&edit_node)
-                .item(&delete_node)
+                .item(&node_move_up)
+                .item(&node_move_down)
+                .item(&node_move_left)
+                .item(&node_move_right)
                 .separator()
-                .item(&toggle_collapse)
-                .item(&toggle_collapse_all)
+                .item(&node_toggle_collapse)
+                .item(&node_expand_all)
+                .item(&node_collapse_all)
                 .separator()
-                .item(&open_icon_picker)
-                .item(&add_link)
+                .item(&node_zoom_to)
+                .item(&node_zoom_out)
+                .item(&node_jump_root)
                 .build()?;
 
-            // === Window menu (will be dynamically populated) ===
-            let window_menu = SubmenuBuilder::new(app, "Window")
-                .item(&PredefinedMenuItem::minimize(app, None)?)
-                .item(&PredefinedMenuItem::maximize(app, None)?)
+            // === Navigate menu items ===
+            let nav_sibling_up = MenuItemBuilder::with_id("nav_sibling_up", "Move to Sibling Above")
+                .accelerator("Up")
+                .build(app)?;
+            let nav_sibling_down = MenuItemBuilder::with_id("nav_sibling_down", "Move to Sibling Below")
+                .accelerator("Down")
+                .build(app)?;
+            let nav_first_child = MenuItemBuilder::with_id("nav_first_child", "Move to First Child")
+                .accelerator("Right")
+                .build(app)?;
+            let nav_parent = MenuItemBuilder::with_id("nav_parent", "Move to Parent")
+                .accelerator("Left")
+                .build(app)?;
+            let nav_first_sibling = MenuItemBuilder::with_id("nav_first_sibling", "Jump to First Sibling")
+                .accelerator("CmdOrCtrl+Up")
+                .enabled(false)
+                .build(app)?;
+            let nav_last_sibling = MenuItemBuilder::with_id("nav_last_sibling", "Jump to Last Sibling")
+                .accelerator("CmdOrCtrl+Down")
+                .enabled(false)
+                .build(app)?;
+            let nav_last_child = MenuItemBuilder::with_id("nav_last_child", "Jump to Last Child")
+                .accelerator("CmdOrCtrl+Right")
+                .enabled(false)
+                .build(app)?;
+            let nav_extend_up = MenuItemBuilder::with_id("nav_extend_up", "Extend Selection Up")
+                .accelerator("Shift+Up")
+                .enabled(false)
+                .build(app)?;
+            let nav_extend_down = MenuItemBuilder::with_id("nav_extend_down", "Extend Selection Down")
+                .accelerator("Shift+Down")
+                .enabled(false)
+                .build(app)?;
+            let nav_select_toggle = MenuItemBuilder::with_id("nav_select_toggle", "Select/Deselect Node")
+                .accelerator("CmdOrCtrl+Enter")
+                .enabled(false)
+                .build(app)?;
+
+            let navigate_menu = SubmenuBuilder::new(app, "Navigate")
+                .item(&nav_sibling_up)
+                .item(&nav_sibling_down)
+                .item(&nav_first_child)
+                .item(&nav_parent)
                 .separator()
+                .item(&nav_first_sibling)
+                .item(&nav_last_sibling)
+                .item(&nav_last_child)
+                .separator()
+                .item(&nav_extend_up)
+                .item(&nav_extend_down)
+                .separator()
+                .item(&nav_select_toggle)
                 .build()?;
 
-            // Store window menu reference for dynamic updates
-            app.manage(WindowMenuState(Mutex::new(Some(window_menu.clone()))));
+            // === View menu items ===
+            let view_toggle = MenuItemBuilder::with_id("view_toggle", "Toggle Outline ↔ Mindmap")
+                .accelerator("CmdOrCtrl+M")
+                .build(app)?;
+            let view_zoom_in = MenuItemBuilder::with_id("view_zoom_in", "Zoom In")
+                .accelerator("CmdOrCtrl+=")
+                .enabled(false)
+                .build(app)?;
+            let view_zoom_out = MenuItemBuilder::with_id("view_zoom_out", "Zoom Out")
+                .accelerator("CmdOrCtrl+-")
+                .enabled(false)
+                .build(app)?;
+            let view_zoom_reset = MenuItemBuilder::with_id("view_zoom_reset", "Reset Zoom")
+                .accelerator("CmdOrCtrl+0")
+                .enabled(false)
+                .build(app)?;
+            let view_fit = MenuItemBuilder::with_id("view_fit", "Fit to Screen")
+                .accelerator("CmdOrCtrl+Shift+F")
+                .build(app)?;
+            let view_show_completed = MenuItemBuilder::with_id("view_show_completed", "Show/Hide Completed")
+                .accelerator("CmdOrCtrl+Shift+H")
+                .enabled(false)
+                .build(app)?;
+            let view_focus_mode = MenuItemBuilder::with_id("view_focus_mode", "Focus Mode (Hide UI)")
+                .accelerator("CmdOrCtrl+Shift+.")
+                .enabled(false)
+                .build(app)?;
+            let view_toggle_sidebar = MenuItemBuilder::with_id("view_toggle_sidebar", "Toggle Sidebar")
+                .accelerator("CmdOrCtrl+B")
+                .enabled(false)
+                .build(app)?;
+            let view_actual_size = MenuItemBuilder::with_id("view_actual_size", "Actual Size")
+                .accelerator("CmdOrCtrl+1")
+                .enabled(false)
+                .build(app)?;
+
+            let mut view_menu = SubmenuBuilder::new(app, "View")
+                .item(&view_toggle)
+                .separator()
+                .item(&view_zoom_in)
+                .item(&view_zoom_out)
+                .item(&view_zoom_reset)
+                .item(&view_fit)
+                .separator()
+                .item(&view_show_completed)
+                .item(&view_focus_mode)
+                .item(&view_toggle_sidebar)
+                .separator()
+                .item(&view_actual_size);
+
+            if !cfg!(target_os = "macos") {
+                view_menu = view_menu
+                    .separator()
+                    .item(&PredefinedMenuItem::fullscreen(app, None)?);
+            }
+
+            let view_menu = view_menu.build()?;
+
+            // === Window menu items (macOS only) ===
+            let window_menu = if cfg!(target_os = "macos") {
+                Some(
+                    SubmenuBuilder::new(app, "Window")
+                        .item(&PredefinedMenuItem::minimize(app, None)?)
+                        .item(&PredefinedMenuItem::maximize(app, None)?)
+                        .separator()
+                        .item(
+                            &MenuItemBuilder::with_id("window_bring_all_to_front", "Bring All to Front")
+                                .enabled(false)
+                                .build(app)?
+                        )
+                        .separator()
+                        .item(&PredefinedMenuItem::fullscreen(app, None)?)
+                        .build()?
+                )
+            } else {
+                None
+            };
 
             // === Help menu items ===
+            let help_shortcuts = MenuItemBuilder::with_id("help_shortcuts", "Keyboard Shortcuts")
+                .accelerator("CmdOrCtrl+/")
+                .build(app)?;
+            let help_docs = MenuItemBuilder::with_id("help_docs", "Documentation")
+                .enabled(false)
+                .build(app)?;
+            let help_tutorials = MenuItemBuilder::with_id("help_tutorials", "Video Tutorials")
+                .enabled(false)
+                .build(app)?;
+            let help_updates = MenuItemBuilder::with_id("help_updates", "Check for Updates...")
+                .enabled(false)
+                .build(app)?;
+            let help_feedback = MenuItemBuilder::with_id("help_feedback", "Send Feedback...")
+                .enabled(false)
+                .build(app)?;
             let about_item = MenuItemBuilder::with_id("about", "About Mind the Map")
                 .build(app)?;
 
             let help_menu = SubmenuBuilder::new(app, "Help")
+                .item(&help_shortcuts)
+                .item(&help_docs)
+                .item(&help_tutorials)
+                .separator()
+                .item(&help_updates)
+                .item(&help_feedback)
+                .separator()
                 .item(&about_item)
                 .build()?;
 
             // Build the full menu bar
-            let menu = MenuBuilder::new(app)
+            let mut menu = MenuBuilder::new(app)
                 .item(&file_menu)
                 .item(&edit_menu)
-                .item(&view_menu)
+                .item(&insert_menu)
+                .item(&format_menu)
                 .item(&node_menu)
-                .item(&window_menu)
+                .item(&navigate_menu)
+                .item(&view_menu);
+
+            if let Some(window_menu) = &window_menu {
+                menu = menu.item(window_menu);
+            }
+
+            let menu = menu
                 .item(&help_menu)
                 .build()?;
 
@@ -495,76 +774,41 @@ pub fn run() {
                             *label = Some(window.label().to_string());
                         }
                     }
-                    // Rebuild window menu to update checkmarks
-                    rebuild_window_menu(&window.app_handle());
-                }
-                WindowEvent::Destroyed => {
-                    // Rebuild window menu when a window is closed
-                    rebuild_window_menu(&window.app_handle());
                 }
                 _ => {}
             }
         })
         .on_menu_event(|app, event| {
-            // Handle window selection from menu
-            let event_id = event.id().as_ref();
-            if event_id.starts_with("window-select:") {
-                let label = event_id.strip_prefix("window-select:").unwrap();
-                if let Some(window) = app.get_webview_window(label) {
-                    let _ = window.set_focus();
-                }
-                return;
-            }
-
-            // Handle new window creation separately
-            if event_id == "new_window" {
-                let window_id = format!("window-{}", Uuid::new_v4());
-                
-                // Use the same URL as the main window (works for both dev and prod)
-                let url = if cfg!(debug_assertions) {
-                    // In dev mode, use the dev server URL
-                    WebviewUrl::External("http://localhost:1420".parse().unwrap())
-                } else {
-                    // In production, use the bundled app
-                    WebviewUrl::App("index.html".into())
-                };
-                
-                if let Ok(_new_window) = WebviewWindowBuilder::new(app, &window_id, url)
-                    .title("Untitled — Mind the Map")
-                    .inner_size(800.0, 600.0)
-                    .build()
-                {
-                    // Rebuild window menu to include new window
-                    rebuild_window_menu(app);
-                }
-                return;
-            }
-
             let command_id = match event.id().as_ref() {
                 "new" => Some("file.new"),
                 "open" => Some("file.open"),
                 "save" => Some("file.save"),
                 "save_as" => Some("file.saveAs"),
+                "export_pdf" => Some("file.print"),
                 "print" => Some("file.print"),
                 "undo" => Some("edit.undo"),
                 "redo" => Some("edit.redo"),
                 "cut" => Some("edit.cut"),
                 "copy" => Some("edit.copy"),
                 "paste" => Some("edit.paste"),
-                "copy_for_miro" => Some("edit.copyForMiro"),
-                "view_mindmap" => Some("view.mindmap"),
-                "view_outline" => Some("view.outline"),
-                "fit_to_view" => Some("view.fitToView"),
-                "find" => Some("view.find"),
-                "create_child" => Some("node.createChild"),
-                "create_sibling" => Some("node.createSibling"),
-                "create_sibling_above" => Some("node.createSiblingAbove"),
-                "edit_node" => Some("node.edit"),
+                "paste_as_child" => Some("edit.paste"),
                 "delete_node" => Some("node.delete"),
-                "toggle_collapse" => Some("node.toggleCollapse"),
-                "toggle_collapse_all" => Some("node.toggleCollapseAll"),
-                "open_icon_picker" => Some("node.openIconPicker"),
-                "add_link" => Some("node.addLink"),
+                "insert_sibling_below" => Some("node.createSibling"),
+                "insert_sibling_above" => Some("node.createSiblingAbove"),
+                "insert_child" => Some("node.createChild"),
+                "insert_link" => Some("node.addLink"),
+                "insert_icon" => Some("node.openIconPicker"),
+                "node_indent" => Some("node.indent"),
+                "node_outdent" => Some("node.outdent"),
+                "node_toggle_collapse" => Some("node.toggleCollapse"),
+                "nav_sibling_up" => Some("navigate.siblingUp"),
+                "nav_sibling_down" => Some("navigate.siblingDown"),
+                "nav_first_child" => Some("navigate.firstChild"),
+                "nav_parent" => Some("navigate.parent"),
+                "view_toggle" => Some("view.toggle"),
+                "view_fit" => Some("view.fitToView"),
+                "find" => Some("view.find"),
+                "help_shortcuts" => Some("app.help.toggle"),
                 "about" => Some("app.about.toggle"),
                 _ => None,
             };

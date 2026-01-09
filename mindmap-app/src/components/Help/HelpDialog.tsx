@@ -4,6 +4,7 @@ import { useDocumentStore } from '../../store';
 interface ShortcutItem {
   keys: string[];
   description: string;
+  inactive?: boolean;
 }
 
 interface ShortcutSection {
@@ -15,81 +16,141 @@ const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 const modKey = isMac ? '⌘' : 'Ctrl';
 const altKey = isMac ? '⌥' : 'Alt';
 const shiftKey = isMac ? '⇧' : 'Shift';
+const ctrlKey = 'Ctrl';
+const redoKeys = isMac
+  ? [`${modKey}+${shiftKey}+Z`]
+  : [`${modKey}+${shiftKey}+Z`, `${modKey}+Y`];
+const quitKeys = [isMac ? `${modKey}+Q` : 'Alt+F4'];
+const fullScreenKeys = isMac
+  ? [`${ctrlKey}+${modKey}+F`]
+  : ['F11'];
 
 const shortcutSections: ShortcutSection[] = [
   {
-    title: 'Navigation',
+    title: 'File',
     shortcuts: [
-      { keys: ['↑', '↓'], description: 'Move between siblings' },
-      { keys: ['←'], description: 'Go to parent' },
-      { keys: ['→'], description: 'Go to first child / expand' },
-      { keys: [`${modKey}+F`], description: 'Search nodes' },
+      { keys: [`${modKey}+N`], description: 'New Document' },
+      { keys: [`${modKey}+O`], description: 'Open...' },
+      { keys: [`${modKey}+S`], description: 'Save' },
+      { keys: [`${modKey}+${shiftKey}+S`], description: 'Save As...' },
+      { keys: [`${modKey}+${shiftKey}+E`], description: 'Export as PDF' },
+      { keys: [`${modKey}+P`], description: 'Print...' },
+      { keys: [`${modKey}+,`], description: 'Preferences...', inactive: true },
+      { keys: quitKeys, description: 'Quit' },
     ],
   },
   {
-    title: 'Node Editing',
+    title: 'Edit',
     shortcuts: [
-      { keys: ['Tab'], description: 'Create child node' },
-      { keys: ['Enter'], description: 'Create sibling below' },
-      { keys: [`${shiftKey}+Enter`], description: 'Create sibling above (ignored while editing)' },
-      { keys: [`${modKey}+]`], description: 'Indent node (move to child of node above)' },
-      { keys: [`${modKey}+[`], description: 'Outdent node (move to sibling of parent)' },
-      { keys: ['E', 'F2'], description: 'Edit selected node' },
-      { keys: ['Escape'], description: 'Save and stop editing' },
-      { keys: [`${modKey}+Escape`], description: 'Cancel (discard changes)' },
-      { keys: ['Delete', 'Backspace'], description: 'Delete node' },
-      { keys: ['I'], description: 'Open icon picker' },
-      { keys: [`${modKey}+K`], description: 'Toggle Link panel' },
-    ],
-  },
-  {
-    title: 'Collapse & Expand',
-    shortcuts: [
-      { keys: ['Space'], description: 'Toggle collapse' },
-      { keys: [`${shiftKey}+${altKey}+Space`], description: 'Smart collapse all (3-state cycle)' },
-    ],
-  },
-  {
-    title: 'Clipboard',
-    shortcuts: [
-      { keys: [`${modKey}+C`], description: 'Copy nodes' },
-      { keys: [`${modKey}+X`], description: 'Cut nodes' },
-      { keys: [`${modKey}+V`], description: 'Paste as children' },
-      { keys: [`${modKey}+${shiftKey}+M`], description: 'Copy for Miro' },
-    ],
-  },
-  {
-    title: 'Multi-Selection',
-    shortcuts: [
-      { keys: [`${modKey}+Click`], description: 'Toggle node in selection' },
-      { keys: [`${shiftKey}+Click`], description: 'Select range' },
-    ],
-  },
-  {
-    title: 'File Operations',
-    shortcuts: [
-      { keys: [`${modKey}+N`], description: 'New document' },
-      { keys: [`${modKey}+O`], description: 'Open document' },
-      { keys: [`${modKey}+S`], description: 'Save document' },
-      { keys: [`${modKey}+${shiftKey}+S`], description: 'Save as...' },
-      { keys: [`${modKey}+P`], description: 'Print / Export PDF' },
-    ],
-  },
-  {
-    title: 'View & History',
-    shortcuts: [
-      { keys: [`${modKey}+1`], description: 'Mind map view' },
-      { keys: [`${modKey}+2`], description: 'Outline view' },
-      { keys: [`${modKey}+0`], description: 'Fit tree to view' },
       { keys: [`${modKey}+Z`], description: 'Undo' },
-      { keys: [`${modKey}+${shiftKey}+Z`, `${modKey}+Y`], description: 'Redo' },
+      { keys: redoKeys, description: 'Redo' },
+      { keys: [`${modKey}+X`], description: 'Cut' },
+      { keys: [`${modKey}+C`], description: 'Copy' },
+      { keys: [`${modKey}+V`], description: 'Paste' },
+      { keys: [`${modKey}+${shiftKey}+V`], description: 'Paste as Child' },
+      { keys: [`${modKey}+D`], description: 'Duplicate Node', inactive: true },
+      { keys: [`${modKey}+Backspace`], description: 'Delete Node' },
+      { keys: [`${modKey}+${shiftKey}+Backspace`], description: 'Delete Node & Children', inactive: true },
+      { keys: [`${modKey}+A`], description: 'Select All (in text)' },
+      { keys: [`${modKey}+${shiftKey}+A`], description: 'Select All Siblings', inactive: true },
+      { keys: [`${modKey}+${altKey}+A`], description: 'Select All Children', inactive: true },
+      { keys: [`${modKey}+F`], description: 'Find...' },
+      { keys: [`${modKey}+G`], description: 'Find Next', inactive: true },
+      { keys: [`${modKey}+${shiftKey}+G`], description: 'Find Previous', inactive: true },
+      { keys: [`${modKey}+${shiftKey}+P`], description: 'Go to Node...', inactive: true },
+      { keys: [`${modKey}+${shiftKey}+D`], description: 'Jump to Daily Note', inactive: true },
+      { keys: [`${modKey}+R`], description: 'Recent Nodes', inactive: true },
     ],
   },
+  {
+    title: 'Insert',
+    shortcuts: [
+      { keys: ['Enter'], description: 'New Sibling Node Below' },
+      { keys: [`${modKey}+${shiftKey}+Enter`], description: 'New Sibling Node Above' },
+      { keys: ['Tab'], description: 'New Child Node' },
+      { keys: [`${shiftKey}+Enter`], description: 'Line Break (in node)', inactive: true },
+      { keys: [`${modKey}+K`], description: 'Link...' },
+      { keys: [`${modKey}+T`], description: 'Tag', inactive: true },
+      { keys: [`${modKey}+${shiftKey}+N`], description: 'Note', inactive: true },
+      { keys: [`${modKey}+${shiftKey}+I`], description: 'Icon...' },
+      { keys: [`${modKey}+${shiftKey}+C`], description: 'Checkbox', inactive: true },
+      { keys: [`${modKey}+${shiftKey}+K`], description: 'Color/Style...', inactive: true },
+      { keys: [`${modKey}+${shiftKey}+P`], description: 'Priority', inactive: true },
+    ],
+  },
+  {
+    title: 'Format',
+    shortcuts: [
+      { keys: [`${modKey}+B`], description: 'Bold', inactive: true },
+      { keys: [`${modKey}+I`], description: 'Italic', inactive: true },
+      { keys: [`${modKey}+U`], description: 'Underline', inactive: true },
+      { keys: [`${modKey}+${shiftKey}+X`], description: 'Strikethrough', inactive: true },
+      { keys: [`${modKey}+E`], description: 'Code', inactive: true },
+      { keys: [`${modKey}+\\`], description: 'Clear Formatting', inactive: true },
+    ],
+  },
+  {
+    title: 'Node',
+    shortcuts: [
+      { keys: [`${modKey}+]`], description: 'Indent' },
+      { keys: [`${modKey}+[`], description: 'Outdent' },
+      { keys: [`${modKey}+${shiftKey}+↑`], description: 'Move Node Up', inactive: true },
+      { keys: [`${modKey}+${shiftKey}+↓`], description: 'Move Node Down', inactive: true },
+      { keys: [`${modKey}+${shiftKey}+←`], description: 'Move Node Left (Outdent)', inactive: true },
+      { keys: [`${modKey}+${shiftKey}+→`], description: 'Move Node Right (Indent)', inactive: true },
+      { keys: ['Space'], description: 'Expand/Collapse' },
+      { keys: [`${modKey}+${altKey}+→`], description: 'Expand All Children', inactive: true },
+      { keys: [`${modKey}+${altKey}+←`], description: 'Collapse All Children', inactive: true },
+      { keys: [`${modKey}+.`], description: 'Zoom to Node (Focus)', inactive: true },
+      { keys: [`${modKey}+,`], description: 'Zoom Out from Node', inactive: true },
+      { keys: [`${modKey}+Home`], description: 'Jump to Root', inactive: true },
+    ],
+  },
+  {
+    title: 'Navigate',
+    shortcuts: [
+      { keys: ['↑'], description: 'Move to Sibling Above' },
+      { keys: ['↓'], description: 'Move to Sibling Below' },
+      { keys: ['→'], description: 'Move to First Child' },
+      { keys: ['←'], description: 'Move to Parent' },
+      { keys: [`${modKey}+↑`], description: 'Jump to First Sibling', inactive: true },
+      { keys: [`${modKey}+↓`], description: 'Jump to Last Sibling', inactive: true },
+      { keys: [`${modKey}+→`], description: 'Jump to Last Child', inactive: true },
+      { keys: [`${shiftKey}+↑`], description: 'Extend Selection Up', inactive: true },
+      { keys: [`${shiftKey}+↓`], description: 'Extend Selection Down', inactive: true },
+      { keys: [`${modKey}+Enter`], description: 'Select/Deselect Node', inactive: true },
+    ],
+  },
+  {
+    title: 'View',
+    shortcuts: [
+      { keys: [`${modKey}+M`], description: 'Toggle Outline ↔ Mindmap' },
+      { keys: [`${modKey}+Plus`], description: 'Zoom In', inactive: true },
+      { keys: [`${modKey}+Minus`], description: 'Zoom Out', inactive: true },
+      { keys: [`${modKey}+0`], description: 'Reset Zoom', inactive: true },
+      { keys: [`${modKey}+${shiftKey}+F`], description: 'Fit to Screen' },
+      { keys: [`${modKey}+${shiftKey}+H`], description: 'Show/Hide Completed', inactive: true },
+      { keys: [`${modKey}+${shiftKey}+.`], description: 'Focus Mode (Hide UI)', inactive: true },
+      { keys: [`${modKey}+B`], description: 'Toggle Sidebar', inactive: true },
+      ...(!isMac ? [{ keys: fullScreenKeys, description: 'Enter Full Screen' }] : []),
+      { keys: [`${modKey}+1`], description: 'Actual Size', inactive: true },
+    ],
+  },
+  ...(isMac
+    ? [
+        {
+          title: 'Window',
+          shortcuts: [
+            { keys: [`${modKey}+M`], description: 'Minimize' },
+            { keys: fullScreenKeys, description: 'Enter Full Screen' },
+          ],
+        },
+      ]
+    : []),
   {
     title: 'Help',
     shortcuts: [
-      { keys: ['?', `${modKey}+/`], description: 'Show this help' },
-      { keys: ['Escape'], description: 'Close dialogs' },
+      { keys: ['?', `${modKey}+/`], description: 'Keyboard Shortcuts' },
     ],
   },
 ];
@@ -196,7 +257,7 @@ function HelpDialog() {
                   {section.shortcuts.map((shortcut, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between py-1.5"
+                      className={`flex items-center justify-between py-1.5 ${shortcut.inactive ? 'opacity-50' : ''}`}
                     >
                       <span className="text-sm text-gray-700 dark:text-gray-300">
                         {shortcut.description}

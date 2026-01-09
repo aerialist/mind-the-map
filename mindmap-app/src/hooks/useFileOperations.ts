@@ -64,6 +64,12 @@ export const useFileOperations = () => {
           e.preventDefault();
           handlePrint();
           break;
+        case 'e':
+          if (e.shiftKey) {
+            e.preventDefault();
+            handlePrint();
+          }
+          break;
       }
     };
 

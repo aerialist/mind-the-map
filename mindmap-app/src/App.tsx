@@ -59,7 +59,7 @@ function App() {
       });
   }, [currentFilePath, isDirty]);
 
-  // Handle global keyboard shortcuts (Ctrl+1, Ctrl+2, Ctrl+F, ?, Ctrl+/)
+  // Handle global keyboard shortcuts (Ctrl+F, Ctrl+K, Ctrl+M, Ctrl+Shift+F, ?, Ctrl+/)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMod = e.ctrlKey || e.metaKey;
@@ -79,22 +79,19 @@ function App() {
 
       if (!isMod) return;
 
-      if (e.key === '1') {
+      const key = e.key.toLowerCase();
+
+      if (key === 'm') {
         e.preventDefault();
-        dispatch('view.mindmap');
-      } else if (e.key === '2') {
+        dispatch('view.toggle');
+      } else if (key === 'f') {
         e.preventDefault();
-        dispatch('view.outline');
-      } else if (e.key === '0') {
-        // Fit to view - emit event for MindMapCanvas to handle
-        if (viewMode === 'mindmap') {
-          e.preventDefault();
+        if (e.shiftKey && viewMode === 'mindmap') {
           dispatch('view.fitToView');
+        } else if (!e.shiftKey) {
+          dispatch('view.find');
         }
-      } else if (e.key === 'f') {
-        e.preventDefault();
-        dispatch('view.find');
-      } else if (e.key === 'k') {
+      } else if (key === 'k') {
         e.preventDefault();
         dispatch('node.addLink');
       }

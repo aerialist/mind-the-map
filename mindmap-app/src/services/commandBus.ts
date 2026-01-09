@@ -1,4 +1,10 @@
 import { useDocumentStore, computeVisibleNodeIds } from '../store';
+import {
+  getDownNodeId,
+  getFirstChildNodeId,
+  getParentNodeId,
+  getUpNodeId,
+} from '../core/navigation';
 import { saveDocument, saveDocumentAs, openDocument } from './tauri/fileSystem';
 import { exportToPDF } from './pdfExport';
 
@@ -55,6 +61,17 @@ let defaultsRegistered = false;
 const registerDefaults = () => {
   if (defaultsRegistered) return;
   defaultsRegistered = true;
+
+  const getNavigableState = () => {
+    const state = useDocumentStore.getState();
+    if (!state.selectedNodeId || state.editingNodeId) return null;
+    return state;
+  };
+
+  const selectNodeIfAvailable = (nodeId: string | null) => {
+    if (!nodeId) return;
+    useDocumentStore.getState().selectNode(nodeId);
+  };
 
   registerCommandHandler('file.new', () => {
     useDocumentStore.getState().newDocument();
@@ -134,6 +151,12 @@ const registerDefaults = () => {
 
   registerCommandHandler('view.outline', () => {
     useDocumentStore.getState().setViewMode('outline');
+  });
+
+  registerCommandHandler('view.toggle', () => {
+    const state = useDocumentStore.getState();
+    const nextMode = state.viewMode === 'mindmap' ? 'outline' : 'mindmap';
+    state.setViewMode(nextMode);
   });
 
   registerCommandHandler('view.find', () => {
@@ -256,6 +279,41 @@ const registerDefaults = () => {
     const state = useDocumentStore.getState();
     if (state.editingNodeId && !getNodeIdArg(args)) return;
     state.toggleLinkPanel();
+  });
+
+  registerCommandHandler('navigate.siblingUp', () => {
+    const state = getNavigableState();
+    if (!state) return;
+    const nextId = getUpNodeId(state.nodes, state.selectedNodeId);
+    selectNodeIfAvailable(nextId);
+  });
+
+  registerCommandHandler('navigate.siblingDown', () => {
+    const state = getNavigableState();
+    if (!state) return;
+    const nextId = getDownNodeId(state.nodes, state.selectedNodeId);
+    selectNodeIfAvailable(nextId);
+  });
+
+  registerCommandHandler('navigate.parent', () => {
+    const state = getNavigableState();
+    if (!state) return;
+    const nextId = getParentNodeId(state.nodes, state.selectedNodeId);
+    selectNodeIfAvailable(nextId);
+  });
+
+  registerCommandHandler('navigate.firstChild', () => {
+    const state = getNavigableState();
+    if (!state) return;
+    const current = state.nodes[state.selectedNodeId];
+    if (!current) return;
+    if (current.childIds.length > 0 && current.isCollapsed) {
+      state.toggleCollapse(current.id);
+      selectNodeIfAvailable(current.childIds[0]);
+      return;
+    }
+    const nextId = getFirstChildNodeId(state.nodes, state.selectedNodeId);
+    selectNodeIfAvailable(nextId);
   });
 };
 

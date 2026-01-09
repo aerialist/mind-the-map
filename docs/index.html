@@ -256,6 +256,14 @@
       white-space: nowrap;
     }
 
+    .shortcut-inactive {
+      color: var(--color-text-muted);
+    }
+
+    .shortcut-inactive kbd {
+      opacity: 0.6;
+    }
+
     kbd {
       display: inline-block;
       padding: 4px 8px;
@@ -506,86 +514,150 @@
         <h3>Keyboard Shortcuts</h3>
         <p>Mind the Map is designed to keep your hands on the keyboard. Press <kbd>?</kbd> or <kbd>Ctrl</kbd>+<kbd>/</kbd> in the app to see the quick reference.</p>
 
-        <h4>Navigation</h4>
+        <h4>File</h4>
         <table class="shortcut-table">
           <tr><th>Key</th><th>Action</th></tr>
-          <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Move between sibling nodes</td></tr>
-          <tr><td><kbd>←</kbd></td><td>Go to parent node (or collapse if expanded)</td></tr>
-          <tr><td><kbd>→</kbd></td><td>Go to first child node (or expand if collapsed)</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Toggle Search & Filter panel</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>Toggle Link panel</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>New Document</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Open...</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Save</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Save As...</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd></td><td>Export as PDF</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>Print...</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>,</kbd></td><td>Preferences...</td></tr>
+          <tr><td><kbd>Cmd</kbd>+<kbd>Q</kbd> (Mac) / <kbd>Alt</kbd>+<kbd>F4</kbd> (Win)</td><td>Quit</td></tr>
         </table>
 
-        <h4>Creating & Editing Nodes</h4>
+        <h4>Edit</h4>
         <table class="shortcut-table">
           <tr><th>Key</th><th>Action</th></tr>
-          <tr><td><kbd>Tab</kbd></td><td>Create child node</td></tr>
-          <tr><td><kbd>Enter</kbd></td><td>Create sibling node below</td></tr>
-          <tr><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>Create sibling node above (ignored while editing)</td></tr>
-          <tr><td><kbd>Cmd</kbd>+<kbd>]</kbd> / <kbd>Ctrl</kbd>+<kbd>]</kbd></td><td>Indent node (move to child of node above)</td></tr>
-          <tr><td><kbd>Cmd</kbd>+<kbd>[</kbd> / <kbd>Ctrl</kbd>+<kbd>[</kbd></td><td>Outdent node (move to sibling of parent)</td></tr>
-          <tr><td><kbd>E</kbd> or <kbd>F2</kbd></td><td>Start editing selected node</td></tr>
-          <tr><td><kbd>Escape</kbd></td><td>Save and stop editing</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>Escape</kbd></td><td>Cancel editing (discard changes)</td></tr>
-          <tr><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td><td>Delete selected node(s)</td></tr>
-        </table>
-
-        <h4>Collapse & Expand</h4>
-        <table class="shortcut-table">
-          <tr><th>Key</th><th>Action</th></tr>
-          <tr><td><kbd>Space</kbd></td><td>Toggle collapse for selected node</td></tr>
-          <tr><td><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd></td><td>Smart cycle through collapse states (see below)</td></tr>
-        </table>
-
-        <h4>File Operations</h4>
-        <table class="shortcut-table">
-          <tr><th>Key</th><th>Action</th></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>New document</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Open document</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Save document</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Save as...</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>Print / Export PDF</td></tr>
-        </table>
-
-        <h4>View & History</h4>
-        <table class="shortcut-table">
-          <tr><th>Key</th><th>Action</th></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>1</kbd></td><td>Switch to Mind Map view</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>2</kbd></td><td>Switch to Outline view</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>0</kbd></td><td>Fit entire tree to view (mind map only)</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Undo</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> or <kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>Redo</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>Redo</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>X</kbd></td><td>Cut</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd></td><td>Copy</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>V</kbd></td><td>Paste</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd></td><td>Paste as Child</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td><td>Duplicate Node</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Backspace</kbd></td><td>Delete Node</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Backspace</kbd></td><td>Delete Node &amp; Children</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>A</kbd></td><td>Select All (in text)</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd></td><td>Select All Siblings</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>A</kbd></td><td>Select All Children</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Find...</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>G</kbd></td><td>Find Next</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd></td><td>Find Previous</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd></td><td>Go to Node...</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd></td><td>Jump to Daily Note</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>R</kbd></td><td>Recent Nodes</td></tr>
         </table>
 
-        <h4>Clipboard</h4>
+        <h4>Insert</h4>
         <table class="shortcut-table">
           <tr><th>Key</th><th>Action</th></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd></td><td>Copy selected nodes</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>X</kbd></td><td>Cut selected nodes</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>V</kbd></td><td>Paste as children of selected node</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd></td><td>Copy for Miro (table format)</td></tr>
+          <tr><td><kbd>Enter</kbd></td><td>New Sibling Node Below</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>New Sibling Node Above</td></tr>
+          <tr><td><kbd>Tab</kbd></td><td>New Child Node</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>Line Break (in node)</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>Link...</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>T</kbd></td><td>Tag</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd></td><td>Note</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd></td><td>Icon...</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd></td><td>Checkbox</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd></td><td>Color/Style...</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd></td><td>Priority</td></tr>
+        </table>
+
+        <h4>Format</h4>
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td>Bold</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>I</kbd></td><td>Italic</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>U</kbd></td><td>Underline</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd></td><td>Strikethrough</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td>Code</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>\\</kbd></td><td>Clear Formatting</td></tr>
+        </table>
+
+        <h4>Node</h4>
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>]</kbd></td><td>Indent</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>[</kbd></td><td>Outdent</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>↑</kbd></td><td>Move Node Up</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>↓</kbd></td><td>Move Node Down</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>←</kbd></td><td>Move Node Left (Outdent)</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>→</kbd></td><td>Move Node Right (Indent)</td></tr>
+          <tr><td><kbd>Space</kbd></td><td>Expand/Collapse</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>→</kbd></td><td>Expand All Children</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>←</kbd></td><td>Collapse All Children</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>.</kbd></td><td>Zoom to Node (Focus)</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>,</kbd></td><td>Zoom Out from Node</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Home</kbd></td><td>Jump to Root</td></tr>
+        </table>
+
+        <h4>Navigate</h4>
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>↑</kbd></td><td>Move to Sibling Above</td></tr>
+          <tr><td><kbd>↓</kbd></td><td>Move to Sibling Below</td></tr>
+          <tr><td><kbd>→</kbd></td><td>Move to First Child</td></tr>
+          <tr><td><kbd>←</kbd></td><td>Move to Parent</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>↑</kbd></td><td>Jump to First Sibling</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>↓</kbd></td><td>Jump to Last Sibling</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>→</kbd></td><td>Jump to Last Child</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Shift</kbd>+<kbd>↑</kbd></td><td>Extend Selection Up</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Shift</kbd>+<kbd>↓</kbd></td><td>Extend Selection Down</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td>Select/Deselect Node</td></tr>
+        </table>
+
+        <h4>View</h4>
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>M</kbd></td><td>Toggle Outline ↔ Mindmap</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>+</kbd></td><td>Zoom In</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>-</kbd></td><td>Zoom Out</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>0</kbd></td><td>Reset Zoom</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></td><td>Fit to Screen</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd></td><td>Show/Hide Completed</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>.</kbd></td><td>Focus Mode (Hide UI)</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td>Toggle Sidebar</td></tr>
+          <tr><td><kbd>F11</kbd></td><td>Enter Full Screen (Windows)</td></tr>
+          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>1</kbd></td><td>Actual Size</td></tr>
+        </table>
+
+        <h4>Window (macOS)</h4>
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>Cmd</kbd>+<kbd>M</kbd></td><td>Minimize</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Cmd</kbd>+<kbd>F</kbd></td><td>Enter Full Screen</td></tr>
+        </table>
+
+        <h4>Help</h4>
+        <table class="shortcut-table">
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>?</kbd> / <kbd>Ctrl</kbd>+<kbd>/</kbd></td><td>Keyboard Shortcuts</td></tr>
         </table>
 
         <div class="tip-box">
-          <strong>Mac Users:</strong> Replace <kbd>Ctrl</kbd> with <kbd>Cmd</kbd> and <kbd>Alt</kbd> with <kbd>Option</kbd> for all shortcuts.
+          <strong>Mac Users:</strong> Replace <kbd>Ctrl</kbd> with <kbd>Cmd</kbd> and <kbd>Alt</kbd> with <kbd>Option</kbd> where shown. Rows labeled (Mac) or (Win) are platform-specific.
         </div>
       </div>
 
       <div class="guide-section" id="views">
         <h3>Two View Modes</h3>
         <p>Mind the Map offers two ways to view and edit your mind map:</p>
+        <p><strong>Shortcut:</strong> Press <kbd>Ctrl</kbd>+<kbd>M</kbd> to toggle between Mind Map and Outline.</p>
 
-        <h4>Mind Map View (Ctrl+1)</h4>
+        <h4>Mind Map View</h4>
         <ul>
           <li>Visual 2D canvas with automatic tree layout</li>
           <li>Pan: Right-click and drag, or use scroll wheel with Shift/Ctrl</li>
           <li>Zoom: Mouse wheel (without modifiers)</li>
-          <li>Fit to view: <kbd>Ctrl</kbd>+<kbd>0</kbd> to zoom and pan so the entire tree is visible</li>
+          <li>Fit to screen: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> to zoom and pan so the entire tree is visible</li>
           <li>Nodes connected by curved lines (bezier curves)</li>
           <li>Double-click or press <kbd>E</kbd> to edit nodes in place</li>
         </ul>
 
-        <h4>Outline View (Ctrl+2)</h4>
+        <h4>Outline View</h4>
         <ul>
           <li>Hierarchical list with indentation</li>
           <li>Focused text editing experience</li>
@@ -831,7 +903,8 @@
 
         <h4>How to Export</h4>
         <ul>
-          <li>Press <kbd>Ctrl</kbd>+<kbd>P</kbd> or select <strong>File → Print / Export PDF</strong></li>
+          <li>Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> or select <strong>File → Export → Export as PDF</strong></li>
+          <li>Use <kbd>Ctrl</kbd>+<kbd>P</kbd> for <strong>Print...</strong></li>
           <li>For <strong>Mind Map view</strong>: A dialog will ask how many pages wide you want the export (default: 1)</li>
           <li>Choose a location and filename for your PDF (defaults to current file name with .pdf extension)</li>
           <li>The PDF is generated based on your current view and settings</li>
@@ -885,7 +958,8 @@
           <tr><td>Open</td><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Opens a .mindmap file</td></tr>
           <tr><td>Save</td><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Saves to current file (or prompts if new)</td></tr>
           <tr><td>Save As</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Save with a new name</td></tr>
-          <tr><td>Print / Export PDF</td><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>Export as high-quality PDF with clickable links (Mind Map: multi-page image; Outline: structured text with Japanese support)</td></tr>
+          <tr><td>Print...</td><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>Print the current view</td></tr>
+          <tr><td>Export as PDF</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd></td><td>Export as high-quality PDF with clickable links (Mind Map: multi-page image; Outline: structured text with Japanese support)</td></tr>
         </table>
       </div>
 

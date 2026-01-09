@@ -20,7 +20,7 @@ This document provides context for AI assistants working on the Mind the Map cod
 
 ### Key Design Principles
 
-1. **Keyboard-first**: Every action has a keyboard shortcut
+1. **Keyboard-first**: Core actions have shortcuts; planned actions may appear in menus but remain inactive
 2. **Performance**: 60fps rendering, instant response
 3. **Dual modes**: Mind map (2D canvas) and Outline (hierarchical list)
 4. **Local-first**: No cloud, files saved as JSON (.mindmap extension)
@@ -153,43 +153,122 @@ interface DocumentState {
 
 ## Keyboard Shortcuts Reference
 
-### Node Operations
+Mod = Cmd on macOS, Ctrl on Windows/Linux. Items marked "(planned)" exist in menus but are inactive.
+In-app shortcuts listing is maintained in `mindmap-app/src/components/Help/HelpDialog.tsx`.
+
+### File
 | Key | Action | Notes |
 |-----|--------|-------|
-| Tab | Create child node | Works in edit mode too |
-| Enter | Create sibling below | Works in edit mode too |
-| Shift+Enter | Create sibling above | Ignored while editing an input |
-| Cmd+] (Ctrl+]) | Indent node | Move to child of node above |
-| Cmd+[ (Ctrl+[) | Outdent node | Move to sibling of parent |
-| E / F2 | Start editing | Double-click also works |
+| Mod+N | New Document | |
+| Mod+O | Open... | |
+| Mod+S | Save | |
+| Mod+Shift+S | Save As... | |
+| Mod+Shift+E | Export as PDF | |
+| Mod+P | Print... | |
+| Mod+, | Preferences... | (planned) |
+| Cmd+Q / Alt+F4 | Quit | macOS / Windows |
+
+### Edit
+| Key | Action | Notes |
+|-----|--------|-------|
+| Mod+Z | Undo | |
+| Mod+Shift+Z / Mod+Y | Redo | |
+| Mod+X | Cut | |
+| Mod+C | Copy | |
+| Mod+V | Paste | |
+| Mod+Shift+V | Paste as Child | |
+| Mod+D | Duplicate Node | (planned) |
+| Mod+Backspace | Delete Node | Root protected |
+| Mod+Shift+Backspace | Delete Node & Children | (planned) |
+| Mod+A | Select All (in text) | |
+| Mod+Shift+A | Select All Siblings | (planned) |
+| Mod+Alt+A | Select All Children | (planned) |
+| Mod+F | Find... | Toggles Search & Filter panel |
+| Mod+G | Find Next | (planned) |
+| Mod+Shift+G | Find Previous | (planned) |
+| Mod+Shift+P | Go to Node... | (planned) |
+| Mod+Shift+D | Jump to Daily Note | (planned) |
+| Mod+R | Recent Nodes | (planned) |
+
+### Insert
+| Key | Action | Notes |
+|-----|--------|-------|
+| Enter | New Sibling Node Below | |
+| Mod+Shift+Enter | New Sibling Node Above | |
+| Tab | New Child Node | |
+| Shift+Enter | Line Break (in node) | (planned) |
+| Mod+K | Link... | |
+| Mod+T | Tag | (planned) |
+| Mod+Shift+N | Note | (planned) |
+| Mod+Shift+I | Icon... | |
+| Mod+Shift+C | Checkbox | (planned) |
+| Mod+Shift+K | Color/Style... | (planned) |
+| Mod+Shift+P | Priority | (planned) |
+
+### Format
+| Key | Action | Notes |
+|-----|--------|-------|
+| Mod+B | Bold | (planned) |
+| Mod+I | Italic | (planned) |
+| Mod+U | Underline | (planned) |
+| Mod+Shift+X | Strikethrough | (planned) |
+| Mod+E | Code | (planned) |
+| Mod+\ | Clear Formatting | (planned) |
+
+### Node
+| Key | Action | Notes |
+|-----|--------|-------|
+| Mod+] | Indent | |
+| Mod+[ | Outdent | |
+| Space | Expand/Collapse | |
+| Mod+Shift+Up/Down/Left/Right | Move Node (Up/Down/Left/Right) | (planned) |
+| Mod+Alt+Right/Left | Expand/Collapse All Children | (planned) |
+| Mod+. | Zoom to Node (Focus) | (planned) |
+| Mod+, | Zoom Out from Node | (planned) |
+| Mod+Home | Jump to Root | (planned) |
+
+### Navigate
+| Key | Action | Notes |
+|-----|--------|-------|
+| Up/Down | Move to Sibling Above/Below | |
+| Left | Move to Parent | |
+| Right | Move to First Child | |
+| Mod+Up | Jump to First Sibling | (planned) |
+| Mod+Down | Jump to Last Sibling | (planned) |
+| Mod+Right | Jump to Last Child | (planned) |
+| Shift+Up/Down | Extend Selection | (planned) |
+| Mod+Enter | Select/Deselect Node | (planned) |
+
+### View
+| Key | Action | Notes |
+|-----|--------|-------|
+| Mod+M | Toggle Outline/Mindmap | |
+| Mod+Shift+F | Fit to Screen | Mind map only |
+| Mod+Plus / Mod+Minus / Mod+0 | Zoom In/Out/Reset | (planned) |
+| Mod+Shift+H | Show/Hide Completed | (planned) |
+| Mod+Shift+. | Focus Mode (Hide UI) | (planned) |
+| Mod+B | Toggle Sidebar | (planned) |
+| Mod+1 | Actual Size | (planned) |
+| Ctrl+Cmd+F / F11 | Enter Full Screen | macOS / Windows |
+
+### Help
+| Key | Action |
+|-----|--------|
+| ? / Mod+/ | Open shortcuts help |
+
+### Hidden / Power User (not in menus)
+| Key | Action | Notes |
+|-----|--------|-------|
+| E / F2 | Start editing selected node | |
 | Escape | Save and stop editing | |
 | Ctrl+Escape | Cancel editing | Discards changes |
-| Delete/Backspace | Delete node | Root protected |
-| I | Toggle icons panel | |
-
-### Navigation
-| Key | Action |
-|-----|--------|
-| ↑ ↓ | Move between siblings |
-| ← | Go to parent / collapse |
-| → | Go to first child / expand |
-| Space | Toggle collapse |
-| Shift+Alt+Space | Smart collapse all (3-state) |
-| Ctrl+F | Toggle Search & Filter panel |
-| Ctrl+K | Open link dialog |
-
-### Clipboard
-| Key | Action |
-|-----|--------|
-| Ctrl+C | Copy nodes with descendants |
-| Ctrl+X | Cut nodes |
-| Ctrl+V | Paste as children |
-| Ctrl+Shift+M | Copy for Miro (table format) |
+| Shift+Alt+Space | Smart collapse all (3-state) | |
+| Mod+Shift+M | Copy for Miro | Table format |
 
 ### Multi-Selection
 | Action | Result |
 |--------|--------|
-| Ctrl+Click | Toggle node in selection |
+| Mod+Click | Toggle node in selection |
 | Shift+Click | Range select |
 
 ### Mouse Actions
@@ -199,18 +278,6 @@ interface DocumentState {
 | Click icon on node | Cycle to next variant in category |
 | Right-click + drag (Mind Map) | Pan canvas |
 | Mouse wheel (Mind Map) | Zoom in/out |
-
-### File & View
-| Key | Action |
-|-----|--------|
-| Ctrl+N/O/S | New/Open/Save |
-| Ctrl+Shift+S | Save As |
-| Ctrl+1 | Mind map view |
-| Ctrl+2 | Outline view |
-| Ctrl+0 | Fit tree to view (mind map) |
-| Ctrl+Z | Undo |
-| Ctrl+Shift+Z / Ctrl+Y | Redo |
-| ? / Ctrl+/ | Open help dialog |
 
 ---
 

@@ -36,8 +36,10 @@ export const useKeyboardNavigation = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.ctrlKey || e.metaKey;
+
       // Handle undo/redo globally (even during editing)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
+      if (isMod && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
         if (e.shiftKey) {
           dispatch('edit.redo');
@@ -48,7 +50,7 @@ export const useKeyboardNavigation = () => {
       }
 
       // Alternative redo shortcut: Ctrl+Y
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) {
+      if (isMod && (e.key === 'y' || e.key === 'Y')) {
         e.preventDefault();
         dispatch('edit.redo');
         return;
@@ -57,7 +59,7 @@ export const useKeyboardNavigation = () => {
       // Note: Copy/Cut/Paste (Cmd+C/X/V) are handled via the command bus
 
       // Copy for Miro (Ctrl+Shift+M) - exports as table format for Miro's paste dialog
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'm' || e.key === 'M')) {
+      if (isMod && e.shiftKey && (e.key === 'm' || e.key === 'M')) {
         if (!editingNodeId && selectedNodeIds.length > 0) {
           e.preventDefault();
           dispatch('edit.copyForMiro');
@@ -65,7 +67,7 @@ export const useKeyboardNavigation = () => {
         return;
       }
 
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X')) {
+      if (isMod && (e.key === 'x' || e.key === 'X')) {
         // Cut - only when not editing and has selection (excluding root)
         if (!editingNodeId && selectedNodeIds.length > 0) {
           e.preventDefault();
@@ -74,9 +76,17 @@ export const useKeyboardNavigation = () => {
         return;
       }
 
+      if (isMod && e.shiftKey && (e.key === 'v' || e.key === 'V')) {
+        if (!editingNodeId && selectedNodeId) {
+          e.preventDefault();
+          dispatch('edit.paste');
+        }
+        return;
+      }
+
       // For Ctrl+V, we don't handle it in keydown - let the native paste event handle it
       // This avoids the permission popup from navigator.clipboard.read()
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+      if (isMod && !e.shiftKey && (e.key === 'v' || e.key === 'V')) {
         // Only intercept if we're not editing and have a target selected
         // The actual paste handling is done in the 'paste' event listener below
         if (!editingNodeId && selectedNodeId) {
@@ -87,7 +97,7 @@ export const useKeyboardNavigation = () => {
       }
 
       // Handle indent/outdent globally (even during editing)
-      if ((e.ctrlKey || e.metaKey) && e.key === ']') {
+      if (isMod && e.key === ']') {
         if (selectedNodeId) {
           e.preventDefault();
           // If editing, save the current text from the input element first
@@ -102,7 +112,7 @@ export const useKeyboardNavigation = () => {
         return;
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === '[') {
+      if (isMod && e.key === '[') {
         if (selectedNodeId) {
           e.preventDefault();
           // If editing, save the current text from the input element first
@@ -167,11 +177,12 @@ export const useKeyboardNavigation = () => {
           break;
 
         case 'Enter':
-          e.preventDefault();
-          if (e.shiftKey) {
+          if (isMod && e.shiftKey) {
+            e.preventDefault();
             // Create a sibling node above
             dispatch('node.createSiblingAbove', { nodeId: selectedNodeId });
-          } else {
+          } else if (!e.shiftKey && !isMod) {
+            e.preventDefault();
             // Create a sibling node below
             dispatch('node.createSibling', { nodeId: selectedNodeId });
           }
@@ -193,9 +204,11 @@ export const useKeyboardNavigation = () => {
 
         case 'Delete':
         case 'Backspace':
-          e.preventDefault();
-          // Delete the selected node (won't delete root)
-          dispatch('node.delete', { nodeId: selectedNodeId });
+          if (isMod && !e.shiftKey) {
+            e.preventDefault();
+            // Delete the selected node (won't delete root)
+            dispatch('node.delete', { nodeId: selectedNodeId });
+          }
           break;
 
         case ' ':
@@ -212,9 +225,11 @@ export const useKeyboardNavigation = () => {
 
         case 'i':
         case 'I':
-          e.preventDefault();
-          // Open icon picker (uses currently selected node)
-          dispatch('node.openIconPicker');
+          if (isMod && e.shiftKey) {
+            e.preventDefault();
+            // Open icon picker (uses currently selected node)
+            dispatch('node.openIconPicker');
+          }
           break;
       }
 

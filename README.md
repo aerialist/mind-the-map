@@ -6,7 +6,7 @@ A lightweight, keyboard-centric mind mapping application with dual view modes (m
 
 Mind the Map is a desktop application built with Tauri 2.0 that provides a snappy, responsive experience for organizing thoughts and ideas. It features:
 
-- **Keyboard-first interaction** - Navigate and edit entirely with keyboard shortcuts
+- **Keyboard-first interaction** - Core workflows are shortcut-driven (planned actions may appear in menus but remain inactive)
 - **Dual view modes** - Switch seamlessly between mind map and outline views
 - **Smart layout** - Automatic tree layout with manual positioning support
 - **Node icons** - Mark nodes with priority, task progress, flags, arrows, and symbols
@@ -16,7 +16,7 @@ Mind the Map is a desktop application built with Tauri 2.0 that provides a snapp
 ## Documentation
 
 - **User Manual**: [docs/index.html](./docs/index.html) or [online version](https://aerialist.github.io/mind-the-map/)
-- **In-App Help**: Press `?` or `Ctrl+/` (Cmd+/ on Mac) to see keyboard shortcuts
+- **In-App Help**: Press `?` or `Mod+/` (Cmd+/ on Mac, Ctrl+/ on Windows) to see keyboard shortcuts
 - **AI Development Guide**: [CLAUDE.md](./CLAUDE.md) for AI-assisted development context
 
 ## Technology Stack
@@ -217,41 +217,49 @@ mind-the-map/
 
 ## Key Features Implemented
 
+Mod = Cmd on macOS, Ctrl on Windows/Linux.
+
 ### Core Editing
-- Create nodes: `Tab` (child), `Enter` (sibling below), `Shift+Enter` (sibling above)
-- Indent/Outdent nodes: `Cmd+]` / `Cmd+[` (or `Ctrl+]` / `Ctrl+[`)
+- Create nodes: `Tab` (child), `Enter` (sibling below), `Mod+Shift+Enter` (sibling above)
+- Indent/Outdent nodes: `Mod+]` / `Mod+[`
 - Edit nodes: `E`, `F2`, or double-click
-- Delete nodes: `Delete` or `Backspace`
+- Delete nodes: `Mod+Backspace`
 - Navigate: Arrow keys
 
 ### Views
-- Mind Map view (`Ctrl+1`): 2D canvas with tree layout, pan & zoom
-- Outline view (`Ctrl+2`): Hierarchical list with inline editing
+- Toggle Mind Map / Outline: `Mod+M`
+- Mind Map view: 2D canvas with tree layout, pan & zoom
+- Outline view: Hierarchical list with inline editing
+- Fit to screen (mind map): `Mod+Shift+F`
 
 ### Organization
 - Collapse/Expand: `Space` for single node
 - Smart Collapse All: `Shift+Alt+Space` cycles through 3 states (collapsed → expanded except completed → fully expanded)
-- Node icons: `I` to open picker, click any icon on a node to cycle through variants in its category
-- Node links: `Ctrl+K` to add/edit hyperlinks
+- Node icons: `Mod+Shift+I` to open picker, click any icon on a node to cycle through variants in its category
+- Node links: `Mod+K` to add/edit hyperlinks
 
-### Search & Filter (`Ctrl+F`)
+### Search & Filter (`Mod+F`)
 - **Search**: Text-based search with results in sidebar, click to navigate
 - **Filter**: Icon-based filtering that hides non-matching nodes from view
 - Multiple icon filters can be combined (OR logic)
 - Parent nodes remain visible for context
 
 ### Clipboard
-- Copy/Cut/Paste: Standard shortcuts with hierarchy preservation
+- Copy/Cut/Paste: Standard shortcuts (`Mod+C`/`Mod+X`/`Mod+V`) with hierarchy preservation
+- Paste as child: `Mod+Shift+V`
 - External paste: Indented text and HTML lists become structured nodes
-- Miro export: `Ctrl+Shift+M` copies in Miro-compatible table format
+- Miro export: `Mod+Shift+M` copies in Miro-compatible table format
 
 ### File Operations
-- New/Open/Save: `Ctrl+N`, `Ctrl+O`, `Ctrl+S`
+- New/Open/Save: `Mod+N`, `Mod+O`, `Mod+S`
+- Save As: `Mod+Shift+S`
+- Export as PDF: `Mod+Shift+E`
+- Print: `Mod+P`
 - Auto-save: 30 seconds after changes (if file was previously saved)
 - File format: `.mindmap` (JSON)
 
 ### History
-- Undo/Redo: `Ctrl+Z`, `Ctrl+Shift+Z` (or `Ctrl+Y`)
+- Undo/Redo: `Mod+Z`, `Mod+Shift+Z` (or `Mod+Y`)
 - 50 operations history
 
 ## Development Notes
