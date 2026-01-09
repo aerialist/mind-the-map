@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../../services/tauri/safeTauri';
 import { useDocumentStore } from '../../store';
 
 interface AboutDialogProps {}
@@ -15,11 +15,11 @@ export function AboutDialog(_props: AboutDialogProps) {
   useEffect(() => {
     const fetchAppInfo = async () => {
       try {
-        const version = await invoke<string>('get_app_version');
-        setAppVersion(version);
-        
-        const platform = await invoke<string>('get_platform_info');
-        setPlatformInfo(platform);
+        const version = await safeInvoke<string>('get_app_version');
+        setAppVersion(version ?? 'Dev');
+
+        const platform = await safeInvoke<string>('get_platform_info');
+        setPlatformInfo(platform ?? 'Browser');
       } catch (error) {
         console.error('Failed to get app info:', error);
         setAppVersion('Unknown');

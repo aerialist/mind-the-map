@@ -1,7 +1,4 @@
 import { useEffect } from 'react';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { listen } from '@tauri-apps/api/event';
-import { invoke } from '@tauri-apps/api/core';
 import './App.css';
 import { OutlineView } from './components/Outline';
 import { MindMapView } from './components/MindMap';
@@ -13,6 +10,7 @@ import { LinkPanel } from './components/LinkDialog';
 import { useDocumentStore } from './store';
 import { useAutoSave, useInitialFileLoad } from './hooks';
 import { openDocumentByPath } from './services/tauri/fileSystem';
+import { isTauriAvailable, safeInvoke, safeListen, safeGetCurrentWindow } from './services/tauri/safeTauri';
 import { Filter, EyeOff } from 'lucide-react';
 import { dispatch, type CommandPayload } from './services/commandBus';
 
@@ -52,11 +50,9 @@ function App() {
     const dirtyMark = isDirty ? '* ' : '';
     const title = `${dirtyMark}${fileLabel} — Mind the Map`;
 
-    getCurrentWindow()
-      .setTitle(title)
-      .catch(() => {
-        // Ignore when not running in Tauri (e.g. `pnpm dev`)
-      });
+    safeGetCurrentWindow().then((win) => {
+      win.setTitle(title);
+    });
   }, [currentFilePath, isDirty]);
 
   // Handle global keyboard shortcuts (Ctrl+F, Ctrl+K, Ctrl+M, Ctrl+Shift+F, ?, Ctrl+/)
@@ -106,7 +102,7 @@ function App() {
     let isCancelled = false;
     let unlistenFn: (() => void) | undefined;
 
-    listen<CommandPayload>('command:dispatch', (event) => {
+    safeListen<CommandPayload>('command:dispatch', (event) => {
       if (isCancelled) return;
       const payload = event.payload;
       if (!payload?.id) return;
@@ -117,7 +113,7 @@ function App() {
       } else {
         unlistenFn = fn;
       }
-    }).catch(() => {});
+    });
 
     return () => {
       isCancelled = true;
@@ -131,23 +127,28 @@ function App() {
   useEffect(() => {
     let unlistenFn: (() => void) | undefined;
 
-    try {
-      const windowHandle = getCurrentWindow();
-      const label = windowHandle.label;
+    const setupWindowFocus = async () => {
+      if (!isTauriAvailable()) return;
 
-      const notifyActive = () => {
-        invoke('window_activated', { label }).catch(() => {});
-      };
+      try {
+        const windowHandle = await safeGetCurrentWindow();
+        const label = windowHandle.label;
 
-      notifyActive();
-      windowHandle.onFocusChanged(({ payload: focused }) => {
-        if (focused) notifyActive();
-      }).then((fn) => {
-        unlistenFn = fn;
-      }).catch(() => {});
-    } catch {
-      // Ignore when not running in Tauri
-    }
+        const notifyActive = () => {
+          safeInvoke('window_activated', { label });
+        };
+
+        notifyActive();
+        const unlisten = await windowHandle.onFocusChanged(({ payload: focused }: { payload: boolean }) => {
+          if (focused) notifyActive();
+        });
+        unlistenFn = unlisten;
+      } catch {
+        // Ignore when not running in Tauri
+      }
+    };
+
+    setupWindowFocus();
 
     return () => {
       if (unlistenFn) {
@@ -162,10 +163,10 @@ function App() {
     let isCancelled = false;
     let unlistenFn: (() => void) | undefined;
 
-    listen<string>('open-file', async (event) => {
+    safeListen<string>('open-file', async (event) => {
       if (isCancelled) return;
       const filePath = event.payload;
-      
+
       if (!filePath || !filePath.endsWith('.mindmap')) return;
 
       // Load the file
@@ -181,7 +182,7 @@ function App() {
       } else {
         unlistenFn = fn;
       }
-    }).catch(() => {});
+    });
 
     return () => {
       isCancelled = true;

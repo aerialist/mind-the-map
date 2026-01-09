@@ -30,6 +30,8 @@ Mind the Map is a desktop application built with Tauri 2.0 that provides a snapp
 | Styling | Tailwind CSS | 3.x |
 | Build Tool | Vite | 7.x |
 | Icons | Lucide React | 0.562.x |
+| Unit Testing | Vitest + React Testing Library | 4.x / 16.x |
+| E2E Testing | Playwright | 1.57.x |
 | Backend | Rust | - |
 
 ## Prerequisites
@@ -208,7 +210,10 @@ mind-the-map/
     │   ├── store/               # Zustand state management
     │   ├── core/                # Core logic (UI-independent)
     │   ├── hooks/               # Custom React hooks
-    │   └── services/            # Tauri API integration
+    │   ├── services/            # Tauri API integration
+    │   └── test/                # Test setup and utilities
+    │
+    ├── e2e/                     # Playwright E2E tests
     │
     └── src-tauri/               # Backend (Rust)
         └── src/
@@ -261,6 +266,46 @@ Mod = Cmd on macOS, Ctrl on Windows/Linux.
 ### History
 - Undo/Redo: `Mod+Z`, `Mod+Shift+Z` (or `Mod+Y`)
 - 50 operations history
+
+## Testing
+
+The project includes comprehensive unit and E2E tests.
+
+### Quick Start
+
+```bash
+cd mindmap-app
+pnpm test         # Run unit tests
+pnpm test:e2e     # Run E2E tests
+pnpm test:all     # Run all tests
+```
+
+### Test Commands
+
+| Command | Description |
+|---------|-------------|
+| `pnpm test` | Run unit tests (Vitest) |
+| `pnpm test:watch` | Run unit tests in watch mode |
+| `pnpm test:coverage` | Run unit tests with coverage report |
+| `pnpm test:e2e` | Run E2E tests (Playwright) |
+| `pnpm test:e2e:ui` | Run E2E tests with interactive UI |
+| `pnpm test:e2e:headed` | Run E2E tests in headed browser mode |
+| `pnpm test:all` | Run all tests (unit + E2E) |
+
+### Test Coverage
+
+**Unit tests (86 tests):**
+- Store actions, selection, undo/redo
+- Keyboard navigation logic
+- Clipboard operations (copy, paste, HTML parsing)
+- File serialization/deserialization
+- Input event handling and IME support
+
+**E2E tests (41 tests):**
+- App loading and basic functionality
+- Node operations (create, edit, delete, navigate)
+- Keyboard shortcuts (global, editing, view)
+- View mode switching
 
 ## Development Notes
 

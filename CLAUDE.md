@@ -17,6 +17,8 @@ This document provides context for AI assistants working on the Mind the Map cod
 | Styling | Tailwind CSS | 3.x |
 | Build | Vite | 7.x |
 | Icons | Lucide React | 0.562.x |
+| Unit Testing | Vitest + React Testing Library | 4.x / 16.x |
+| E2E Testing | Playwright | 1.57.x |
 
 ### Key Design Principles
 
@@ -72,10 +74,19 @@ mind-the-map/
     │   │   ├── commandBus.ts    # Command bus + default handlers
     │   │   └── tauri/           # Tauri API wrappers
     │   │       ├── fileSystem.ts
+    │   │       ├── safeTauri.ts # Safe wrappers for browser-only mode
     │   │       └── index.ts
+    │   │
+    │   ├── test/                # Test setup
+    │   │   └── setup.ts         # Vitest setup with Tauri API mocks
     │   │
     │   └── utils/
     │       └── nodeInputHandlers.ts  # Shared input/textarea key handling
+    │
+    ├── e2e/                     # Playwright E2E tests
+    │   ├── app.spec.ts          # Basic app functionality tests
+    │   ├── node-operations.spec.ts  # Node CRUD and navigation tests
+    │   └── keyboard-shortcuts.spec.ts # Keyboard shortcut tests
     │
     └── src-tauri/               # Rust backend
         └── src/                 # Tauri app entry (menus, commands)
@@ -394,6 +405,79 @@ pnpm tauri dev        # Run development server
 pnpm tauri build      # Build for production
 ```
 
+## Testing
+
+The project includes comprehensive unit and E2E tests.
+
+### Test Commands
+
+```bash
+cd mindmap-app
+pnpm test             # Run unit tests (Vitest)
+pnpm test:watch       # Run unit tests in watch mode
+pnpm test:coverage    # Run unit tests with coverage report
+pnpm test:e2e         # Run E2E tests (Playwright)
+pnpm test:e2e:ui      # Run E2E tests with interactive UI
+pnpm test:e2e:headed  # Run E2E tests in headed browser mode
+pnpm test:all         # Run all tests (unit + E2E)
+```
+
+### Unit Tests (Vitest + React Testing Library)
+
+Unit tests are located alongside their source files with `.test.ts` suffix:
+
+| Test File | Coverage |
+|-----------|----------|
+| `src/store/documentStore.test.ts` | Zustand store actions, selection, history |
+| `src/core/navigation/navigation.test.ts` | Keyboard navigation logic |
+| `src/core/clipboard/clipboard.test.ts` | Copy/paste, HTML/text parsing |
+| `src/core/serialization/serialization.test.ts` | JSON file format handling |
+| `src/utils/nodeInputHandlers.test.ts` | Input key event handling, IME support |
+
+**Test setup** (`src/test/setup.ts`):
+- Mocks Tauri APIs (`@tauri-apps/api/core`, `@tauri-apps/api/event`, etc.)
+- Configures jsdom environment
+- Sets up Testing Library matchers
+
+### E2E Tests (Playwright)
+
+E2E tests are in the `e2e/` directory:
+
+| Test File | Coverage |
+|-----------|----------|
+| `e2e/app.spec.ts` | Basic app functionality, smoke tests |
+| `e2e/node-operations.spec.ts` | Node CRUD, navigation, editing |
+| `e2e/keyboard-shortcuts.spec.ts` | All keyboard shortcuts |
+
+**Browser-only mode**: E2E tests run against `pnpm dev` (Vite only) using safe Tauri wrappers (`src/services/tauri/safeTauri.ts`) that provide mock implementations when Tauri APIs are unavailable.
+
+### Writing New Tests
+
+**Unit test example:**
+```typescript
+// src/core/myFeature/myFeature.test.ts
+import { describe, it, expect } from 'vitest';
+import { myFunction } from './myFeature';
+
+describe('myFunction', () => {
+  it('should do something', () => {
+    expect(myFunction('input')).toBe('expected');
+  });
+});
+```
+
+**E2E test example:**
+```typescript
+// e2e/myFeature.spec.ts
+import { test, expect } from '@playwright/test';
+
+test('should do something', async ({ page }) => {
+  await page.goto('/');
+  await page.keyboard.press('Meta+f');
+  await expect(page.getByText('Search')).toBeVisible();
+});
+```
+
 ---
 
 ## Important Caveats
@@ -473,5 +557,9 @@ pnpm tauri build      # Build for production
 | Navigation logic | `src/core/navigation/` |
 | Serialization | `src/core/serialization/` |
 | File I/O | `src/services/tauri/fileSystem.ts` |
+| Safe Tauri wrappers | `src/services/tauri/safeTauri.ts` |
 | Help dialog (cheat sheet) | `src/components/Help/HelpDialog.tsx` |
 | Link dialog | `src/components/LinkDialog/LinkPanel.tsx` |
+| Test setup | `src/test/setup.ts` |
+| E2E tests | `e2e/*.spec.ts` |
+| Playwright config | `playwright.config.ts` |
