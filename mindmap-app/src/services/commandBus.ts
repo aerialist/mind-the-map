@@ -65,7 +65,7 @@ const registerDefaults = () => {
   const getNavigableState = () => {
     const state = useDocumentStore.getState();
     if (!state.selectedNodeId || state.editingNodeId) return null;
-    return state;
+    return { ...state, selectedNodeId: state.selectedNodeId };
   };
 
   const selectNodeIfAvailable = (nodeId: string | null) => {
