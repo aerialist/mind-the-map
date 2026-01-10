@@ -56,7 +56,14 @@ export const useKeyboardNavigation = () => {
         return;
       }
 
-      // Note: Copy/Cut/Paste (Cmd+C/X/V) are handled via the command bus
+      // Copy (Cmd+C) - handle explicitly for Windows compatibility
+      if (isMod && !e.shiftKey && (e.key === 'c' || e.key === 'C')) {
+        if (!editingNodeId && selectedNodeIds.length > 0) {
+          e.preventDefault();
+          dispatch('edit.copy');
+        }
+        return;
+      }
 
       // Copy for Miro (Ctrl+Shift+M) - exports as table format for Miro's paste dialog
       if (isMod && e.shiftKey && (e.key === 'm' || e.key === 'M')) {
@@ -84,14 +91,11 @@ export const useKeyboardNavigation = () => {
         return;
       }
 
-      // For Ctrl+V, we don't handle it in keydown - let the native paste event handle it
-      // This avoids the permission popup from navigator.clipboard.read()
+      // Paste (Cmd+V) - handle explicitly for Windows compatibility
       if (isMod && !e.shiftKey && (e.key === 'v' || e.key === 'V')) {
-        // Only intercept if we're not editing and have a target selected
-        // The actual paste handling is done in the 'paste' event listener below
         if (!editingNodeId && selectedNodeId) {
-          // Don't prevent default - let the paste event fire
-          // The paste event handler will handle the actual paste logic
+          e.preventDefault();
+          dispatch('edit.paste');
         }
         return;
       }
