@@ -310,22 +310,38 @@ pub fn run() {
                 .enabled(false)
                 .build(app)?;
 
-            let file_menu = SubmenuBuilder::new(app, "File")
-                .item(&new_doc)
-                .item(&open_doc)
-                .item(&open_recent_menu)
-                .separator()
-                .item(&save_doc)
-                .item(&save_as)
-                .separator()
-                .item(&export_menu)
-                .separator()
-                .item(&print_item)
-                .separator()
-                .item(&preferences_item)
-                .separator()
-                .item(&PredefinedMenuItem::quit(app, None)?)
-                .build()?;
+            // On macOS, Quit and Preferences go in the app menu, not File menu
+            let file_menu = if cfg!(target_os = "macos") {
+                SubmenuBuilder::new(app, "File")
+                    .item(&new_doc)
+                    .item(&open_doc)
+                    .item(&open_recent_menu)
+                    .separator()
+                    .item(&save_doc)
+                    .item(&save_as)
+                    .separator()
+                    .item(&export_menu)
+                    .separator()
+                    .item(&print_item)
+                    .build()?
+            } else {
+                SubmenuBuilder::new(app, "File")
+                    .item(&new_doc)
+                    .item(&open_doc)
+                    .item(&open_recent_menu)
+                    .separator()
+                    .item(&save_doc)
+                    .item(&save_as)
+                    .separator()
+                    .item(&export_menu)
+                    .separator()
+                    .item(&print_item)
+                    .separator()
+                    .item(&preferences_item)
+                    .separator()
+                    .item(&PredefinedMenuItem::quit(app, None)?)
+                    .build()?
+            };
 
             // === Edit menu items ===
             // Use custom menu items for copy/cut/paste so JavaScript handles them
@@ -729,19 +745,49 @@ pub fn run() {
             let about_item = MenuItemBuilder::with_id("about", "About Mind the Map")
                 .build(app)?;
 
-            let help_menu = SubmenuBuilder::new(app, "Help")
-                .item(&help_shortcuts)
-                .item(&help_docs)
-                .item(&help_tutorials)
-                .separator()
-                .item(&help_updates)
-                .item(&help_feedback)
-                .separator()
-                .item(&about_item)
-                .build()?;
+            // On macOS, create separate Help menu without About (it goes in app menu)
+            let help_menu = if cfg!(target_os = "macos") {
+                SubmenuBuilder::new(app, "Help")
+                    .item(&help_shortcuts)
+                    .item(&help_docs)
+                    .item(&help_tutorials)
+                    .separator()
+                    .item(&help_updates)
+                    .item(&help_feedback)
+                    .build()?
+            } else {
+                SubmenuBuilder::new(app, "Help")
+                    .item(&help_shortcuts)
+                    .item(&help_docs)
+                    .item(&help_tutorials)
+                    .separator()
+                    .item(&help_updates)
+                    .item(&help_feedback)
+                    .separator()
+                    .item(&about_item)
+                    .build()?
+            };
 
             // Build the full menu bar
-            let mut menu = MenuBuilder::new(app)
+            let mut menu = MenuBuilder::new(app);
+
+            // On macOS, add the application menu first with About, Preferences, and Quit
+            if cfg!(target_os = "macos") {
+                let app_menu = SubmenuBuilder::new(app, "Mind the Map")
+                    .item(&about_item)
+                    .separator()
+                    .item(&preferences_item)
+                    .separator()
+                    .item(&PredefinedMenuItem::hide(app, None)?)
+                    .item(&PredefinedMenuItem::hide_others(app, None)?)
+                    .item(&PredefinedMenuItem::show_all(app, None)?)
+                    .separator()
+                    .item(&PredefinedMenuItem::quit(app, None)?)
+                    .build()?;
+                menu = menu.item(&app_menu);
+            }
+
+            let mut menu = menu
                 .item(&file_menu)
                 .item(&edit_menu)
                 .item(&insert_menu)
