@@ -2,8 +2,8 @@ use std::fs;
 use std::path::Path;
 use std::sync::Mutex;
 use serde::Serialize;
-use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder, PredefinedMenuItem, MenuEvent};
-use tauri::{AppHandle, Emitter, Manager, RunEvent, State, WindowEvent};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder, PredefinedMenuItem};
+use tauri::{Emitter, Manager, State, WindowEvent};
 
 // Track the active window label
 struct AppState {
@@ -13,72 +13,6 @@ struct AppState {
 #[derive(Clone, Serialize)]
 struct CommandDispatchPayload {
     id: String,
-}
-
-// Helper function to handle menu events
-fn handle_menu_event<R: tauri::Runtime>(app: &AppHandle<R>, event: &MenuEvent) {
-    let command_id = match event.id().as_ref() {
-        "new" => Some("file.new"),
-        "open" => Some("file.open"),
-        "save" => Some("file.save"),
-        "save_as" => Some("file.saveAs"),
-        "export_pdf" => Some("file.print"),
-        "print" => Some("file.print"),
-        "undo" => Some("edit.undo"),
-        "redo" => Some("edit.redo"),
-        "cut" => Some("edit.cut"),
-        "copy" => Some("edit.copy"),
-        "paste" => Some("edit.paste"),
-        "paste_as_child" => Some("edit.paste"),
-        "delete_node" => Some("node.delete"),
-        "insert_sibling_below" => Some("node.createSibling"),
-        "insert_sibling_above" => Some("node.createSiblingAbove"),
-        "insert_child" => Some("node.createChild"),
-        "insert_link" => Some("node.addLink"),
-        "insert_icon" => Some("node.openIconPicker"),
-        "node_indent" => Some("node.indent"),
-        "node_outdent" => Some("node.outdent"),
-        "node_toggle_collapse" => Some("node.toggleCollapse"),
-        "nav_sibling_up" => Some("navigate.siblingUp"),
-        "nav_sibling_down" => Some("navigate.siblingDown"),
-        "nav_first_child" => Some("navigate.firstChild"),
-        "nav_parent" => Some("navigate.parent"),
-        "view_toggle" => Some("view.toggle"),
-        "view_mindmap" => Some("view.mindmap"),
-        "view_outline" => Some("view.outline"),
-        "view_fit" => Some("view.fitToView"),
-        "find" => Some("view.find"),
-        "help_shortcuts" => Some("app.help.toggle"),
-        "about" => Some("app.about.toggle"),
-        _ => None,
-    };
-
-    if let Some(id) = command_id {
-        // Get the last focused window from our tracker
-        let target_label = app
-            .try_state::<AppState>()
-            .and_then(|state| state.active_label.lock().ok()?.clone());
-
-        let payload_id = id.to_string();
-
-        if let Some(ref label) = target_label {
-            if let Some(window) = app.get_webview_window(label) {
-                let _ = window.emit(
-                    "command:dispatch",
-                    CommandDispatchPayload { id: payload_id.clone() },
-                );
-                return;
-            }
-        }
-
-        // Fallback: send to the first available window
-        if let Some(window) = app.webview_windows().values().next() {
-            let _ = window.emit(
-                "command:dispatch",
-                CommandDispatchPayload { id: payload_id },
-            );
-        }
-    }
 }
 
 
@@ -846,16 +780,70 @@ pub fn run() {
                 _ => {}
             }
         })
-        // Register menu event handler (works on macOS)
         .on_menu_event(|app, event| {
-            handle_menu_event(app, &event);
-        })
-        .build(tauri::generate_context!())
-        .expect("error while building tauri application")
-        .run(|app, event| {
-            // Handle menu events through RunEvent as well (for Windows compatibility)
-            if let RunEvent::MenuEvent(event) = event {
-                handle_menu_event(app, &event);
+            let command_id = match event.id().as_ref() {
+                "new" => Some("file.new"),
+                "open" => Some("file.open"),
+                "save" => Some("file.save"),
+                "save_as" => Some("file.saveAs"),
+                "export_pdf" => Some("file.print"),
+                "print" => Some("file.print"),
+                "undo" => Some("edit.undo"),
+                "redo" => Some("edit.redo"),
+                "cut" => Some("edit.cut"),
+                "copy" => Some("edit.copy"),
+                "paste" => Some("edit.paste"),
+                "paste_as_child" => Some("edit.paste"),
+                "delete_node" => Some("node.delete"),
+                "insert_sibling_below" => Some("node.createSibling"),
+                "insert_sibling_above" => Some("node.createSiblingAbove"),
+                "insert_child" => Some("node.createChild"),
+                "insert_link" => Some("node.addLink"),
+                "insert_icon" => Some("node.openIconPicker"),
+                "node_indent" => Some("node.indent"),
+                "node_outdent" => Some("node.outdent"),
+                "node_toggle_collapse" => Some("node.toggleCollapse"),
+                "nav_sibling_up" => Some("navigate.siblingUp"),
+                "nav_sibling_down" => Some("navigate.siblingDown"),
+                "nav_first_child" => Some("navigate.firstChild"),
+                "nav_parent" => Some("navigate.parent"),
+                "view_toggle" => Some("view.toggle"),
+                "view_mindmap" => Some("view.mindmap"),
+                "view_outline" => Some("view.outline"),
+                "view_fit" => Some("view.fitToView"),
+                "find" => Some("view.find"),
+                "help_shortcuts" => Some("app.help.toggle"),
+                "about" => Some("app.about.toggle"),
+                _ => None,
+            };
+
+            if let Some(id) = command_id {
+                // Get the last focused window from our tracker
+                let target_label = app
+                    .try_state::<AppState>()
+                    .and_then(|state| state.active_label.lock().ok()?.clone());
+
+                let payload_id = id.to_string();
+
+                if let Some(ref label) = target_label {
+                    if let Some(window) = app.get_webview_window(label) {
+                        let _ = window.emit(
+                            "command:dispatch",
+                            CommandDispatchPayload { id: payload_id.clone() },
+                        );
+                        return;
+                    }
+                }
+
+                // Fallback: send to the first available window
+                if let Some(window) = app.webview_windows().values().next() {
+                    let _ = window.emit(
+                        "command:dispatch",
+                        CommandDispatchPayload { id: payload_id },
+                    );
+                }
             }
-        });
+        })
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
 }
