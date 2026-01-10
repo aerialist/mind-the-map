@@ -634,6 +634,12 @@ pub fn run() {
             let view_toggle = MenuItemBuilder::with_id("view_toggle", "Toggle Outline ↔ Mindmap")
                 .accelerator("CmdOrCtrl+M")
                 .build(app)?;
+            let view_mindmap = MenuItemBuilder::with_id("view_mindmap", "Switch to Mind Map")
+                .accelerator("CmdOrCtrl+1")
+                .build(app)?;
+            let view_outline = MenuItemBuilder::with_id("view_outline", "Switch to Outline")
+                .accelerator("CmdOrCtrl+2")
+                .build(app)?;
             let view_zoom_in = MenuItemBuilder::with_id("view_zoom_in", "Zoom In")
                 .accelerator("CmdOrCtrl+=")
                 .enabled(false)
@@ -661,13 +667,11 @@ pub fn run() {
                 .accelerator("CmdOrCtrl+B")
                 .enabled(false)
                 .build(app)?;
-            let view_actual_size = MenuItemBuilder::with_id("view_actual_size", "Actual Size")
-                .accelerator("CmdOrCtrl+1")
-                .enabled(false)
-                .build(app)?;
 
             let mut view_menu = SubmenuBuilder::new(app, "View")
                 .item(&view_toggle)
+                .item(&view_mindmap)
+                .item(&view_outline)
                 .separator()
                 .item(&view_zoom_in)
                 .item(&view_zoom_out)
@@ -676,9 +680,7 @@ pub fn run() {
                 .separator()
                 .item(&view_show_completed)
                 .item(&view_focus_mode)
-                .item(&view_toggle_sidebar)
-                .separator()
-                .item(&view_actual_size);
+                .item(&view_toggle_sidebar);
 
             if !cfg!(target_os = "macos") {
                 view_menu = view_menu
@@ -806,6 +808,8 @@ pub fn run() {
                 "nav_first_child" => Some("navigate.firstChild"),
                 "nav_parent" => Some("navigate.parent"),
                 "view_toggle" => Some("view.toggle"),
+                "view_mindmap" => Some("view.mindmap"),
+                "view_outline" => Some("view.outline"),
                 "view_fit" => Some("view.fitToView"),
                 "find" => Some("view.find"),
                 "help_shortcuts" => Some("app.help.toggle"),

@@ -125,6 +125,8 @@ const shortcutSections: ShortcutSection[] = [
     title: 'View',
     shortcuts: [
       { keys: [`${modKey}+M`], description: 'Toggle Outline ↔ Mindmap' },
+      { keys: [`${modKey}+1`], description: 'Switch to Mind Map' },
+      { keys: [`${modKey}+2`], description: 'Switch to Outline' },
       { keys: [`${modKey}+Plus`], description: 'Zoom In', inactive: true },
       { keys: [`${modKey}+Minus`], description: 'Zoom Out', inactive: true },
       { keys: [`${modKey}+0`], description: 'Reset Zoom', inactive: true },
@@ -133,7 +135,6 @@ const shortcutSections: ShortcutSection[] = [
       { keys: [`${modKey}+${shiftKey}+.`], description: 'Focus Mode (Hide UI)', inactive: true },
       { keys: [`${modKey}+B`], description: 'Toggle Sidebar', inactive: true },
       ...(!isMac ? [{ keys: fullScreenKeys, description: 'Enter Full Screen' }] : []),
-      { keys: [`${modKey}+1`], description: 'Actual Size', inactive: true },
     ],
   },
   ...(isMac

@@ -55,7 +55,7 @@ function App() {
     });
   }, [currentFilePath, isDirty]);
 
-  // Handle global keyboard shortcuts (Ctrl+F, Ctrl+K, Ctrl+M, Ctrl+Shift+F, ?, Ctrl+/)
+  // Handle global keyboard shortcuts (Ctrl+F, Ctrl+K, Ctrl+M, Ctrl+1, Ctrl+2, Ctrl+Shift+F, ?, Ctrl+/)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMod = e.ctrlKey || e.metaKey;
@@ -80,6 +80,12 @@ function App() {
       if (key === 'm') {
         e.preventDefault();
         dispatch('view.toggle');
+      } else if (key === '1') {
+        e.preventDefault();
+        dispatch('view.mindmap');
+      } else if (key === '2') {
+        e.preventDefault();
+        dispatch('view.outline');
       } else if (key === 'f') {
         e.preventDefault();
         if (e.shiftKey && viewMode === 'mindmap') {
