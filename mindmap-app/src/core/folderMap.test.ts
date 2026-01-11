@@ -63,7 +63,9 @@ describe('buildNodesFromFolderTree', () => {
 
     expect(rootId).toBe('root');
     expect(root.content.type).toBe('text');
-    expect(root.content.text).toBe('Project');
+    if (root.content.type === 'text') {
+      expect(root.content.text).toBe('Project');
+    }
     expect(root.link).toBe('/Projects/Project');
     expect(root.childIds).toHaveLength(6);
 
