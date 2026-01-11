@@ -29,6 +29,25 @@ export interface OpenResult {
   error?: string;
 }
 
+export interface FolderOpenResult {
+  success: boolean;
+  path?: string;
+  error?: string;
+}
+
+export interface DirectoryTreeEntry {
+  name: string;
+  path: string;
+  isDir: boolean;
+  children: DirectoryTreeEntry[];
+}
+
+export interface DirectoryTreeResult {
+  success: boolean;
+  tree?: DirectoryTreeEntry;
+  error?: string;
+}
+
 // Save document with "Save As" dialog
 export const saveDocumentAs = async (
   nodes: NodeMap,
@@ -99,6 +118,49 @@ export const openDocument = async (): Promise<OpenResult> => {
     const { nodes, rootId, title } = deserialize(content);
 
     return { success: true, nodes, rootId, title, path };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+// Open folder with dialog
+export const openFolder = async (): Promise<FolderOpenResult> => {
+  try {
+    const selection = await open({
+      multiple: false,
+      directory: true,
+    });
+
+    const path = Array.isArray(selection) ? selection[0] : selection;
+
+    if (!path) {
+      return { success: false, error: 'Open cancelled' };
+    }
+
+    return { success: true, path };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+// Read directory tree from a folder path
+export const readDirectoryTree = async (
+  path: string,
+  includeHidden: boolean
+): Promise<DirectoryTreeResult> => {
+  try {
+    const tree = await invoke<DirectoryTreeEntry>('read_directory_tree', {
+      path,
+      includeHidden,
+    });
+
+    return { success: true, tree };
   } catch (error) {
     return {
       success: false,

@@ -35,14 +35,17 @@ import Mail from 'lucide-static/icons/mail.svg?raw';
 import Phone from 'lucide-static/icons/phone.svg?raw';
 import Send from 'lucide-static/icons/send.svg?raw';
 import AtSign from 'lucide-static/icons/at-sign.svg?raw';
+import AudioLines from 'lucide-static/icons/audio-lines.svg?raw';
 import FileText from 'lucide-static/icons/file-text.svg?raw';
 import File from 'lucide-static/icons/file.svg?raw';
 import Image from 'lucide-static/icons/image.svg?raw';
 import Link from 'lucide-static/icons/link.svg?raw';
+import Map from 'lucide-static/icons/map.svg?raw';
 import Paperclip from 'lucide-static/icons/paperclip.svg?raw';
 import FolderOpen from 'lucide-static/icons/folder-open.svg?raw';
 import Database from 'lucide-static/icons/database.svg?raw';
 import Code from 'lucide-static/icons/code.svg?raw';
+import Video from 'lucide-static/icons/video.svg?raw';
 import Star from 'lucide-static/icons/star.svg?raw';
 import Heart from 'lucide-static/icons/heart.svg?raw';
 import HeartCrack from 'lucide-static/icons/heart-crack.svg?raw';
@@ -140,6 +143,9 @@ export const ICON_SVG_MAP: IconSvgMap = {
     'file-text': FileText,
     'file': File,
     'image': Image,
+    'audio-lines': AudioLines,
+    'video': Video,
+    'map': Map,
     'link': Link,
     'attachment': Paperclip,
     'folder': FolderOpen,

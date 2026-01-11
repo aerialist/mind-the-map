@@ -21,6 +21,11 @@ export const useFileOperations = () => {
     dispatch('file.open');
   }, []);
 
+  // Map folder handler
+  const handleMapFolder = useCallback(() => {
+    dispatch('file.mapFolder');
+  }, []);
+
   // New document handler
   const handleNew = useCallback(() => {
     // TODO: Check for unsaved changes before creating new
@@ -52,7 +57,11 @@ export const useFileOperations = () => {
 
         case 'o':
           e.preventDefault();
-          handleOpen();
+          if (e.shiftKey) {
+            handleMapFolder();
+          } else {
+            handleOpen();
+          }
           break;
 
         case 'n':
@@ -75,12 +84,20 @@ export const useFileOperations = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave, handleSaveAs, handleOpen, handleNew, handlePrint]);
+  }, [
+    handleSave,
+    handleSaveAs,
+    handleOpen,
+    handleMapFolder,
+    handleNew,
+    handlePrint,
+  ]);
 
   return {
     handleSave,
     handleSaveAs,
     handleOpen,
+    handleMapFolder,
     handleNew,
     handlePrint,
     isDirty,

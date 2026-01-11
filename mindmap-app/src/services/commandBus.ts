@@ -1,3 +1,4 @@
+import { ask } from '@tauri-apps/plugin-dialog';
 import { useDocumentStore, computeVisibleNodeIds } from '../store';
 import {
   getDownNodeId,
@@ -5,8 +6,16 @@ import {
   getParentNodeId,
   getUpNodeId,
 } from '../core/navigation';
-import { saveDocument, saveDocumentAs, openDocument } from './tauri/fileSystem';
+import {
+  saveDocument,
+  saveDocumentAs,
+  openDocument,
+  openFolder,
+  readDirectoryTree,
+} from './tauri/fileSystem';
 import { exportToPDF } from './pdfExport';
+import { buildNodesFromFolderTree } from '../core/folderMap';
+import { isTauriAvailable } from './tauri/safeTauri';
 
 export type CommandPayload = {
   id: string;
@@ -16,6 +25,50 @@ export type CommandPayload = {
 type CommandHandler = (args?: unknown) => void | Promise<void>;
 
 const handlers = new Map<string, Set<CommandHandler>>();
+
+const confirmDiscardChanges = async (actionLabel: string): Promise<boolean> => {
+  const message = `You have unsaved changes. ${actionLabel} will replace the current document. Continue?`;
+
+  if (isTauriAvailable()) {
+    try {
+      const confirmed = await ask(message, {
+        title: 'Unsaved Changes',
+        kind: 'warning',
+      });
+      return Boolean(confirmed);
+    } catch {
+      // Fall back to browser confirm
+    }
+  }
+
+  if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+    return window.confirm(message);
+  }
+
+  return false;
+};
+
+const confirmIncludeHidden = async (): Promise<boolean> => {
+  const message = 'Include hidden files and folders (starting with a dot)?';
+
+  if (isTauriAvailable()) {
+    try {
+      const confirmed = await ask(message, {
+        title: 'Map Folder',
+        kind: 'info',
+      });
+      return Boolean(confirmed);
+    } catch {
+      // Fall back to browser confirm
+    }
+  }
+
+  if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+    return window.confirm(message);
+  }
+
+  return false;
+};
 
 const getNodeIdArg = (args: unknown): string | null => {
   if (!args || typeof args !== 'object') return null;
@@ -88,6 +141,34 @@ const registerDefaults = () => {
     } else if (result.error !== 'Open cancelled') {
       console.error('Open failed:', result.error);
     }
+  });
+
+  registerCommandHandler('file.mapFolder', async () => {
+    const state = useDocumentStore.getState();
+    if (state.isDirty) {
+      const confirmed = await confirmDiscardChanges('Mapping a folder');
+      if (!confirmed) return;
+    }
+
+    const folderResult = await openFolder();
+    if (!folderResult.success || !folderResult.path) {
+      if (folderResult.error && folderResult.error !== 'Open cancelled') {
+        console.error('Map folder failed:', folderResult.error);
+      }
+      return;
+    }
+
+    const includeHidden = await confirmIncludeHidden();
+    const treeResult = await readDirectoryTree(folderResult.path, includeHidden);
+    if (!treeResult.success || !treeResult.tree) {
+      if (treeResult.error) {
+        console.error('Map folder failed:', treeResult.error);
+      }
+      return;
+    }
+
+    const { nodes, rootId } = buildNodesFromFolderTree(treeResult.tree);
+    useDocumentStore.getState().loadDocument(nodes, rootId, null);
   });
 
   registerCommandHandler('file.save', async () => {

@@ -42,14 +42,17 @@ import {
   Send,
   AtSign,
   // Document icons
+  AudioLines,
   FileText,
   File,
   Image,
   Link,
+  Map,
   Paperclip,
   FolderOpen,
   Database,
   Code,
+  Video,
   // Symbol icons
   Star,
   Heart,
@@ -104,7 +107,18 @@ export type PeopleIcon = 'user' | 'users' | 'user-plus' | 'user-check' | 'user-x
 export type CommunicationIcon = 'message' | 'message-more' | 'mail' | 'phone' | 'send' | 'at-sign';
 
 // Document icons
-export type DocumentIcon = 'file-text' | 'file' | 'image' | 'link' | 'attachment' | 'folder' | 'database' | 'code';
+export type DocumentIcon =
+  | 'file-text'
+  | 'file'
+  | 'image'
+  | 'audio-lines'
+  | 'video'
+  | 'map'
+  | 'link'
+  | 'attachment'
+  | 'folder'
+  | 'database'
+  | 'code';
 
 // Symbol icons
 export type SymbolIcon = 'star' | 'heart' | 'heart-crack' | 'thumbs-up' | 'thumbs-down' | 'bookmark' | 'map-pin' | 'lightbulb' | 'target' | 'trophy' | 'gift' | 'zap' | 'flame' | 'rocket' | 'sparkles';
@@ -202,6 +216,9 @@ export const ICON_DEFINITIONS: Record<IconCategory, IconDefinition[]> = {
     { type: 'document', value: 'file-text', label: 'Document or note', icon: FileText, color: '#3b82f6' },
     { type: 'document', value: 'file', label: 'Generic file', icon: File, color: '#6b7280' },
     { type: 'document', value: 'image', label: 'Image or visual', icon: Image, color: '#8b5cf6' },
+    { type: 'document', value: 'audio-lines', label: 'Audio file', icon: AudioLines, color: '#f97316' },
+    { type: 'document', value: 'video', label: 'Video file', icon: Video, color: '#8b5cf6' },
+    { type: 'document', value: 'map', label: 'Mind map', icon: Map, color: '#22c55e' },
     { type: 'document', value: 'link', label: 'External link', icon: Link, color: '#3b82f6' },
     { type: 'document', value: 'attachment', label: 'Attachment', icon: Paperclip, color: '#6b7280' },
     { type: 'document', value: 'folder', label: 'Folder or collection', icon: FolderOpen, color: '#eab308' },

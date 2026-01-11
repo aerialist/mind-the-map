@@ -15,6 +15,15 @@ struct CommandDispatchPayload {
     id: String,
 }
 
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DirectoryEntry {
+    name: String,
+    path: String,
+    is_dir: bool,
+    children: Vec<DirectoryEntry>,
+}
+
 
 // Save document to file (atomic write using temp file + rename)
 #[tauri::command]
@@ -42,6 +51,72 @@ fn read_document(path: String) -> Result<String, String> {
     }
 
     fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {}", e))
+}
+
+fn entry_name(path: &Path) -> String {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .map(|name| name.to_string())
+        .unwrap_or_else(|| path.to_string_lossy().to_string())
+}
+
+fn build_directory_entry(path: &Path, include_hidden: bool) -> DirectoryEntry {
+    let mut children: Vec<DirectoryEntry> = Vec::new();
+
+    if path.is_dir() {
+        if let Ok(entries) = fs::read_dir(path) {
+            for entry in entries.flatten() {
+                let entry_path = entry.path();
+                let name = entry_name(&entry_path);
+                if !include_hidden && name.starts_with('.') {
+                    continue;
+                }
+                let entry_type = match entry.file_type() {
+                    Ok(file_type) => file_type,
+                    Err(_) => continue,
+                };
+
+                if entry_type.is_dir() && !entry_type.is_symlink() {
+                    children.push(build_directory_entry(&entry_path, include_hidden));
+                } else {
+                    children.push(DirectoryEntry {
+                        name,
+                        path: entry_path.to_string_lossy().to_string(),
+                        is_dir: false,
+                        children: Vec::new(),
+                    });
+                }
+            }
+        }
+
+        children.sort_by(|a, b| {
+            let a_key = (!a.is_dir, a.name.to_lowercase());
+            let b_key = (!b.is_dir, b.name.to_lowercase());
+            a_key.cmp(&b_key)
+        });
+    }
+
+    DirectoryEntry {
+        name: entry_name(path),
+        path: path.to_string_lossy().to_string(),
+        is_dir: path.is_dir(),
+        children,
+    }
+}
+
+#[tauri::command]
+fn read_directory_tree(path: String, include_hidden: bool) -> Result<DirectoryEntry, String> {
+    let root_path = Path::new(&path);
+
+    if !root_path.exists() {
+        return Err("Folder not found".to_string());
+    }
+
+    if !root_path.is_dir() {
+        return Err("Path is not a folder".to_string());
+    }
+
+    Ok(build_directory_entry(root_path, include_hidden))
 }
 
 // Save PDF file (from base64 encoded content)
@@ -114,6 +189,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             save_document,
             read_document,
+            read_directory_tree,
             save_pdf,
             get_app_version,
             get_platform_info,
@@ -272,6 +348,9 @@ pub fn run() {
             let open_doc = MenuItemBuilder::with_id("open", "Open...")
                 .accelerator("CmdOrCtrl+O")
                 .build(app)?;
+            let map_folder = MenuItemBuilder::with_id("map_folder", "Map Folder...")
+                .accelerator("CmdOrCtrl+Shift+O")
+                .build(app)?;
             let open_recent_placeholder = MenuItemBuilder::with_id("open_recent_placeholder", "No Recent Files")
                 .enabled(false)
                 .build(app)?;
@@ -315,6 +394,7 @@ pub fn run() {
                 SubmenuBuilder::new(app, "File")
                     .item(&new_doc)
                     .item(&open_doc)
+                    .item(&map_folder)
                     .item(&open_recent_menu)
                     .separator()
                     .item(&save_doc)
@@ -328,6 +408,7 @@ pub fn run() {
                 SubmenuBuilder::new(app, "File")
                     .item(&new_doc)
                     .item(&open_doc)
+                    .item(&map_folder)
                     .item(&open_recent_menu)
                     .separator()
                     .item(&save_doc)
@@ -830,6 +911,7 @@ pub fn run() {
             let command_id = match event.id().as_ref() {
                 "new" => Some("file.new"),
                 "open" => Some("file.open"),
+                "map_folder" => Some("file.mapFolder"),
                 "save" => Some("file.save"),
                 "save_as" => Some("file.saveAs"),
                 "export_pdf" => Some("file.print"),
