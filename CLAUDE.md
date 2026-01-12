@@ -233,7 +233,7 @@ In-app shortcuts listing is maintained in `mindmap-app/src/components/Help/HelpD
 | Mod+[ | Outdent | |
 | Space | Expand/Collapse | |
 | Mod+Shift+Up/Down/Left/Right | Move Node (Up/Down/Left/Right) | (planned) |
-| Mod+Alt+Right/Left | Expand/Collapse All Children | (planned) |
+| Mod+Alt+Right/Left | Expand/Collapse All Children | |
 | Mod+. | Zoom to Node (Focus) | (planned) |
 | Mod+, | Zoom Out from Node | (planned) |
 | Mod+Home | Jump to Root | (planned) |

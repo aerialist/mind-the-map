@@ -154,6 +154,8 @@ interface DocumentState {
   deleteNode: (nodeId: string) => void;
   toggleCollapse: (nodeId: string) => void;
   toggleCollapseAll: (nodeId: string) => void;
+  expandAllChildren: (nodeId: string) => void;
+  collapseAllChildren: (nodeId: string) => void;
   moveNode: (nodeId: string, newParentId: string, insertIndex: number) => void;
   indentNode: (nodeId: string) => void;
   outdentNode: (nodeId: string) => void;
@@ -788,6 +790,56 @@ export const useDocumentStore = create<DocumentState>()(
         };
 
         // Apply to the selected node and all its descendants
+        setCollapseRecursive(nodeId);
+      }),
+
+    expandAllChildren: (nodeId) =>
+      set((state) => {
+        const node = state.nodes[nodeId];
+        if (!node) return;
+
+        // Only expand if node has children
+        if (node.childIds.length === 0) return;
+
+        const setCollapseRecursive = (currentNodeId: string) => {
+          const currentNode = state.nodes[currentNodeId];
+          if (!currentNode) return;
+
+          if (currentNode.childIds.length > 0) {
+            currentNode.isCollapsed = false;
+          }
+
+          for (const childId of currentNode.childIds) {
+            setCollapseRecursive(childId);
+          }
+        };
+
+        state.collapseAllState = 'expanded';
+        setCollapseRecursive(nodeId);
+      }),
+
+    collapseAllChildren: (nodeId) =>
+      set((state) => {
+        const node = state.nodes[nodeId];
+        if (!node) return;
+
+        // Only collapse if node has children
+        if (node.childIds.length === 0) return;
+
+        const setCollapseRecursive = (currentNodeId: string) => {
+          const currentNode = state.nodes[currentNodeId];
+          if (!currentNode) return;
+
+          if (currentNode.childIds.length > 0) {
+            currentNode.isCollapsed = true;
+          }
+
+          for (const childId of currentNode.childIds) {
+            setCollapseRecursive(childId);
+          }
+        };
+
+        state.collapseAllState = 'collapsed';
         setCollapseRecursive(nodeId);
       }),
 

@@ -339,6 +339,24 @@ const registerDefaults = () => {
     state.toggleCollapseAll(targetId);
   });
 
+  registerCommandHandler('node.expandAllChildren', (args) => {
+    const state = useDocumentStore.getState();
+    const explicitId = getNodeIdArg(args);
+    const targetId = explicitId ?? state.selectedNodeId;
+    if (!targetId) return;
+    if (state.editingNodeId && !explicitId) return;
+    state.expandAllChildren(targetId);
+  });
+
+  registerCommandHandler('node.collapseAllChildren', (args) => {
+    const state = useDocumentStore.getState();
+    const explicitId = getNodeIdArg(args);
+    const targetId = explicitId ?? state.selectedNodeId;
+    if (!targetId) return;
+    if (state.editingNodeId && !explicitId) return;
+    state.collapseAllChildren(targetId);
+  });
+
   registerCommandHandler('node.indent', (args) => {
     const state = useDocumentStore.getState();
     const targetId = getNodeIdArg(args) ?? state.selectedNodeId;

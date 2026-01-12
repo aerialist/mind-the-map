@@ -650,11 +650,9 @@ pub fn run() {
                 .build(app)?;
             let node_expand_all = MenuItemBuilder::with_id("node_expand_all", "Expand All Children")
                 .accelerator("CmdOrCtrl+Alt+Right")
-                .enabled(false)
                 .build(app)?;
             let node_collapse_all = MenuItemBuilder::with_id("node_collapse_all", "Collapse All Children")
                 .accelerator("CmdOrCtrl+Alt+Left")
-                .enabled(false)
                 .build(app)?;
             let node_zoom_to = MenuItemBuilder::with_id("node_zoom_to", "Zoom to Node (Focus)")
                 .accelerator("CmdOrCtrl+.")
@@ -927,6 +925,8 @@ pub fn run() {
                 "node_outdent" => Some("node.outdent"),
                 "node_toggle_collapse" => Some("node.toggleCollapse"),
                 "node_toggle_collapse_all" => Some("node.toggleCollapseAll"),
+                "node_expand_all" => Some("node.expandAllChildren"),
+                "node_collapse_all" => Some("node.collapseAllChildren"),
                 "node_move_up" => Some("node.moveUp"),
                 "node_move_down" => Some("node.moveDown"),
                 "node_move_left" => Some("node.outdent"),
