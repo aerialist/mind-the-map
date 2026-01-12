@@ -151,6 +151,7 @@ interface DocumentState {
   createChildNode: (parentId: string) => void;
   createSiblingNode: (siblingId: string) => void;
   createSiblingNodeAbove: (siblingId: string) => void;
+  duplicateNode: (nodeId: string) => void;
   deleteNode: (nodeId: string) => void;
   toggleCollapse: (nodeId: string) => void;
   toggleCollapseAll: (nodeId: string) => void;
@@ -681,6 +682,73 @@ export const useDocumentStore = create<DocumentState>()(
         state.selectedNodeId = newId;
         state.selectedNodeIds = [newId];
         state.editingNodeId = newId;
+        state.isDirty = true;
+      }),
+
+    duplicateNode: (nodeId) =>
+      set((state) => {
+        const node = state.nodes[nodeId];
+        if (!node) return;
+
+        // Can't duplicate root node
+        if (!node.parentId) return;
+
+        const parent = state.nodes[node.parentId];
+        if (!parent) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        const collectNodeTree = (currentId: string): NodeMap => {
+          const result: NodeMap = {};
+          const currentNode = state.nodes[currentId];
+          if (!currentNode) return result;
+
+          result[currentId] = JSON.parse(JSON.stringify(currentNode));
+
+          for (const childId of currentNode.childIds) {
+            Object.assign(result, collectNodeTree(childId));
+          }
+
+          return result;
+        };
+
+        const subtree = collectNodeTree(nodeId);
+        const idMapping: Record<string, string> = {};
+
+        for (const oldId of Object.keys(subtree)) {
+          idMapping[oldId] = generateId();
+        }
+
+        const newRootId = idMapping[nodeId];
+
+        for (const [oldId, oldNode] of Object.entries(subtree)) {
+          const newId = idMapping[oldId];
+          const newNode: Node = {
+            ...oldNode,
+            id: newId,
+            parentId: oldNode.parentId ? idMapping[oldNode.parentId] : null,
+            childIds: oldNode.childIds
+              .map((childId) => idMapping[childId])
+              .filter((id): id is string => id !== undefined),
+            position: { x: 0, y: 0, source: 'auto' },
+          };
+
+          if (oldId === nodeId) {
+            newNode.parentId = node.parentId;
+          }
+
+          state.nodes[newId] = newNode;
+        }
+
+        const siblingIndex = parent.childIds.indexOf(nodeId);
+        const insertIndex =
+          siblingIndex === -1 ? parent.childIds.length : siblingIndex + 1;
+        parent.childIds.splice(insertIndex, 0, newRootId);
+
+        parent.isCollapsed = false;
+        state.selectedNodeId = newRootId;
+        state.selectedNodeIds = [newRootId];
         state.isDirty = true;
       }),
 

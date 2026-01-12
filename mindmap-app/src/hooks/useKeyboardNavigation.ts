@@ -65,6 +65,14 @@ export const useKeyboardNavigation = () => {
         return;
       }
 
+      if (isMod && !e.shiftKey && (e.key === 'd' || e.key === 'D')) {
+        if (!editingNodeId && selectedNodeId) {
+          e.preventDefault();
+          dispatch('node.duplicate', { nodeId: selectedNodeId });
+        }
+        return;
+      }
+
       // Copy for Miro (Ctrl+Shift+M) - exports as table format for Miro's paste dialog
       if (isMod && e.shiftKey && (e.key === 'm' || e.key === 'M')) {
         if (!editingNodeId && selectedNodeIds.length > 0) {

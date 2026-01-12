@@ -49,7 +49,7 @@ const shortcutSections: ShortcutSection[] = [
       { keys: [`${modKey}+C`], description: 'Copy' },
       { keys: [`${modKey}+V`], description: 'Paste' },
       { keys: [`${modKey}+${shiftKey}+V`], description: 'Paste as Child' },
-      { keys: [`${modKey}+D`], description: 'Duplicate Node', inactive: true },
+      { keys: [`${modKey}+D`], description: 'Duplicate Node' },
       { keys: [`${modKey}+Backspace`], description: 'Delete Node' },
       { keys: [`${modKey}+${shiftKey}+Backspace`], description: 'Delete Node & Children', inactive: true },
       { keys: [`${modKey}+A`], description: 'Select All (in text)' },

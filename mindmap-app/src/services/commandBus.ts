@@ -303,6 +303,15 @@ const registerDefaults = () => {
     state.createSiblingNodeAbove(targetId);
   });
 
+  registerCommandHandler('node.duplicate', (args) => {
+    const state = useDocumentStore.getState();
+    const explicitId = getNodeIdArg(args);
+    const targetId = explicitId ?? state.selectedNodeId;
+    if (!targetId) return;
+    if (state.editingNodeId && !explicitId) return;
+    state.duplicateNode(targetId);
+  });
+
   registerCommandHandler('node.focusParent', (args) => {
     const state = useDocumentStore.getState();
     const targetId = getNodeIdArg(args) ?? state.selectedNodeId;

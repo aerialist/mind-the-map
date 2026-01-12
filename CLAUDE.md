@@ -188,7 +188,7 @@ In-app shortcuts listing is maintained in `mindmap-app/src/components/Help/HelpD
 | Mod+C | Copy | |
 | Mod+V | Paste | |
 | Mod+Shift+V | Paste as Child | |
-| Mod+D | Duplicate Node | (planned) |
+| Mod+D | Duplicate Node | |
 | Mod+Backspace | Delete Node | Root protected |
 | Mod+Shift+Backspace | Delete Node & Children | (planned) |
 | Mod+A | Select All (in text) | |

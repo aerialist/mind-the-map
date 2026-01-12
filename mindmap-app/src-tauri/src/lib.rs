@@ -447,7 +447,6 @@ pub fn run() {
                 .build(app)?;
             let duplicate_node = MenuItemBuilder::with_id("duplicate_node", "Duplicate Node")
                 .accelerator("CmdOrCtrl+D")
-                .enabled(false)
                 .build(app)?;
             let delete_node = MenuItemBuilder::with_id("delete_node", "Delete Node")
                 .accelerator("CmdOrCtrl+Backspace")
@@ -915,6 +914,7 @@ pub fn run() {
                 "copy" => Some("edit.copy"),
                 "paste" => Some("edit.paste"),
                 "paste_as_child" => Some("edit.paste"),
+                "duplicate_node" => Some("node.duplicate"),
                 "delete_node" => Some("node.delete"),
                 "insert_sibling_below" => Some("node.createSibling"),
                 "insert_sibling_above" => Some("node.createSiblingAbove"),
