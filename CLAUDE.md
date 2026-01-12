@@ -273,7 +273,7 @@ In-app shortcuts listing is maintained in `mindmap-app/src/components/Help/HelpD
 | E / F2 | Start editing selected node | |
 | Escape | Save and stop editing | |
 | Ctrl+Escape | Cancel editing | Discards changes |
-| Shift+Alt+Space | Smart collapse all (3-state) | |
+| Shift+Space | Smart collapse all (3-state) | |
 | Mod+Shift+M | Copy for Miro | Table format |
 
 ### Multi-Selection
@@ -306,7 +306,7 @@ In-app shortcuts listing is maintained in `mindmap-app/src/components/Help/HelpD
 - Frontend notifies Rust of focus via `window_activated` and `getCurrentWindow().onFocusChanged`
 - Default command handlers live in `src/services/commandBus.ts`; components can add handlers via `registerCommandHandler`
 
-### Smart Collapse (Shift+Alt+Space)
+### Smart Collapse (Shift+Space)
 Cycles through 3 states:
 1. **Collapsed**: All children hidden
 2. **Expanded except completed**: Shows all except nodes with Done status icon (✓)

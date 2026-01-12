@@ -239,7 +239,7 @@ Mod = Cmd on macOS, Ctrl on Windows/Linux.
 
 ### Organization
 - Collapse/Expand: `Space` for single node
-- Smart Collapse All: `Shift+Alt+Space` cycles through 3 states (collapsed → expanded except completed → fully expanded)
+- Smart Collapse All: `Shift+Space` cycles through 3 states (collapsed → expanded except completed → fully expanded)
 - Node icons: `Mod+Shift+I` to open picker, click any icon on a node to cycle through variants in its category
 - Node links: `Mod+K` to add/edit hyperlinks
 

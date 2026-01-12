@@ -253,8 +253,8 @@ export const useKeyboardNavigation = () => {
         case ' ':
         case '\u00A0': // Non-breaking space (produced by Option+Space on macOS)
           e.preventDefault();
-          if (e.shiftKey && e.altKey) {
-            // Toggle collapse/expand all children recursively (Shift+Alt+Space)
+          if (e.shiftKey) {
+            // Toggle collapse/expand all children recursively (Shift+Space)
             dispatch('node.toggleCollapseAll', { nodeId: selectedNodeId });
           } else {
             // Toggle collapse/expand for the selected node

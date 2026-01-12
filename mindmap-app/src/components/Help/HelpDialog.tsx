@@ -100,6 +100,7 @@ const shortcutSections: ShortcutSection[] = [
       { keys: [`${modKey}+${shiftKey}+←`], description: 'Move Node Left (Outdent)' },
       { keys: [`${modKey}+${shiftKey}+→`], description: 'Move Node Right (Indent)' },
       { keys: ['Space'], description: 'Expand/Collapse' },
+      { keys: [`${shiftKey}+Space`], description: 'Expand/Collapse All Children' },
       { keys: [`${modKey}+${altKey}+→`], description: 'Expand All Children', inactive: true },
       { keys: [`${modKey}+${altKey}+←`], description: 'Collapse All Children', inactive: true },
       { keys: [`${modKey}+.`], description: 'Zoom to Node (Focus)', inactive: true },

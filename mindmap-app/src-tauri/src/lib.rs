@@ -645,6 +645,9 @@ pub fn run() {
             let node_toggle_collapse = MenuItemBuilder::with_id("node_toggle_collapse", "Expand/Collapse")
                 .accelerator("Space")
                 .build(app)?;
+            let node_toggle_collapse_all = MenuItemBuilder::with_id("node_toggle_collapse_all", "Expand/Collapse All Children")
+                .accelerator("Shift+Space")
+                .build(app)?;
             let node_expand_all = MenuItemBuilder::with_id("node_expand_all", "Expand All Children")
                 .accelerator("CmdOrCtrl+Alt+Right")
                 .enabled(false)
@@ -676,6 +679,7 @@ pub fn run() {
                 .item(&node_move_right)
                 .separator()
                 .item(&node_toggle_collapse)
+                .item(&node_toggle_collapse_all)
                 .item(&node_expand_all)
                 .item(&node_collapse_all)
                 .separator()
@@ -922,6 +926,7 @@ pub fn run() {
                 "node_indent" => Some("node.indent"),
                 "node_outdent" => Some("node.outdent"),
                 "node_toggle_collapse" => Some("node.toggleCollapse"),
+                "node_toggle_collapse_all" => Some("node.toggleCollapseAll"),
                 "node_move_up" => Some("node.moveUp"),
                 "node_move_down" => Some("node.moveDown"),
                 "node_move_left" => Some("node.outdent"),
