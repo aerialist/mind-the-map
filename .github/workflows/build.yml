@@ -133,14 +133,6 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm tauri build --target ${{ matrix.target }}
 
-      - name: Upload artifacts
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: tauri-bundle-${{ matrix.os }}-${{ matrix.target }}
-          path: mindmap-app/src-tauri/target/${{ matrix.target }}/release/bundle
-          retention-days: 7
-
       # Release Build: use tauri-action to create GitHub release
       - name: Build and Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -161,3 +153,41 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: --target ${{ matrix.target }}
+
+      - name: Prepare portable Windows executable
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $src = "src-tauri/target/${{ matrix.target }}/release/mindmap-app.exe"
+          $dst = "src-tauri/target/${{ matrix.target }}/release/Mind-the-Map-portable.exe"
+          if (!(Test-Path $src)) {
+            throw "Portable exe not found at $src"
+          }
+          Copy-Item $src $dst -Force
+
+      - name: Upload artifacts
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-bundle-${{ matrix.os }}-${{ matrix.target }}
+          path: mindmap-app/src-tauri/target/${{ matrix.target }}/release/bundle
+          retention-days: 7
+
+      - name: Upload portable Windows executable
+        if: ${{ matrix.os == 'windows-latest' && !startsWith(github.ref, 'refs/tags/v') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-portable-windows-${{ matrix.target }}
+          path: mindmap-app/src-tauri/target/${{ matrix.target }}/release/Mind-the-Map-portable.exe
+          retention-days: 7
+
+      - name: Upload portable Windows executable to release
+        if: ${{ matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/v') }}
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          prerelease: false
+          files: mindmap-app/src-tauri/target/${{ matrix.target }}/release/Mind-the-Map-portable.exe
