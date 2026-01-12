@@ -92,6 +92,20 @@ export const getFirstChildNodeId = (
 };
 
 /**
+ * Get the last child node ID (if expanded and has children)
+ */
+export const getLastChildNodeId = (
+  nodes: NodeMap,
+  currentNodeId: string
+): string | null => {
+  const node = nodes[currentNodeId];
+  if (!node || node.isCollapsed || node.childIds.length === 0) {
+    return null;
+  }
+  return node.childIds[node.childIds.length - 1];
+};
+
+/**
  * Get the next sibling node ID
  */
 export const getNextSiblingNodeId = (
@@ -139,6 +153,46 @@ export const getPreviousSiblingNodeId = (
   }
 
   return parent.childIds[currentIndex - 1];
+};
+
+/**
+ * Get the first sibling node ID
+ */
+export const getFirstSiblingNodeId = (
+  nodes: NodeMap,
+  currentNodeId: string
+): string | null => {
+  const node = nodes[currentNodeId];
+  if (!node || !node.parentId) {
+    return null;
+  }
+
+  const parent = nodes[node.parentId];
+  if (!parent || parent.childIds.length === 0) {
+    return null;
+  }
+
+  return parent.childIds[0];
+};
+
+/**
+ * Get the last sibling node ID
+ */
+export const getLastSiblingNodeId = (
+  nodes: NodeMap,
+  currentNodeId: string
+): string | null => {
+  const node = nodes[currentNodeId];
+  if (!node || !node.parentId) {
+    return null;
+  }
+
+  const parent = nodes[node.parentId];
+  if (!parent || parent.childIds.length === 0) {
+    return null;
+  }
+
+  return parent.childIds[parent.childIds.length - 1];
 };
 
 /**

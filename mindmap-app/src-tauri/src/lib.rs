@@ -688,15 +688,12 @@ pub fn run() {
                 .build(app)?;
             let nav_first_sibling = MenuItemBuilder::with_id("nav_first_sibling", "Jump to First Sibling")
                 .accelerator("CmdOrCtrl+Up")
-                .enabled(false)
                 .build(app)?;
             let nav_last_sibling = MenuItemBuilder::with_id("nav_last_sibling", "Jump to Last Sibling")
                 .accelerator("CmdOrCtrl+Down")
-                .enabled(false)
                 .build(app)?;
             let nav_last_child = MenuItemBuilder::with_id("nav_last_child", "Jump to Last Child")
                 .accelerator("CmdOrCtrl+Right")
-                .enabled(false)
                 .build(app)?;
             let nav_extend_up = MenuItemBuilder::with_id("nav_extend_up", "Extend Selection Up")
                 .accelerator("Shift+Up")
@@ -935,6 +932,9 @@ pub fn run() {
                 "nav_sibling_down" => Some("navigate.siblingDown"),
                 "nav_first_child" => Some("navigate.firstChild"),
                 "nav_parent" => Some("navigate.parent"),
+                "nav_first_sibling" => Some("navigate.firstSibling"),
+                "nav_last_sibling" => Some("navigate.lastSibling"),
+                "nav_last_child" => Some("navigate.lastChild"),
                 "view_toggle" => Some("view.toggle"),
                 "view_mindmap" => Some("view.mindmap"),
                 "view_outline" => Some("view.outline"),

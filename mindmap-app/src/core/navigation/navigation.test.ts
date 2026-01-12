@@ -5,8 +5,11 @@ import {
   getPreviousNodeId,
   getParentNodeId,
   getFirstChildNodeId,
+  getLastChildNodeId,
   getNextSiblingNodeId,
   getPreviousSiblingNodeId,
+  getFirstSiblingNodeId,
+  getLastSiblingNodeId,
   getDownNodeId,
   getUpNodeId,
 } from "./index";
@@ -184,6 +187,29 @@ describe("navigation", () => {
     });
   });
 
+  describe("getLastChildNodeId", () => {
+    it("should return the last child node ID", () => {
+      const nodes = createTestNodes();
+
+      expect(getLastChildNodeId(nodes, "root")).toBe("child2");
+      expect(getLastChildNodeId(nodes, "child1")).toBe("grandchild2");
+    });
+
+    it("should return null for collapsed node", () => {
+      const nodes = createTestNodes();
+      nodes.child1.isCollapsed = true;
+
+      expect(getLastChildNodeId(nodes, "child1")).toBeNull();
+    });
+
+    it("should return null for node without children", () => {
+      const nodes = createTestNodes();
+
+      expect(getLastChildNodeId(nodes, "child2")).toBeNull();
+      expect(getLastChildNodeId(nodes, "grandchild1")).toBeNull();
+    });
+  });
+
   describe("getNextSiblingNodeId", () => {
     it("should return the next sibling", () => {
       const nodes = createTestNodes();
@@ -227,6 +253,36 @@ describe("navigation", () => {
       const nodes = createTestNodes();
 
       expect(getPreviousSiblingNodeId(nodes, "root")).toBeNull();
+    });
+  });
+
+  describe("getFirstSiblingNodeId", () => {
+    it("should return the first sibling", () => {
+      const nodes = createTestNodes();
+
+      expect(getFirstSiblingNodeId(nodes, "child2")).toBe("child1");
+      expect(getFirstSiblingNodeId(nodes, "grandchild2")).toBe("grandchild1");
+    });
+
+    it("should return null for root node", () => {
+      const nodes = createTestNodes();
+
+      expect(getFirstSiblingNodeId(nodes, "root")).toBeNull();
+    });
+  });
+
+  describe("getLastSiblingNodeId", () => {
+    it("should return the last sibling", () => {
+      const nodes = createTestNodes();
+
+      expect(getLastSiblingNodeId(nodes, "child1")).toBe("child2");
+      expect(getLastSiblingNodeId(nodes, "grandchild1")).toBe("grandchild2");
+    });
+
+    it("should return null for root node", () => {
+      const nodes = createTestNodes();
+
+      expect(getLastSiblingNodeId(nodes, "root")).toBeNull();
     });
   });
 

@@ -149,11 +149,21 @@ export const useKeyboardNavigation = () => {
 
       switch (e.key) {
         case 'ArrowUp':
+          if (isMod && !e.shiftKey && !e.altKey) {
+            e.preventDefault();
+            dispatch('navigate.firstSibling');
+            return;
+          }
           e.preventDefault();
           nextNodeId = getUpNodeId(nodes, selectedNodeId);
           break;
 
         case 'ArrowDown':
+          if (isMod && !e.shiftKey && !e.altKey) {
+            e.preventDefault();
+            dispatch('navigate.lastSibling');
+            return;
+          }
           e.preventDefault();
           nextNodeId = getDownNodeId(nodes, selectedNodeId);
           break;
@@ -165,6 +175,11 @@ export const useKeyboardNavigation = () => {
           break;
 
         case 'ArrowRight':
+          if (isMod && !e.shiftKey && !e.altKey) {
+            e.preventDefault();
+            dispatch('navigate.lastChild');
+            return;
+          }
           e.preventDefault();
           {
             // If node has children and is collapsed, expand it first

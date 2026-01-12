@@ -3,6 +3,9 @@ import { useDocumentStore, computeVisibleNodeIds } from '../store';
 import {
   getDownNodeId,
   getFirstChildNodeId,
+  getFirstSiblingNodeId,
+  getLastChildNodeId,
+  getLastSiblingNodeId,
   getParentNodeId,
   getUpNodeId,
 } from '../core/navigation';
@@ -394,6 +397,34 @@ const registerDefaults = () => {
       return;
     }
     const nextId = getFirstChildNodeId(state.nodes, state.selectedNodeId);
+    selectNodeIfAvailable(nextId);
+  });
+
+  registerCommandHandler('navigate.firstSibling', () => {
+    const state = getNavigableState();
+    if (!state) return;
+    const nextId = getFirstSiblingNodeId(state.nodes, state.selectedNodeId);
+    selectNodeIfAvailable(nextId);
+  });
+
+  registerCommandHandler('navigate.lastSibling', () => {
+    const state = getNavigableState();
+    if (!state) return;
+    const nextId = getLastSiblingNodeId(state.nodes, state.selectedNodeId);
+    selectNodeIfAvailable(nextId);
+  });
+
+  registerCommandHandler('navigate.lastChild', () => {
+    const state = getNavigableState();
+    if (!state) return;
+    const current = state.nodes[state.selectedNodeId];
+    if (!current) return;
+    if (current.childIds.length > 0 && current.isCollapsed) {
+      state.toggleCollapse(current.id);
+      selectNodeIfAvailable(current.childIds[current.childIds.length - 1]);
+      return;
+    }
+    const nextId = getLastChildNodeId(state.nodes, state.selectedNodeId);
     selectNodeIfAvailable(nextId);
   });
 };
