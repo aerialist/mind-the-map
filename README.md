@@ -206,7 +206,8 @@ mind-the-map/
     │   │   ├── Outline/         # Outline view components
     │   │   ├── IconPicker/      # Icons panel (right sidebar)
     │   │   ├── LinkDialog/      # Node link editor
-    │   │   └── Search/          # Search & Filter panel
+    │   │   ├── Search/          # Search & Filter panel
+    │   │   └── Settings/        # Preferences dialog
     │   ├── store/               # Zustand state management
     │   ├── core/                # Core logic (UI-independent)
     │   ├── hooks/               # Custom React hooks
@@ -260,8 +261,14 @@ Mod = Cmd on macOS, Ctrl on Windows/Linux.
 - Save As: `Mod+Shift+S`
 - Export as PDF: `Mod+Shift+E`
 - Print: `Mod+P`
-- Auto-save: 30 seconds after changes (if file was previously saved)
+- Preferences: `Mod+,`
+- Auto-save: Configurable in Preferences (default: enabled, 30 seconds)
 - File format: `.mindmap` (JSON)
+
+### Settings / Preferences (`Mod+,`)
+- **General**: Auto-save toggle and interval, update checking (coming soon)
+- **Appearance**: Theme (Light/Dark/System), font size (not yet applied), animations (not yet implemented)
+- **API Keys**: Secure storage for OpenAI, Anthropic, and Workflowy API keys (stored in OS keychain)
 
 ### History
 - Undo/Redo: `Mod+Z`, `Mod+Shift+Z` (or `Mod+Y`)

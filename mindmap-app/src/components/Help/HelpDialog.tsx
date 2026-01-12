@@ -36,7 +36,7 @@ const shortcutSections: ShortcutSection[] = [
       { keys: [`${modKey}+${shiftKey}+S`], description: 'Save As...' },
       { keys: [`${modKey}+${shiftKey}+E`], description: 'Export as PDF' },
       { keys: [`${modKey}+P`], description: 'Print...' },
-      { keys: [`${modKey}+,`], description: 'Preferences...', inactive: true },
+      { keys: [`${modKey}+,`], description: 'Preferences...' },
       { keys: quitKeys, description: 'Quit' },
     ],
   },

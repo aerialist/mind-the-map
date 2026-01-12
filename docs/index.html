@@ -396,6 +396,7 @@
         <a href="#getting-started">Guide</a>
         <a href="#shortcuts">Shortcuts</a>
         <a href="#search-filter">Search & Filter</a>
+        <a href="#settings">Settings</a>
         <a href="https://github.com/aerialist/mind-the-map" target="_blank">GitHub</a>
       </nav>
     </div>
@@ -524,7 +525,7 @@
           <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Save As...</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd></td><td>Export as PDF</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>Print...</td></tr>
-          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>,</kbd></td><td>Preferences...</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>,</kbd></td><td>Preferences...</td></tr>
           <tr><td><kbd>Cmd</kbd>+<kbd>Q</kbd> (Mac) / <kbd>Alt</kbd>+<kbd>F4</kbd> (Win)</td><td>Quit</td></tr>
         </table>
 
@@ -980,6 +981,43 @@
           <tr><td>Horizontal wheel</td><td>Pan horizontally (if your mouse/trackpad supports it)</td></tr>
           <tr><td>Drag node</td><td>Move node to new position or parent</td></tr>
         </table>
+      </div>
+
+      <div class="guide-section" id="settings">
+        <h3>Settings / Preferences</h3>
+        <p>Open the Preferences dialog with <kbd>Ctrl</kbd>+<kbd>,</kbd> (or <kbd>Cmd</kbd>+<kbd>,</kbd> on Mac) to customize Mind the Map.</p>
+
+        <h4>General Tab</h4>
+        <ul>
+          <li><strong>Auto-save</strong> - Enable or disable automatic saving. When enabled, choose the save interval (10 seconds, 30 seconds, 1 minute, 2 minutes, or 5 minutes).</li>
+          <li><strong>Check for updates</strong> - Coming soon: Automatically check for new versions on startup.</li>
+        </ul>
+
+        <h4>Appearance Tab</h4>
+        <ul>
+          <li><strong>Theme</strong> - Choose Light, Dark, or System (follows your OS preference).</li>
+          <li><strong>Font Size</strong> - Select Small (14px), Medium (16px), or Large (18px). <em>Coming soon: Currently not applied to the UI.</em></li>
+          <li><strong>Animations</strong> - Enable or disable animations in the mind map view. <em>Coming soon: Currently not implemented.</em></li>
+        </ul>
+
+        <h4>API Keys Tab</h4>
+        <p>Store API keys securely for integrations with external services:</p>
+        <ul>
+          <li><strong>OpenAI API Key</strong> - For AI-powered features (coming soon)</li>
+          <li><strong>Anthropic API Key</strong> - For Claude AI features (coming soon)</li>
+          <li><strong>Workflowy API Key</strong> - For Workflowy import/export integration</li>
+        </ul>
+
+        <div class="tip-box">
+          <strong>Security:</strong> API keys are stored in your operating system's secure keychain (macOS Keychain, Windows Credential Manager) and are never saved in plain text files.
+        </div>
+
+        <h4>Settings Storage</h4>
+        <p>Settings are automatically saved and persist across app restarts and version updates:</p>
+        <ul>
+          <li><strong>macOS:</strong> <code>~/Library/Application Support/com.shunya.mindmap-app/settings.json</code></li>
+          <li><strong>Windows:</strong> <code>C:\Users\&lt;User&gt;\AppData\Roaming\com.shunya.mindmap-app\settings.json</code></li>
+        </ul>
       </div>
 
       <div class="guide-section" id="tips">

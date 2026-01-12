@@ -47,6 +47,7 @@ mind-the-map/
     │   │
     │   ├── store/               # Zustand state management
     │   │   ├── documentStore.ts # Main store (nodes, selection, history)
+    │   │   ├── settingsStore.ts # Settings state (preferences, theme)
     │   │   └── selectors.ts     # Memoized selectors
     │   │
     │   ├── core/                # Pure logic (no React)
@@ -63,7 +64,8 @@ mind-the-map/
     │   │   ├── Help/            # Help dialog (cheat sheet)
     │   │   ├── IconPicker/      # Icons panel (right sidebar)
     │   │   ├── LinkDialog/      # Node link editor
-    │   │   └── Search/          # Search & Filter panel (right sidebar)
+    │   │   ├── Search/          # Search & Filter panel (right sidebar)
+    │   │   └── Settings/        # Preferences dialog (General, Appearance, API Keys)
     │   │
     │   ├── hooks/               # Custom React hooks
     │   │   ├── useAutoSave.ts
@@ -72,6 +74,11 @@ mind-the-map/
     │   │
     │   ├── services/            # App-level services
     │   │   ├── commandBus.ts    # Command bus + default handlers
+    │   │   ├── settings/        # Settings persistence
+    │   │   │   ├── types.ts     # Settings interfaces
+    │   │   │   ├── settingsStore.ts  # tauri-plugin-store wrapper
+    │   │   │   ├── secretsStore.ts   # tauri-plugin-keyring wrapper
+    │   │   │   └── migrations.ts     # Schema version migrations
     │   │   └── tauri/           # Tauri API wrappers
     │   │       ├── fileSystem.ts
     │   │       ├── safeTauri.ts # Safe wrappers for browser-only mode
@@ -176,7 +183,7 @@ In-app shortcuts listing is maintained in `mindmap-app/src/components/Help/HelpD
 | Mod+Shift+S | Save As... | |
 | Mod+Shift+E | Export as PDF | |
 | Mod+P | Print... | |
-| Mod+, | Preferences... | (planned) |
+| Mod+, | Preferences... | Opens settings dialog |
 | Cmd+Q / Alt+F4 | Quit | macOS / Windows |
 
 ### Edit
@@ -338,6 +345,34 @@ Copies as TSV + HTML table format:
 - Respects `position.source === 'manual'` nodes
 - Calculates positions for `source === 'auto'` nodes only
 - Avoids overlaps between all nodes
+
+### Settings / Preferences (Cmd+,)
+The Settings dialog provides persistent app configuration with three tabs:
+
+**General Tab**:
+- Auto-save toggle and interval selection (10s, 30s, 1min, 2min, 5min)
+- Check for updates toggle (not yet implemented)
+
+**Appearance Tab**:
+- Theme selection: Light, Dark, or System (follows OS preference)
+- Font size: Small (14px), Medium (16px), Large (18px) - not yet applied to UI
+- Animations toggle for mind map view - not yet implemented
+
+**API Keys Tab**:
+- Secure storage for API keys using OS keychain (macOS Keychain, Windows Credential Manager)
+- Supported keys: OpenAI, Anthropic, Workflowy
+- Keys are never stored in plain text files
+
+**Storage Architecture**:
+- Non-sensitive settings: `tauri-plugin-store` → JSON file in app data directory
+  - macOS: `~/Library/Application Support/com.shunya.mindmap-app/settings.json`
+  - Windows: `C:\Users\<User>\AppData\Roaming\com.shunya.mindmap-app\settings.json`
+- Sensitive settings (API keys): `tauri-plugin-keyring` → OS keychain
+
+**Implementation files**:
+- `src/services/settings/` - Persistence layer
+- `src/store/settingsStore.ts` - Zustand state
+- `src/components/Settings/` - Dialog UI components
 
 ### Search & Filter Panel (Ctrl+F)
 The Search & Filter panel is a right sidebar with three distinct sections:
@@ -559,6 +594,9 @@ test('should do something', async ({ page }) => {
 | Safe Tauri wrappers | `src/services/tauri/safeTauri.ts` |
 | Help dialog (cheat sheet) | `src/components/Help/HelpDialog.tsx` |
 | Link dialog | `src/components/LinkDialog/LinkPanel.tsx` |
+| Settings dialog | `src/components/Settings/SettingsDialog.tsx` |
+| Settings persistence | `src/services/settings/` |
+| Settings state | `src/store/settingsStore.ts` |
 | Test setup | `src/test/setup.ts` |
 | E2E tests | `e2e/*.spec.ts` |
 | Playwright config | `playwright.config.ts` |

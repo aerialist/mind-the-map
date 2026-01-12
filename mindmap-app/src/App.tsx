@@ -7,7 +7,9 @@ import { IconPicker } from './components/IconPicker';
 import { HelpDialog } from './components/Help';
 import { AboutDialog } from './components/About';
 import { LinkPanel } from './components/LinkDialog';
+import { SettingsDialog } from './components/Settings';
 import { useDocumentStore } from './store';
+import { useSettingsStore } from './store/settingsStore';
 import { useAutoSave, useInitialFileLoad } from './hooks';
 import { openDocumentByPath } from './services/tauri/fileSystem';
 import { isTauriAvailable, safeInvoke, safeListen, safeGetCurrentWindow } from './services/tauri/safeTauri';
@@ -36,7 +38,42 @@ function App() {
   const hiddenIconFilters = useDocumentStore((state) => state.hiddenIconFilters);
   const clearHiddenIconFilters = useDocumentStore((state) => state.clearHiddenIconFilters);
 
-  // Enable autosave (30 seconds after last change, only if file has been saved before)
+  // Settings store
+  const loadSettings = useSettingsStore((state) => state.loadSettings);
+  const theme = useSettingsStore((state) => state.settings.appearance.theme);
+
+  // Load settings on mount
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  // Apply theme setting
+  useEffect(() => {
+    const root = document.documentElement;
+
+    const applyTheme = (isDark: boolean) => {
+      if (isDark) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    };
+
+    if (theme === 'system') {
+      // Use system preference
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      applyTheme(mediaQuery.matches);
+
+      // Listen for system theme changes
+      const handler = (e: MediaQueryListEvent) => applyTheme(e.matches);
+      mediaQuery.addEventListener('change', handler);
+      return () => mediaQuery.removeEventListener('change', handler);
+    } else {
+      applyTheme(theme === 'dark');
+    }
+  }, [theme]);
+
+  // Enable autosave (uses settings for interval)
   useAutoSave();
 
   // Load file from URL query parameter (for opening .mindmap links in new window)
@@ -70,6 +107,13 @@ function App() {
       if (isMod && e.key === '/') {
         e.preventDefault();
         dispatch('app.help.toggle');
+        return;
+      }
+
+      // Settings shortcut: Cmd+, (comma)
+      if (isMod && e.key === ',') {
+        e.preventDefault();
+        dispatch('app.settings.toggle');
         return;
       }
 
@@ -312,6 +356,9 @@ function App() {
 
       {/* About dialog */}
       <AboutDialog />
+
+      {/* Settings dialog */}
+      <SettingsDialog />
     </div>
   );
 }

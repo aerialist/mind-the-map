@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useDocumentStore } from '../store';
+import { useSettingsStore } from '../store/settingsStore';
 import { saveDocument } from '../services/tauri/fileSystem';
-
-const AUTOSAVE_DELAY_MS = 1000; // 1 second
 
 export const useAutoSave = () => {
   const nodes = useDocumentStore((state) => state.nodes);
@@ -11,14 +10,19 @@ export const useAutoSave = () => {
   const isDirty = useDocumentStore((state) => state.isDirty);
   const markClean = useDocumentStore((state) => state.markClean);
 
+  // Get auto-save settings
+  const autoSaveEnabled = useSettingsStore((state) => state.settings.general.autoSaveEnabled);
+  const autoSaveIntervalMs = useSettingsStore((state) => state.settings.general.autoSaveIntervalMs);
+
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSavingRef = useRef(false);
 
   useEffect(() => {
     // Only autosave if:
-    // 1. There's an existing file path (don't trigger Save As dialog)
-    // 2. The document has unsaved changes
-    if (!currentFilePath || !isDirty) {
+    // 1. Auto-save is enabled in settings
+    // 2. There's an existing file path (don't trigger Save As dialog)
+    // 3. The document has unsaved changes
+    if (!autoSaveEnabled || !currentFilePath || !isDirty) {
       return;
     }
 
@@ -47,7 +51,7 @@ export const useAutoSave = () => {
       } finally {
         isSavingRef.current = false;
       }
-    }, AUTOSAVE_DELAY_MS);
+    }, autoSaveIntervalMs);
 
     // Cleanup on unmount or when dependencies change
     return () => {
@@ -55,5 +59,5 @@ export const useAutoSave = () => {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [nodes, rootId, currentFilePath, isDirty, markClean]);
+  }, [nodes, rootId, currentFilePath, isDirty, markClean, autoSaveEnabled, autoSaveIntervalMs]);
 };

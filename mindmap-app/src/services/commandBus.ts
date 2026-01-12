@@ -1,5 +1,6 @@
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useDocumentStore, computeVisibleNodeIds } from '../store';
+import { useSettingsStore } from '../store/settingsStore';
 import {
   getDownNodeId,
   getFirstChildNodeId,
@@ -253,6 +254,10 @@ const registerDefaults = () => {
 
   registerCommandHandler('app.about.toggle', () => {
     useDocumentStore.getState().toggleAbout();
+  });
+
+  registerCommandHandler('app.settings.toggle', () => {
+    useSettingsStore.getState().toggleSettings();
   });
 
   registerCommandHandler('edit.undo', () => {

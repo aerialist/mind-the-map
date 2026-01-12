@@ -186,6 +186,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_keyring::init())
         .invoke_handler(tauri::generate_handler![
             save_document,
             read_document,
@@ -386,7 +388,6 @@ pub fn run() {
                 .build(app)?;
             let preferences_item = MenuItemBuilder::with_id("preferences", "Preferences...")
                 .accelerator("CmdOrCtrl+,")
-                .enabled(false)
                 .build(app)?;
 
             // On macOS, Quit and Preferences go in the app menu, not File menu
@@ -945,6 +946,7 @@ pub fn run() {
                 "find" => Some("view.find"),
                 "help_shortcuts" => Some("app.help.toggle"),
                 "about" => Some("app.about.toggle"),
+                "preferences" => Some("app.settings.toggle"),
                 _ => None,
             };
 
