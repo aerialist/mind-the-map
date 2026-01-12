@@ -353,6 +353,32 @@ const registerDefaults = () => {
     state.outdentNode(targetId);
   });
 
+  registerCommandHandler('node.moveUp', (args) => {
+    const state = useDocumentStore.getState();
+    const targetId = getNodeIdArg(args) ?? state.selectedNodeId;
+    if (!targetId) return;
+    const node = state.nodes[targetId];
+    if (!node || !node.parentId) return;
+    const parent = state.nodes[node.parentId];
+    if (!parent) return;
+    const nodeIndex = parent.childIds.indexOf(targetId);
+    if (nodeIndex <= 0) return;
+    state.moveNode(targetId, node.parentId, nodeIndex - 1);
+  });
+
+  registerCommandHandler('node.moveDown', (args) => {
+    const state = useDocumentStore.getState();
+    const targetId = getNodeIdArg(args) ?? state.selectedNodeId;
+    if (!targetId) return;
+    const node = state.nodes[targetId];
+    if (!node || !node.parentId) return;
+    const parent = state.nodes[node.parentId];
+    if (!parent) return;
+    const nodeIndex = parent.childIds.indexOf(targetId);
+    if (nodeIndex === -1 || nodeIndex >= parent.childIds.length - 1) return;
+    state.moveNode(targetId, node.parentId, nodeIndex + 2);
+  });
+
   registerCommandHandler('node.openIconPicker', (args) => {
     const state = useDocumentStore.getState();
     if (state.editingNodeId && !getNodeIdArg(args)) return;

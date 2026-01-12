@@ -464,6 +464,18 @@ pub fn run() {
                 .accelerator("CmdOrCtrl+Alt+A")
                 .enabled(false)
                 .build(app)?;
+            let nav_extend_up = MenuItemBuilder::with_id("nav_extend_up", "Extend Selection Up")
+                .accelerator("Shift+Up")
+                .enabled(false)
+                .build(app)?;
+            let nav_extend_down = MenuItemBuilder::with_id("nav_extend_down", "Extend Selection Down")
+                .accelerator("Shift+Down")
+                .enabled(false)
+                .build(app)?;
+            let nav_select_toggle = MenuItemBuilder::with_id("nav_select_toggle", "Select/Deselect Node")
+                .accelerator("CmdOrCtrl+Enter")
+                .enabled(false)
+                .build(app)?;
             let find_item = MenuItemBuilder::with_id("find", "Find...")
                 .accelerator("CmdOrCtrl+F")
                 .build(app)?;
@@ -504,6 +516,9 @@ pub fn run() {
                 .item(&PredefinedMenuItem::select_all(app, Some("Select All (in text)"))?)
                 .item(&select_all_siblings)
                 .item(&select_all_children)
+                .item(&nav_extend_up)
+                .item(&nav_extend_down)
+                .item(&nav_select_toggle)
                 .separator()
                 .item(&find_item)
                 .item(&find_next)
@@ -617,19 +632,15 @@ pub fn run() {
                 .build(app)?;
             let node_move_up = MenuItemBuilder::with_id("node_move_up", "Move Node Up")
                 .accelerator("CmdOrCtrl+Shift+Up")
-                .enabled(false)
                 .build(app)?;
             let node_move_down = MenuItemBuilder::with_id("node_move_down", "Move Node Down")
                 .accelerator("CmdOrCtrl+Shift+Down")
-                .enabled(false)
                 .build(app)?;
             let node_move_left = MenuItemBuilder::with_id("node_move_left", "Move Node Left (Outdent)")
                 .accelerator("CmdOrCtrl+Shift+Left")
-                .enabled(false)
                 .build(app)?;
             let node_move_right = MenuItemBuilder::with_id("node_move_right", "Move Node Right (Indent)")
                 .accelerator("CmdOrCtrl+Shift+Right")
-                .enabled(false)
                 .build(app)?;
             let node_toggle_collapse = MenuItemBuilder::with_id("node_toggle_collapse", "Expand/Collapse")
                 .accelerator("Space")
@@ -695,18 +706,6 @@ pub fn run() {
             let nav_last_child = MenuItemBuilder::with_id("nav_last_child", "Jump to Last Child")
                 .accelerator("CmdOrCtrl+Right")
                 .build(app)?;
-            let nav_extend_up = MenuItemBuilder::with_id("nav_extend_up", "Extend Selection Up")
-                .accelerator("Shift+Up")
-                .enabled(false)
-                .build(app)?;
-            let nav_extend_down = MenuItemBuilder::with_id("nav_extend_down", "Extend Selection Down")
-                .accelerator("Shift+Down")
-                .enabled(false)
-                .build(app)?;
-            let nav_select_toggle = MenuItemBuilder::with_id("nav_select_toggle", "Select/Deselect Node")
-                .accelerator("CmdOrCtrl+Enter")
-                .enabled(false)
-                .build(app)?;
 
             let navigate_menu = SubmenuBuilder::new(app, "Navigate")
                 .item(&nav_sibling_up)
@@ -717,11 +716,6 @@ pub fn run() {
                 .item(&nav_first_sibling)
                 .item(&nav_last_sibling)
                 .item(&nav_last_child)
-                .separator()
-                .item(&nav_extend_up)
-                .item(&nav_extend_down)
-                .separator()
-                .item(&nav_select_toggle)
                 .build()?;
 
             // === View menu items ===
@@ -928,6 +922,10 @@ pub fn run() {
                 "node_indent" => Some("node.indent"),
                 "node_outdent" => Some("node.outdent"),
                 "node_toggle_collapse" => Some("node.toggleCollapse"),
+                "node_move_up" => Some("node.moveUp"),
+                "node_move_down" => Some("node.moveDown"),
+                "node_move_left" => Some("node.outdent"),
+                "node_move_right" => Some("node.indent"),
                 "nav_sibling_up" => Some("navigate.siblingUp"),
                 "nav_sibling_down" => Some("navigate.siblingDown"),
                 "nav_first_child" => Some("navigate.firstChild"),

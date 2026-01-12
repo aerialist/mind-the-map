@@ -149,6 +149,11 @@ export const useKeyboardNavigation = () => {
 
       switch (e.key) {
         case 'ArrowUp':
+          if (isMod && e.shiftKey && !e.altKey) {
+            e.preventDefault();
+            dispatch('node.moveUp');
+            return;
+          }
           if (isMod && !e.shiftKey && !e.altKey) {
             e.preventDefault();
             dispatch('navigate.firstSibling');
@@ -159,6 +164,11 @@ export const useKeyboardNavigation = () => {
           break;
 
         case 'ArrowDown':
+          if (isMod && e.shiftKey && !e.altKey) {
+            e.preventDefault();
+            dispatch('node.moveDown');
+            return;
+          }
           if (isMod && !e.shiftKey && !e.altKey) {
             e.preventDefault();
             dispatch('navigate.lastSibling');
@@ -169,12 +179,22 @@ export const useKeyboardNavigation = () => {
           break;
 
         case 'ArrowLeft':
+          if (isMod && e.shiftKey && !e.altKey) {
+            e.preventDefault();
+            dispatch('node.outdent');
+            return;
+          }
           e.preventDefault();
           // Go to parent
           nextNodeId = getParentNodeId(nodes, selectedNodeId);
           break;
 
         case 'ArrowRight':
+          if (isMod && e.shiftKey && !e.altKey) {
+            e.preventDefault();
+            dispatch('node.indent');
+            return;
+          }
           if (isMod && !e.shiftKey && !e.altKey) {
             e.preventDefault();
             dispatch('navigate.lastChild');
