@@ -253,7 +253,7 @@ Mod = Cmd on macOS, Ctrl on Windows/Linux.
 - Copy/Cut/Paste: Standard shortcuts (`Mod+C`/`Mod+X`/`Mod+V`) with hierarchy preservation
 - Paste as child: `Mod+Shift+V`
 - External paste: Indented text and HTML lists become structured nodes
-- Miro export: `Mod+Shift+M` copies in Miro-compatible table format
+- Miro export: `Mod+Shift+C` copies in Miro-compatible table format
 
 ### File Operations
 - New/Open/Save: `Mod+N`, `Mod+O`, `Mod+S`

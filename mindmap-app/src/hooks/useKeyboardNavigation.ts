@@ -73,8 +73,8 @@ export const useKeyboardNavigation = () => {
         return;
       }
 
-      // Copy for Miro (Ctrl+Shift+M) - exports as table format for Miro's paste dialog
-      if (isMod && e.shiftKey && (e.key === 'm' || e.key === 'M')) {
+      // Copy for Miro (Ctrl/Cmd+Shift+C) - exports as table format for Miro's paste dialog
+      if (isMod && e.shiftKey && (e.key === 'c' || e.key === 'C')) {
         if (!editingNodeId && selectedNodeIds.length > 0) {
           e.preventDefault();
           dispatch('edit.copyForMiro');

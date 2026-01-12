@@ -212,7 +212,6 @@ In-app shortcuts listing is maintained in `mindmap-app/src/components/Help/HelpD
 | Mod+T | Tag | (planned) |
 | Mod+Shift+N | Note | (planned) |
 | Mod+Shift+I | Icon... | |
-| Mod+Shift+C | Checkbox | (planned) |
 | Mod+Shift+K | Color/Style... | (planned) |
 | Mod+Shift+P | Priority | (planned) |
 
@@ -274,7 +273,7 @@ In-app shortcuts listing is maintained in `mindmap-app/src/components/Help/HelpD
 | Escape | Save and stop editing | |
 | Ctrl+Escape | Cancel editing | Discards changes |
 | Shift+Space | Smart collapse all (3-state) | |
-| Mod+Shift+M | Copy for Miro | Table format |
+| Mod+Shift+C | Copy for Miro | Table format |
 
 ### Multi-Selection
 | Action | Result |
@@ -318,7 +317,7 @@ When pasting from external apps:
 2. Parse indented plain text (tabs/spaces → hierarchy)
 3. Fall back to flat text (each line = sibling node)
 
-### Miro Export (Ctrl+Shift+M)
+### Miro Export (Ctrl+Shift+C)
 Copies as TSV + HTML table format:
 - Column 1: Node text
 - Column 2: Parent index (for hierarchy)

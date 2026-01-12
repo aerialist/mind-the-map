@@ -439,6 +439,9 @@ pub fn run() {
             let copy_item = MenuItemBuilder::with_id("copy", "Copy")
                 .accelerator("CmdOrCtrl+C")
                 .build(app)?;
+            let copy_for_miro = MenuItemBuilder::with_id("copy_for_miro", "Copy for Miro")
+                .accelerator("CmdOrCtrl+Shift+C")
+                .build(app)?;
             let paste_item = MenuItemBuilder::with_id("paste", "Paste")
                 .accelerator("CmdOrCtrl+V")
                 .build(app)?;
@@ -505,6 +508,7 @@ pub fn run() {
                 .separator()
                 .item(&cut_item)
                 .item(&copy_item)
+                .item(&copy_for_miro)
                 .item(&paste_item)
                 .item(&paste_as_child)
                 .separator()
@@ -556,10 +560,6 @@ pub fn run() {
             let insert_icon = MenuItemBuilder::with_id("insert_icon", "Icon...")
                 .accelerator("CmdOrCtrl+Shift+I")
                 .build(app)?;
-            let insert_checkbox = MenuItemBuilder::with_id("insert_checkbox", "Checkbox")
-                .accelerator("CmdOrCtrl+Shift+C")
-                .enabled(false)
-                .build(app)?;
             let insert_color_style = MenuItemBuilder::with_id("insert_color_style", "Color/Style...")
                 .accelerator("CmdOrCtrl+Shift+K")
                 .enabled(false)
@@ -581,7 +581,6 @@ pub fn run() {
                 .item(&insert_note)
                 .separator()
                 .item(&insert_icon)
-                .item(&insert_checkbox)
                 .item(&insert_color_style)
                 .item(&insert_priority)
                 .build()?;
@@ -912,6 +911,7 @@ pub fn run() {
                 "redo" => Some("edit.redo"),
                 "cut" => Some("edit.cut"),
                 "copy" => Some("edit.copy"),
+                "copy_for_miro" => Some("edit.copyForMiro"),
                 "paste" => Some("edit.paste"),
                 "paste_as_child" => Some("edit.paste"),
                 "duplicate_node" => Some("node.duplicate"),
