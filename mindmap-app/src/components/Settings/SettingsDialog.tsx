@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Settings, Palette, Key } from 'lucide-react';
+import { Settings, Palette, Key, ListTree } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
 import { GeneralTab } from './GeneralTab';
 import { AppearanceTab } from './AppearanceTab';
 import { ApiKeysTab } from './ApiKeysTab';
+import { WorkflowyTab } from './WorkflowyTab';
 
-type TabId = 'general' | 'appearance' | 'apikeys';
+type TabId = 'general' | 'appearance' | 'workflowy' | 'apikeys';
 
 interface Tab {
   id: TabId;
@@ -16,6 +17,7 @@ interface Tab {
 const tabs: Tab[] = [
   { id: 'general', label: 'General', icon: <Settings className="w-4 h-4" /> },
   { id: 'appearance', label: 'Appearance', icon: <Palette className="w-4 h-4" /> },
+  { id: 'workflowy', label: 'Workflowy', icon: <ListTree className="w-4 h-4" /> },
   { id: 'apikeys', label: 'API Keys', icon: <Key className="w-4 h-4" /> },
 ];
 
@@ -125,6 +127,7 @@ export function SettingsDialog() {
         <div className="p-6 min-h-[300px] max-h-[60vh] overflow-y-auto">
           {activeTab === 'general' && <GeneralTab />}
           {activeTab === 'appearance' && <AppearanceTab />}
+          {activeTab === 'workflowy' && <WorkflowyTab />}
           {activeTab === 'apikeys' && <ApiKeysTab />}
         </div>
 

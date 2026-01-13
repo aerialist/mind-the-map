@@ -21,11 +21,16 @@ export interface MindmapSettings {
   animationsEnabled: boolean;
 }
 
+export interface WorkflowySettings {
+  targetBulletId: string; // projectid like "8371678f-2aa6-1d44-8073-50274ebb91fa"
+}
+
 export interface AppSettings {
   version: number;
   general: GeneralSettings;
   appearance: AppearanceSettings;
   mindmap: MindmapSettings;
+  workflowy: WorkflowySettings;
   recentFiles: string[];
 }
 
@@ -43,6 +48,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   mindmap: {
     defaultZoom: 1.0,
     animationsEnabled: true,
+  },
+  workflowy: {
+    targetBulletId: '',
   },
   recentFiles: [],
 };

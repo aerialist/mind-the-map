@@ -15,6 +15,7 @@ import {
   type GeneralSettings,
   type AppearanceSettings,
   type MindmapSettings,
+  type WorkflowySettings,
   DEFAULT_SETTINGS,
   SETTINGS_VERSION,
   MAX_RECENT_FILES,
@@ -37,6 +38,7 @@ async function getStore(): Promise<Store | null> {
         general: DEFAULT_SETTINGS.general,
         appearance: DEFAULT_SETTINGS.appearance,
         mindmap: DEFAULT_SETTINGS.mindmap,
+        workflowy: DEFAULT_SETTINGS.workflowy,
         recentFiles: [],
       },
       autoSave: 100, // Auto-save with 100ms debounce
@@ -68,6 +70,7 @@ export async function loadSettings(): Promise<AppSettings> {
     general: await s.get<GeneralSettings>('general') ?? DEFAULT_SETTINGS.general,
     appearance: await s.get<AppearanceSettings>('appearance') ?? DEFAULT_SETTINGS.appearance,
     mindmap: await s.get<MindmapSettings>('mindmap') ?? DEFAULT_SETTINGS.mindmap,
+    workflowy: await s.get<WorkflowySettings>('workflowy') ?? DEFAULT_SETTINGS.workflowy,
     recentFiles: await s.get<string[]>('recentFiles') ?? [],
   };
 }
@@ -103,6 +106,17 @@ export async function updateMindmapSettings(values: Partial<MindmapSettings>): P
 
   const current = await s.get<MindmapSettings>('mindmap') ?? DEFAULT_SETTINGS.mindmap;
   await s.set('mindmap', { ...current, ...values });
+}
+
+/**
+ * Update workflowy settings
+ */
+export async function updateWorkflowySettings(values: Partial<WorkflowySettings>): Promise<void> {
+  const s = await getStore();
+  if (!s) return;
+
+  const current = await s.get<WorkflowySettings>('workflowy') ?? DEFAULT_SETTINGS.workflowy;
+  await s.set('workflowy', { ...current, ...values });
 }
 
 /**
@@ -157,5 +171,6 @@ export async function resetSettings(): Promise<void> {
   await s.set('general', DEFAULT_SETTINGS.general);
   await s.set('appearance', DEFAULT_SETTINGS.appearance);
   await s.set('mindmap', DEFAULT_SETTINGS.mindmap);
+  await s.set('workflowy', DEFAULT_SETTINGS.workflowy);
   // Note: We don't clear recentFiles on reset
 }

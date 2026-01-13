@@ -29,12 +29,6 @@ const apiKeyConfigs: ApiKeyConfig[] = [
     description: 'For Claude AI features (coming soon)',
     placeholder: 'sk-ant-...',
   },
-  {
-    name: 'workflowy',
-    label: 'Workflowy API Key',
-    description: 'For Workflowy import/export integration',
-    placeholder: 'Enter API key...',
-  },
 ];
 
 export function ApiKeysTab() {

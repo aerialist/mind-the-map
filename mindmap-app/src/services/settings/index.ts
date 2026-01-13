@@ -11,6 +11,7 @@ export type {
   GeneralSettings,
   AppearanceSettings,
   MindmapSettings,
+  WorkflowySettings,
 } from './types';
 export { DEFAULT_SETTINGS, SETTINGS_VERSION, MAX_RECENT_FILES } from './types';
 
@@ -20,6 +21,7 @@ export {
   updateGeneralSettings,
   updateAppearanceSettings,
   updateMindmapSettings,
+  updateWorkflowySettings,
   addRecentFile,
   removeRecentFile,
   clearRecentFiles,

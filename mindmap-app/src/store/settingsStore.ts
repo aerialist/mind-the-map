@@ -9,12 +9,14 @@ import type {
   GeneralSettings,
   AppearanceSettings,
   MindmapSettings,
+  WorkflowySettings,
 } from '../services/settings/types';
 import {
   loadSettings,
   updateGeneralSettings as persistGeneralSettings,
   updateAppearanceSettings as persistAppearanceSettings,
   updateMindmapSettings as persistMindmapSettings,
+  updateWorkflowySettings as persistWorkflowySettings,
   addRecentFile as persistAddRecentFile,
   removeRecentFile as persistRemoveRecentFile,
   clearRecentFiles as persistClearRecentFiles,
@@ -32,6 +34,7 @@ interface SettingsState {
   updateGeneralSettings: (values: Partial<GeneralSettings>) => Promise<void>;
   updateAppearanceSettings: (values: Partial<AppearanceSettings>) => Promise<void>;
   updateMindmapSettings: (values: Partial<MindmapSettings>) => Promise<void>;
+  updateWorkflowySettings: (values: Partial<WorkflowySettings>) => Promise<void>;
   addRecentFile: (filePath: string) => Promise<void>;
   removeRecentFile: (filePath: string) => Promise<void>;
   clearRecentFiles: () => Promise<void>;
@@ -76,6 +79,13 @@ export const useSettingsStore = create<SettingsState>()(
       await persistMindmapSettings(values);
       set((state) => {
         state.settings.mindmap = { ...state.settings.mindmap, ...values };
+      });
+    },
+
+    updateWorkflowySettings: async (values) => {
+      await persistWorkflowySettings(values);
+      set((state) => {
+        state.settings.workflowy = { ...state.settings.workflowy, ...values };
       });
     },
 
