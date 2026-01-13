@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Eye, EyeOff, Check, Trash2, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Check, Trash2, AlertCircle, RefreshCw, Download } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
+import { useDocumentStore } from '../../store/documentStore';
 import {
   getApiKey,
   setApiKey,
@@ -8,10 +9,17 @@ import {
   hasApiKey,
   isKeyringAvailable,
 } from '../../services/settings';
+import {
+  testWorkflowyConnection,
+  importFromWorkflowy,
+  WorkflowyError,
+} from '../../services/workflowy';
 
 export function WorkflowyTab() {
   const settings = useSettingsStore((s) => s.settings);
   const updateWorkflowySettings = useSettingsStore((s) => s.updateWorkflowySettings);
+  const closeSettings = useSettingsStore((s) => s.closeSettings);
+  const loadDocument = useDocumentStore((s) => s.loadDocument);
 
   const [keyringAvailable, setKeyringAvailable] = useState<boolean | null>(null);
 
@@ -24,6 +32,16 @@ export function WorkflowyTab() {
 
   // Target Bullet ID state
   const [targetBulletId, setTargetBulletId] = useState(settings.workflowy.targetBulletId);
+
+  // Connection test state
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
+  // Import state
+  const [isImporting, setIsImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [importMessage, setImportMessage] = useState<string | null>(null);
 
   useEffect(() => {
     isKeyringAvailable().then(setKeyringAvailable);
@@ -76,6 +94,66 @@ export function WorkflowyTab() {
     if (currentValue) {
       setApiKeyValue(currentValue);
       setShowApiKey(true);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    setIsTestingConnection(true);
+    setConnectionStatus('idle');
+    setConnectionError(null);
+
+    try {
+      await testWorkflowyConnection();
+      setConnectionStatus('success');
+    } catch (error) {
+      setConnectionStatus('error');
+      if (error instanceof WorkflowyError) {
+        setConnectionError(error.message);
+      } else {
+        setConnectionError('Failed to connect to Workflowy');
+      }
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
+  const handleImport = async () => {
+    // Ensure target bullet ID is saved first
+    handleTargetBulletIdBlur();
+
+    const bulletId = targetBulletId.trim().replace(/^#/, '');
+    if (!bulletId) {
+      setImportStatus('error');
+      setImportMessage('Please enter a target bullet ID');
+      return;
+    }
+
+    setIsImporting(true);
+    setImportStatus('idle');
+    setImportMessage(null);
+
+    try {
+      const result = await importFromWorkflowy(bulletId);
+
+      // Load the imported data as a new document (no file path = unsaved)
+      loadDocument(result.nodes, result.rootId, null);
+
+      setImportStatus('success');
+      setImportMessage(`Imported ${result.nodeCount} nodes: "${result.rootText}"`);
+
+      // Close settings dialog after a short delay to show success message
+      setTimeout(() => {
+        closeSettings();
+      }, 1000);
+    } catch (error) {
+      setImportStatus('error');
+      if (error instanceof WorkflowyError) {
+        setImportMessage(error.message);
+      } else {
+        setImportMessage('Failed to import from Workflowy');
+      }
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -193,6 +271,41 @@ export function WorkflowyTab() {
             )}
           </div>
         )}
+
+        {/* Test Connection Button */}
+        {isApiKeySet && keyringAvailable && (
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              onClick={handleTestConnection}
+              disabled={isTestingConnection}
+              className="
+                flex items-center gap-2 px-3 py-2 text-sm rounded-md
+                border border-gray-300 dark:border-gray-600
+                text-gray-700 dark:text-gray-300
+                hover:bg-gray-100 dark:hover:bg-gray-700
+                disabled:opacity-50 disabled:cursor-not-allowed
+                transition-colors
+              "
+            >
+              <RefreshCw className={`w-4 h-4 ${isTestingConnection ? 'animate-spin' : ''}`} />
+              {isTestingConnection ? 'Testing...' : 'Test Connection'}
+            </button>
+
+            {connectionStatus === 'success' && (
+              <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
+                <Check className="w-4 h-4" />
+                Connected successfully
+              </span>
+            )}
+
+            {connectionStatus === 'error' && (
+              <span className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
+                <AlertCircle className="w-4 h-4" />
+                {connectionError || 'Connection failed'}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Target Bullet ID Section */}
@@ -226,6 +339,56 @@ export function WorkflowyTab() {
           Example URL: <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">workflowy.com/#/8371678f-2aa6-1d44-8073-50274ebb91fa</code>
         </p>
       </div>
+
+      {/* Import Section */}
+      {isApiKeySet && keyringAvailable && (
+        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3">
+          <div>
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white">
+              Import from Workflowy
+            </h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Import the target bullet and all its children as a new document.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleImport}
+              disabled={isImporting || !targetBulletId.trim()}
+              className="
+                flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md
+                bg-blue-500 hover:bg-blue-600 text-white
+                disabled:opacity-50 disabled:cursor-not-allowed
+                transition-colors
+              "
+            >
+              <Download className={`w-4 h-4 ${isImporting ? 'animate-pulse' : ''}`} />
+              {isImporting ? 'Importing...' : 'Import'}
+            </button>
+
+            {importStatus === 'success' && (
+              <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
+                <Check className="w-4 h-4" />
+                {importMessage}
+              </span>
+            )}
+
+            {importStatus === 'error' && (
+              <span className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
+                <AlertCircle className="w-4 h-4" />
+                {importMessage}
+              </span>
+            )}
+          </div>
+
+          {!targetBulletId.trim() && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Enter a target bullet ID above to enable import.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

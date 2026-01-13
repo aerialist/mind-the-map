@@ -149,6 +149,51 @@ fn get_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
+// HTTP proxy for external API calls (avoids CORS)
+#[derive(Clone, serde::Deserialize)]
+struct HttpRequest {
+    url: String,
+    method: String,
+    headers: std::collections::HashMap<String, String>,
+    body: Option<String>,
+}
+
+#[derive(Clone, Serialize)]
+struct HttpResponse {
+    status: u16,
+    body: String,
+}
+
+#[tauri::command]
+async fn http_request(request: HttpRequest) -> Result<HttpResponse, String> {
+    let client = reqwest::Client::new();
+
+    let method = match request.method.to_uppercase().as_str() {
+        "GET" => reqwest::Method::GET,
+        "POST" => reqwest::Method::POST,
+        "PUT" => reqwest::Method::PUT,
+        "DELETE" => reqwest::Method::DELETE,
+        "PATCH" => reqwest::Method::PATCH,
+        _ => return Err(format!("Unsupported HTTP method: {}", request.method)),
+    };
+
+    let mut req = client.request(method, &request.url);
+
+    for (key, value) in request.headers {
+        req = req.header(&key, &value);
+    }
+
+    if let Some(body) = request.body {
+        req = req.body(body);
+    }
+
+    let response = req.send().await.map_err(|e| format!("HTTP request failed: {}", e))?;
+    let status = response.status().as_u16();
+    let body = response.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+
+    Ok(HttpResponse { status, body })
+}
+
 // Get platform information
 #[tauri::command]
 fn get_platform_info() -> String {
@@ -195,7 +240,8 @@ pub fn run() {
             save_pdf,
             get_app_version,
             get_platform_info,
-            window_activated
+            window_activated,
+            http_request
         ])
         .setup(|app| {
             // Handle file opens from macOS (when .mindmap file is double-clicked)
