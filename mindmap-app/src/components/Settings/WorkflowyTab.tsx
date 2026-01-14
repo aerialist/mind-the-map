@@ -192,15 +192,20 @@ export function WorkflowyTab() {
       // Always update the document store with modified nodes (sync metadata may have been updated)
       useDocumentStore.getState().loadDocument(result.updatedNodes, rootId, useDocumentStore.getState().currentFilePath);
 
+      const summary = `${result.updated} updated, ${result.created} created, ${result.deleted} deleted, ${result.moved} moved.`;
+      const warningDetails = result.warnings.length > 0
+        ? ` ${result.warnings.length} warnings. First: ${result.warnings[0].warning}`
+        : '';
+
       if (result.errors.length > 0) {
         setSyncStatus('error');
         // Show the first error for debugging
         const firstError = result.errors[0];
         console.error('Push errors:', result.errors);
-        setSyncMessage(`Pushed with errors: ${result.updated} updated, ${result.created} created, ${result.deleted} deleted. ${result.errors.length} errors. First: ${firstError.error}`);
+        setSyncMessage(`Pushed with errors: ${summary} ${result.errors.length} errors. First: ${firstError.error}${warningDetails}`);
       } else {
         setSyncStatus('success');
-        setSyncMessage(`Pushed successfully: ${result.updated} updated, ${result.created} created, ${result.deleted} deleted.`);
+        setSyncMessage(`Pushed successfully: ${summary}${warningDetails}`);
       }
     } catch (error) {
       setSyncStatus('error');

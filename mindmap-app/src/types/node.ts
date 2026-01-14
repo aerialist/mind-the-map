@@ -17,6 +17,9 @@ export interface WorkflowySyncMetadata {
   lastSyncedAt: number; // Unix timestamp of last sync
   lastModifiedAt: number; // Workflowy's modifiedAt timestamp
   conflict?: boolean; // Conflict detected during push/pull
+  lastSyncedParentId?: string | null; // Workflowy parent ID at last sync
+  lastSyncedPosition?: 'top' | 'bottom'; // Position at last sync (approximate)
+  lastSyncedSiblingIndex?: number; // Index among synced siblings at last sync
 }
 
 export interface Node {

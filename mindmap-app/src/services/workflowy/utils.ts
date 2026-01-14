@@ -117,6 +117,21 @@ export function workflowyTreeToMtmNodes(
 
   processNode(tree, null);
 
+  // Record last synced parent/position for move detection
+  for (const [nodeId, node] of Object.entries(nodes)) {
+    if (!node.workflowySync) continue;
+    node.workflowySync.lastSyncedParentId = node.parentId;
+
+    if (node.parentId) {
+      const parent = nodes[node.parentId];
+      if (parent) {
+        const index = parent.childIds.indexOf(nodeId);
+        node.workflowySync.lastSyncedPosition = index === 0 ? 'top' : 'bottom';
+        node.workflowySync.lastSyncedSiblingIndex = index;
+      }
+    }
+  }
+
   return {
     rootId: tree.id,
     nodes,
@@ -209,7 +224,9 @@ export interface SyncResult {
   updated: number;
   created: number;
   deleted: number;
+  moved: number;
   errors: Array<{ nodeId: string; error: string }>;
+  warnings: Array<{ nodeId: string; warning: string }>;
 }
 
 /**
@@ -230,7 +247,9 @@ export async function pushToWorkflowy(
     updated: 0,
     created: 0,
     deleted: 0,
+    moved: 0,
     errors: [],
+    warnings: [],
     updatedNodes: {},
   };
 
@@ -319,8 +338,9 @@ export async function pushToWorkflowy(
         const parentNode = node.parentId ? mutableNodes[node.parentId] : null;
         let position: 'top' | 'bottom' = 'bottom'; // Default to bottom (most common: add as last child)
 
+        let siblingIndex: number | null = null;
         if (parentNode) {
-          const siblingIndex = parentNode.childIds.indexOf(node.id);
+          siblingIndex = parentNode.childIds.indexOf(node.id);
           // If this is the first child (index 0), use 'top'
           // Otherwise use 'bottom' (will be added after all existing children)
           if (siblingIndex === 0) {
@@ -345,6 +365,9 @@ export async function pushToWorkflowy(
           workflowyId: newNodeId,
           lastSyncedAt: Date.now(),
           lastModifiedAt: createdNode.modifiedAt,
+          lastSyncedParentId: parentWfId,
+          lastSyncedPosition: position,
+          lastSyncedSiblingIndex: siblingIndex ?? undefined,
         };
         clearConflict(node);
 
@@ -361,6 +384,22 @@ export async function pushToWorkflowy(
         const wfId = node.workflowySync.workflowyId;
         const text = node.content.type === 'text' ? node.content.text : '[Image]';
         const isDone = node.icons?.some(icon => icon.type === 'status' && icon.value === 'done') ?? false;
+        const parentNode = node.parentId ? mutableNodes[node.parentId] : null;
+        const parentSync = parentNode?.workflowySync || null;
+        const desiredParentWfId = node.parentId ? parentSync?.workflowyId : null;
+        let desiredPosition: 'top' | 'bottom' | null = null;
+        let siblingIndex: number | null = null;
+        let syncedSiblingCount = 0;
+        if (parentNode) {
+          const syncedSiblingIds = parentNode.childIds.filter((childId) => {
+            return mutableNodes[childId]?.workflowySync;
+          });
+          syncedSiblingCount = syncedSiblingIds.length;
+          siblingIndex = syncedSiblingIds.indexOf(node.id);
+          if (siblingIndex !== -1) {
+            desiredPosition = siblingIndex === 0 ? 'top' : 'bottom';
+          }
+        }
 
         // Check if local content differs from what we last synced
         // We track this by comparing current local state vs what Workflowy had at last sync
@@ -370,19 +409,53 @@ export async function pushToWorkflowy(
         const textNeedsUpdate = wfNode.name !== text;
         const wasDone = wfNode.completedAt !== null;
         const completionNeedsUpdate = isDone !== wasDone;
+        const lastSyncedParentId = node.workflowySync.lastSyncedParentId ?? wfNode.parent_id ?? null;
+        const lastSyncedPosition = node.workflowySync.lastSyncedPosition ?? null;
+        const lastSyncedSiblingIndex = node.workflowySync.lastSyncedSiblingIndex;
+        const parentChanged = node.parentId ? desiredParentWfId !== lastSyncedParentId : false;
+        const positionChanged = desiredPosition !== null
+          && lastSyncedPosition !== null
+          && desiredPosition !== lastSyncedPosition;
+        const orderChanged = siblingIndex !== null
+          ? (lastSyncedSiblingIndex !== undefined
+            ? siblingIndex !== lastSyncedSiblingIndex
+            : positionChanged)
+          : false;
+        const orderLossy = desiredPosition === 'bottom'
+          && siblingIndex !== null
+          && siblingIndex !== -1
+          && siblingIndex < syncedSiblingCount - 1;
+        let moved = false;
+        let contentUpdated = false;
 
         // If nothing needs to change locally, skip this node entirely
-        if (!textNeedsUpdate && !completionNeedsUpdate) {
+        if (!textNeedsUpdate && !completionNeedsUpdate && !parentChanged && !orderChanged) {
           // Just sync metadata - no actual update needed
           node.workflowySync.lastModifiedAt = wfNode.modifiedAt;
           node.workflowySync.lastSyncedAt = Date.now();
+          node.workflowySync.lastSyncedParentId = desiredParentWfId ?? null;
+          if (desiredPosition) {
+            node.workflowySync.lastSyncedPosition = desiredPosition;
+          }
+          if (siblingIndex !== null && siblingIndex !== -1) {
+            node.workflowySync.lastSyncedSiblingIndex = siblingIndex;
+          }
           clearConflict(node);
           // Don't count as "updated" since nothing actually changed
           continue;
         }
 
-        // There are local changes - check for conflicts with remote
-        if (wfNode.modifiedAt > node.workflowySync.lastModifiedAt) {
+        if ((parentChanged || orderChanged) && node.parentId && !parentSync) {
+          result.errors.push({
+            nodeId: node.id,
+            error: 'Parent node has not been synced to Workflowy yet.',
+          });
+          continue;
+        }
+
+        // There are local content changes - check for conflicts with remote
+        if ((textNeedsUpdate || completionNeedsUpdate)
+          && wfNode.modifiedAt > node.workflowySync.lastModifiedAt) {
           // Remote was modified since our last sync - potential conflict
           // Check if remote content is different from what we have
           const remoteHasChanges = wfNode.name !== text || wasDone !== isDone;
@@ -399,24 +472,50 @@ export async function pushToWorkflowy(
           // Remote timestamp is newer but content matches - safe to proceed
         }
 
+        if ((parentChanged || orderChanged) && desiredParentWfId && desiredPosition) {
+          if (orderLossy) {
+            result.warnings.push({
+              nodeId: node.id,
+              warning: 'Local reordering can only be expressed as top or bottom in Workflowy; moving to bottom.',
+            });
+          }
+          await client.moveNode(wfId, desiredParentWfId, desiredPosition);
+          moved = true;
+        }
+
         // Apply local changes to Workflowy
         if (textNeedsUpdate) {
           await client.updateNode(wfId, { name: text });
+          contentUpdated = true;
         }
 
         if (isDone && !wasDone) {
           await client.completeNode(wfId);
+          contentUpdated = true;
         } else if (!isDone && wasDone) {
           await client.uncompleteNode(wfId);
+          contentUpdated = true;
         }
 
         // Fetch updated node to get new modifiedAt timestamp
         const updatedNode = await client.getNode(wfId);
         node.workflowySync.lastModifiedAt = updatedNode.modifiedAt;
         node.workflowySync.lastSyncedAt = Date.now();
+        node.workflowySync.lastSyncedParentId = desiredParentWfId ?? null;
+        if (desiredPosition) {
+          node.workflowySync.lastSyncedPosition = desiredPosition;
+        }
+        if (siblingIndex !== null && siblingIndex !== -1) {
+          node.workflowySync.lastSyncedSiblingIndex = siblingIndex;
+        }
         clearConflict(node);
 
-        result.updated++;
+        if (contentUpdated) {
+          result.updated++;
+        }
+        if (moved) {
+          result.moved++;
+        }
       } catch (error) {
         result.errors.push({
           nodeId: node.id,
@@ -601,6 +700,21 @@ export async function pullFromWorkflowy(
     }
 
     parent.childIds = nextChildIds;
+  }
+
+  // Refresh last synced parent/position metadata for non-conflict Workflowy nodes
+  for (const [nodeId, node] of Object.entries(mergedNodes)) {
+    if (!node.workflowySync || node.workflowySync.conflict) continue;
+
+    node.workflowySync.lastSyncedParentId = node.parentId;
+    if (node.parentId) {
+      const parent = mergedNodes[node.parentId];
+      if (parent) {
+        const index = parent.childIds.indexOf(nodeId);
+        node.workflowySync.lastSyncedPosition = index === 0 ? 'top' : 'bottom';
+        node.workflowySync.lastSyncedSiblingIndex = index;
+      }
+    }
   }
 
   return { nodes: mergedNodes, conflicts };
