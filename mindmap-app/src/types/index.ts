@@ -1,6 +1,6 @@
 // Type exports
 
-export type { Node, NodeContent, NodeMap, Position } from './node';
+export type { Node, NodeContent, NodeMap, Position, WorkflowySyncMetadata } from './node';
 export type {
   Document,
   DocumentMetadata,

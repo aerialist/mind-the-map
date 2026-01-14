@@ -12,6 +12,12 @@ export type NodeContent =
   | { type: 'text'; text: string }
   | { type: 'image'; url: string }; // Future: support for images
 
+export interface WorkflowySyncMetadata {
+  workflowyId: string; // Original Workflowy node ID
+  lastSyncedAt: number; // Unix timestamp of last sync
+  lastModifiedAt: number; // Workflowy's modifiedAt timestamp
+}
+
 export interface Node {
   id: string;
   parentId: string | null;
@@ -21,6 +27,7 @@ export interface Node {
   isCollapsed: boolean;
   icons?: NodeIcon[]; // Optional array of icons for the node
   link?: string; // Optional link (URL or file path)
+  workflowySync?: WorkflowySyncMetadata; // Workflowy sync metadata (if imported from Workflowy)
 }
 
 export type NodeMap = Record<string, Node>;

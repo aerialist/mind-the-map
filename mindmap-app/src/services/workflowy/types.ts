@@ -81,7 +81,7 @@ export interface CreateNodeRequest {
   parent_id: WorkflowyParentId;
   name: string;
   note?: string;
-  priority?: number;
+  position?: WorkflowyPosition;
 }
 
 /**

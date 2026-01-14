@@ -13,8 +13,10 @@ export {
   stripWorkflowyMarkdown,
   parseWorkflowyDates,
   importFromWorkflowy,
+  pushToWorkflowy,
+  pullFromWorkflowy,
 } from './utils';
-export type { WorkflowyImportResult } from './utils';
+export type { WorkflowyImportResult, SyncResult } from './utils';
 export type {
   // Node types
   WorkflowyNode,

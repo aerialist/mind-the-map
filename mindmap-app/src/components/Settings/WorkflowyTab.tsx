@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Eye, EyeOff, Check, Trash2, AlertCircle, RefreshCw, Download } from 'lucide-react';
+import { Eye, EyeOff, Check, Trash2, AlertCircle, RefreshCw, Download, Upload, ArrowDownUp } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useDocumentStore } from '../../store/documentStore';
 import {
@@ -12,6 +12,8 @@ import {
 import {
   testWorkflowyConnection,
   importFromWorkflowy,
+  pushToWorkflowy,
+  pullFromWorkflowy,
   WorkflowyError,
 } from '../../services/workflowy';
 
@@ -42,6 +44,11 @@ export function WorkflowyTab() {
   const [isImporting, setIsImporting] = useState(false);
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [importMessage, setImportMessage] = useState<string | null>(null);
+
+  // Sync state
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   useEffect(() => {
     isKeyringAvailable().then(setKeyringAvailable);
@@ -154,6 +161,105 @@ export function WorkflowyTab() {
       }
     } finally {
       setIsImporting(false);
+    }
+  };
+
+  const handlePushToWorkflowy = async () => {
+    const nodes = useDocumentStore.getState().nodes;
+    const rootId = useDocumentStore.getState().rootId;
+
+    if (!rootId) {
+      setSyncStatus('error');
+      setSyncMessage('No document to sync');
+      return;
+    }
+
+    // Check if document has Workflowy sync metadata
+    const rootNode = nodes[rootId];
+    if (!rootNode?.workflowySync) {
+      setSyncStatus('error');
+      setSyncMessage('This document was not imported from Workflowy. Use Import first.');
+      return;
+    }
+
+    setIsSyncing(true);
+    setSyncStatus('idle');
+    setSyncMessage(null);
+
+    try {
+      const result = await pushToWorkflowy(nodes, rootId);
+
+      // Always update the document store with modified nodes (sync metadata may have been updated)
+      useDocumentStore.getState().loadDocument(result.updatedNodes, rootId, useDocumentStore.getState().currentFilePath);
+
+      if (result.errors.length > 0) {
+        setSyncStatus('error');
+        // Show the first error for debugging
+        const firstError = result.errors[0];
+        console.error('Push errors:', result.errors);
+        setSyncMessage(`Pushed with errors: ${result.updated} updated, ${result.created} created, ${result.deleted} deleted. ${result.errors.length} errors. First: ${firstError.error}`);
+      } else {
+        setSyncStatus('success');
+        setSyncMessage(`Pushed successfully: ${result.updated} updated, ${result.created} created, ${result.deleted} deleted.`);
+      }
+    } catch (error) {
+      setSyncStatus('error');
+      if (error instanceof WorkflowyError) {
+        setSyncMessage(error.message);
+      } else {
+        setSyncMessage('Failed to push to Workflowy');
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handlePullFromWorkflowy = async () => {
+    const nodes = useDocumentStore.getState().nodes;
+    const rootId = useDocumentStore.getState().rootId;
+
+    if (!rootId) {
+      setSyncStatus('error');
+      setSyncMessage('No document to sync');
+      return;
+    }
+
+    // Check if document has Workflowy sync metadata
+    const rootNode = nodes[rootId];
+    if (!rootNode?.workflowySync) {
+      setSyncStatus('error');
+      setSyncMessage('This document was not imported from Workflowy. Use Import first.');
+      return;
+    }
+
+    const bulletId = rootNode.workflowySync.workflowyId;
+
+    setIsSyncing(true);
+    setSyncStatus('idle');
+    setSyncMessage(null);
+
+    try {
+      const result = await pullFromWorkflowy(bulletId, nodes);
+
+      if (result.conflicts.length > 0) {
+        setSyncStatus('error');
+        setSyncMessage(`Pulled with conflicts: ${result.conflicts.length} nodes have both local and remote changes.`);
+      } else {
+        setSyncStatus('success');
+        setSyncMessage('Pulled successfully from Workflowy.');
+      }
+
+      // Update the document with merged nodes
+      useDocumentStore.getState().loadDocument(result.nodes, rootId, useDocumentStore.getState().currentFilePath);
+    } catch (error) {
+      setSyncStatus('error');
+      if (error instanceof WorkflowyError) {
+        setSyncMessage(error.message);
+      } else {
+        setSyncMessage('Failed to pull from Workflowy');
+      }
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -387,6 +493,72 @@ export function WorkflowyTab() {
               Enter a target bullet ID above to enable import.
             </p>
           )}
+        </div>
+      )}
+
+      {/* Sync Section */}
+      {isApiKeySet && keyringAvailable && (
+        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3">
+          <div>
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white">
+              Sync with Workflowy
+            </h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Push local changes to Workflowy or pull remote changes to your document.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handlePushToWorkflowy}
+              disabled={isSyncing}
+              className="
+                flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md
+                border border-gray-300 dark:border-gray-600
+                text-gray-700 dark:text-gray-300
+                hover:bg-gray-100 dark:hover:bg-gray-700
+                disabled:opacity-50 disabled:cursor-not-allowed
+                transition-colors
+              "
+            >
+              <Upload className={`w-4 h-4 ${isSyncing ? 'animate-pulse' : ''}`} />
+              Push to Workflowy
+            </button>
+
+            <button
+              onClick={handlePullFromWorkflowy}
+              disabled={isSyncing}
+              className="
+                flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md
+                border border-gray-300 dark:border-gray-600
+                text-gray-700 dark:text-gray-300
+                hover:bg-gray-100 dark:hover:bg-gray-700
+                disabled:opacity-50 disabled:cursor-not-allowed
+                transition-colors
+              "
+            >
+              <ArrowDownUp className={`w-4 h-4 ${isSyncing ? 'animate-pulse' : ''}`} />
+              Pull from Workflowy
+            </button>
+
+            {syncStatus === 'success' && (
+              <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
+                <Check className="w-4 h-4" />
+                {syncMessage}
+              </span>
+            )}
+
+            {syncStatus === 'error' && (
+              <span className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
+                <AlertCircle className="w-4 h-4" />
+                {syncMessage}
+              </span>
+            )}
+          </div>
+
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Note: Only documents imported from Workflowy can be synced.
+          </p>
         </div>
       )}
     </div>

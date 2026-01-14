@@ -125,7 +125,7 @@ export class WorkflowyClient {
   async createNode(
     parentId: WorkflowyParentId,
     name: string,
-    options?: { note?: string; priority?: number }
+    options?: { note?: string; position?: WorkflowyPosition }
   ): Promise<string> {
     const body: CreateNodeRequest = {
       parent_id: parentId,
