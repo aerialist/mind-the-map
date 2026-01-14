@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import { useDocumentStore } from '../../store';
 import { useDragContext, useVisibleNodes } from './OutlineView';
 import { getIconDefinition, sortIconsByDisplayOrder, type NodeIcon } from '../../types';
-import { Tags, Link } from 'lucide-react';
+import { Tags, Link, List } from 'lucide-react';
 import { openLink } from '../../services/tauri';
 import { dispatch } from '../../services/commandBus';
 import { handleNodeInputKeyDown } from '../../utils/nodeInputHandlers';
@@ -41,6 +41,8 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   const isEditing = editingNodeId === nodeId;
   const isDragging = draggedNodeId === nodeId;
   const isRoot = !node?.parentId;
+  const hasWorkflowyBadge = !!node?.workflowySync || !!node?.workflowyConflict;
+  const hasWorkflowyConflict = !!node?.workflowySync?.conflict || !!node?.workflowyConflict;
 
   // Initialize edit text and focus when starting to edit
   useEffect(() => {
@@ -268,6 +270,26 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
             >
               {text}
             </span>
+          </span>
+        )}
+
+        {/* Workflowy badge (shown when node is synced) */}
+        {hasWorkflowyBadge && !isEditing && (
+          <span
+            className={`ml-1 relative inline-flex items-center justify-center ${
+              hasWorkflowyConflict
+                ? 'text-red-500 dark:text-red-400'
+                : 'text-gray-400 dark:text-gray-500'
+            }`}
+            title={hasWorkflowyConflict ? 'Workflowy conflict detected' : 'Synced with Workflowy'}
+          >
+            <List className="w-4 h-4" />
+            {hasWorkflowyConflict && (
+              <span
+                className="pointer-events-none absolute h-[2px] w-4 rotate-45 bg-red-500 dark:bg-red-400"
+                aria-hidden="true"
+              />
+            )}
           </span>
         )}
 

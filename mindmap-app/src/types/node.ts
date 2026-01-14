@@ -16,6 +16,7 @@ export interface WorkflowySyncMetadata {
   workflowyId: string; // Original Workflowy node ID
   lastSyncedAt: number; // Unix timestamp of last sync
   lastModifiedAt: number; // Workflowy's modifiedAt timestamp
+  conflict?: boolean; // Conflict detected during push/pull
 }
 
 export interface Node {
@@ -28,6 +29,7 @@ export interface Node {
   icons?: NodeIcon[]; // Optional array of icons for the node
   link?: string; // Optional link (URL or file path)
   workflowySync?: WorkflowySyncMetadata; // Workflowy sync metadata (if imported from Workflowy)
+  workflowyConflict?: boolean; // Local-only Workflowy conflict marker
 }
 
 export type NodeMap = Record<string, Node>;

@@ -234,6 +234,21 @@ export async function pushToWorkflowy(
     updatedNodes: {},
   };
 
+  const clearConflict = (node: Node) => {
+    if (node.workflowySync?.conflict) {
+      delete node.workflowySync.conflict;
+    }
+    if (node.workflowyConflict) {
+      delete node.workflowyConflict;
+    }
+  };
+
+  const markConflict = (node: Node) => {
+    if (node.workflowySync) {
+      node.workflowySync.conflict = true;
+    }
+  };
+
   // Get the root node's Workflowy ID to fetch remote state for deletion detection
   const rootNode = nodes[rootId];
   const rootWfId = rootNode?.workflowySync?.workflowyId;
@@ -262,6 +277,7 @@ export async function pushToWorkflowy(
       position: { ...node.position },
       icons: node.icons ? [...node.icons] : undefined,
       workflowySync: node.workflowySync ? { ...node.workflowySync } : undefined,
+      workflowyConflict: node.workflowyConflict,
     };
   }
 
@@ -330,6 +346,7 @@ export async function pushToWorkflowy(
           lastSyncedAt: Date.now(),
           lastModifiedAt: createdNode.modifiedAt,
         };
+        clearConflict(node);
 
         result.created++;
       } catch (error) {
@@ -359,6 +376,7 @@ export async function pushToWorkflowy(
           // Just sync metadata - no actual update needed
           node.workflowySync.lastModifiedAt = wfNode.modifiedAt;
           node.workflowySync.lastSyncedAt = Date.now();
+          clearConflict(node);
           // Don't count as "updated" since nothing actually changed
           continue;
         }
@@ -371,6 +389,7 @@ export async function pushToWorkflowy(
 
           if (remoteHasChanges) {
             // True conflict - both sides have different content
+            markConflict(node);
             result.errors.push({
               nodeId: node.id,
               error: 'Conflict: Both local and remote have changes. Pull changes first.',
@@ -395,6 +414,7 @@ export async function pushToWorkflowy(
         const updatedNode = await client.getNode(wfId);
         node.workflowySync.lastModifiedAt = updatedNode.modifiedAt;
         node.workflowySync.lastSyncedAt = Date.now();
+        clearConflict(node);
 
         result.updated++;
       } catch (error) {
@@ -449,6 +469,18 @@ export async function pullFromWorkflowy(
   }
 
   const conflicts: string[] = [];
+  const clearConflict = (sync: Node['workflowySync']): Node['workflowySync'] => {
+    if (!sync) return sync;
+    const nextSync = { ...sync };
+    delete nextSync.conflict;
+    return nextSync;
+  };
+  const clearLocalConflict = (node: Node): Node => {
+    if (!node.workflowyConflict) {
+      return node;
+    }
+    return { ...node, workflowyConflict: undefined };
+  };
 
   // Convert Workflowy tree to flat map
   const { nodes: remoteNodes } = workflowyTreeToMtmNodes(tree);
@@ -462,7 +494,7 @@ export async function pullFromWorkflowy(
 
     if (!localNode) {
       // New node from Workflowy - add it as-is
-      mergedNodes[nodeId] = remoteNode;
+      mergedNodes[nodeId] = clearLocalConflict(remoteNode);
     } else if (localNode.workflowySync) {
       // Existing node - check for conflicts
       const remoteModified = remoteNode.workflowySync!.lastModifiedAt;
@@ -475,27 +507,35 @@ export async function pullFromWorkflowy(
         if (localChanged) {
           conflicts.push(`Node "${localNode.content.type === 'text' ? localNode.content.text : nodeId}" has both local and remote changes`);
           // Keep local version but flag conflict
-          mergedNodes[nodeId] = localNode;
+          mergedNodes[nodeId] = clearLocalConflict({
+            ...localNode,
+            workflowySync: {
+              ...localNode.workflowySync,
+              conflict: true,
+            },
+          });
           continue;
         }
 
         // No local changes - accept remote version but preserve local UI state
-        mergedNodes[nodeId] = {
+        mergedNodes[nodeId] = clearLocalConflict({
           ...remoteNode,
           position: localNode.position, // Keep local position
           isCollapsed: localNode.isCollapsed, // Keep local collapsed state
-        };
+          workflowySync: clearConflict(remoteNode.workflowySync),
+        });
       } else {
         // Local version is same or newer - keep it but update structure from remote
-        mergedNodes[nodeId] = {
+        mergedNodes[nodeId] = clearLocalConflict({
           ...localNode,
           parentId: remoteNode.parentId, // Update parent from remote
           childIds: remoteNode.childIds, // Update children from remote
-        };
+          workflowySync: clearConflict(localNode.workflowySync),
+        });
       }
     } else {
       // Node exists locally but has no sync metadata - shouldn't happen
-      mergedNodes[nodeId] = remoteNode;
+      mergedNodes[nodeId] = clearLocalConflict(remoteNode);
     }
   }
 
@@ -505,6 +545,62 @@ export async function pullFromWorkflowy(
       // Node was deleted in Workflowy - don't include in merged nodes
       // (it's already not in mergedNodes since we only added remoteNodes)
     }
+  }
+
+  // Third pass: Preserve local-only nodes (no Workflowy sync metadata)
+  const localOnlyNodeIds = new Set<string>();
+  for (const [nodeId, localNode] of Object.entries(localNodes)) {
+    if (localNode.workflowySync) continue;
+    localOnlyNodeIds.add(nodeId);
+    if (!mergedNodes[nodeId]) {
+      mergedNodes[nodeId] = {
+        ...localNode,
+        workflowyConflict: true,
+      };
+    } else if (!mergedNodes[nodeId].workflowyConflict) {
+      mergedNodes[nodeId] = {
+        ...mergedNodes[nodeId],
+        workflowyConflict: true,
+      };
+    }
+  }
+
+  // Attach local-only children under their parents while keeping local-only order
+  for (const [parentId, localParent] of Object.entries(localNodes)) {
+    if (localParent.childIds.length === 0) continue;
+
+    const parent = mergedNodes[parentId];
+    if (!parent) continue;
+
+    const localChildIds = localParent.childIds;
+    const remoteChildIds = parent.childIds.filter(
+      (childId) => !localOnlyNodeIds.has(childId)
+    );
+
+    if (localChildIds.length === 0) continue;
+
+    const nextChildIds: string[] = [];
+    let remoteIndex = 0;
+
+    for (const childId of localChildIds) {
+      if (localOnlyNodeIds.has(childId)) {
+        if (!nextChildIds.includes(childId)) {
+          nextChildIds.push(childId);
+        }
+        continue;
+      }
+
+      if (remoteIndex < remoteChildIds.length) {
+        nextChildIds.push(remoteChildIds[remoteIndex]);
+        remoteIndex += 1;
+      }
+    }
+
+    for (; remoteIndex < remoteChildIds.length; remoteIndex += 1) {
+      nextChildIds.push(remoteChildIds[remoteIndex]);
+    }
+
+    parent.childIds = nextChildIds;
   }
 
   return { nodes: mergedNodes, conflicts };

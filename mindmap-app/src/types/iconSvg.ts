@@ -40,6 +40,7 @@ import FileText from 'lucide-static/icons/file-text.svg?raw';
 import File from 'lucide-static/icons/file.svg?raw';
 import Image from 'lucide-static/icons/image.svg?raw';
 import Link from 'lucide-static/icons/link.svg?raw';
+import List from 'lucide-static/icons/list.svg?raw';
 import Map from 'lucide-static/icons/map.svg?raw';
 import Paperclip from 'lucide-static/icons/paperclip.svg?raw';
 import FolderOpen from 'lucide-static/icons/folder-open.svg?raw';
@@ -181,6 +182,9 @@ export const ICON_SVG_MAP: IconSvgMap = {
     'wrench': Wrench,
     'shield': Shield,
     'shield-check': ShieldCheck,
+  },
+  workflowy: {
+    'list': List,
   },
 };
 

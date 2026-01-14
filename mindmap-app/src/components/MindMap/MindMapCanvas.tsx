@@ -39,6 +39,8 @@ const NODE_PADDING_X = 16;
 const NODE_MIN_WIDTH = 80;
 const NODE_HEIGHT = 32;
 const NODE_RADIUS = 6;
+const RIGHT_ICON_SIZE = 14;
+const RIGHT_ICON_SLOT = 20;
 
 // Layout constants
 const HORIZONTAL_GAP = 60;
@@ -60,6 +62,9 @@ const COLORS = {
   collapseIndicatorBg: 0x16213e,
   linkIcon: 0xa855f7, // Purple color for link icon
 };
+
+const WORKFLOWY_BADGE_COLOR = '#94a3b8';
+const WORKFLOWY_CONFLICT_COLOR = '#ef4444';
 
 // Track the previous selected node ID for determining pan direction
 let prevMindmapSelectedNodeId: string | null = null;
@@ -124,13 +129,11 @@ const calculateLayout = (
       iconsWidth = node.icons.length * 16 + 4;
     }
 
-    // Account for link icon width
-    let linkWidth = 0;
-    if (node.link) {
-      linkWidth = 20; // Link icon width + padding
-    }
+    const rightIconCount =
+      (node.link ? 1 : 0) + (node.workflowySync || node.workflowyConflict ? 1 : 0);
+    const rightIconsWidth = rightIconCount * RIGHT_ICON_SLOT;
 
-    return Math.max(textWidth + iconsWidth + linkWidth + NODE_PADDING_X * 2, NODE_MIN_WIDTH);
+    return Math.max(textWidth + iconsWidth + rightIconsWidth + NODE_PADDING_X * 2, NODE_MIN_WIDTH);
   };
 
   // Calculate subtree height (only considering visible nodes)
@@ -1005,6 +1008,9 @@ function MindMapCanvas() {
       // Node text
       const text = node.content.type === 'text' ? node.content.text : '[image]';
       const hasLink = !!node.link;
+      const hasWorkflowyBadge = !!node.workflowySync || !!node.workflowyConflict;
+      const hasWorkflowyConflict =
+        !!node.workflowySync?.conflict || !!node.workflowyConflict;
       const textStyle = new TextStyle({
         fontSize: 14,
         fill: hasLink ? COLORS.textLink : COLORS.text,
@@ -1035,40 +1041,84 @@ function MindMapCanvas() {
 
       container.addChild(textObj);
 
-      // Link icon (shown at right end of node if node has a link)
-      if (hasLink) {
-        const linkIconSize = 14;
-        const linkIconX = layout.width - NODE_PADDING_X - linkIconSize + 2;
-        const linkIconY = (layout.height - linkIconSize) / 2;
+      // Right-side badges/icons (Workflowy sync + link)
+      if (hasLink || hasWorkflowyBadge) {
+        const rightIconSize = RIGHT_ICON_SIZE;
+        const rightIconStep = RIGHT_ICON_SLOT;
+        const rightIconScale = rightIconSize / LUCIDE_SIZE;
+        const rightIconY = (layout.height - rightIconSize) / 2;
+        let rightIconX = layout.width - NODE_PADDING_X - rightIconSize + 2;
 
-        const linkIconContainer = new Container();
-        linkIconContainer.x = linkIconX;
-        linkIconContainer.y = linkIconY;
-        linkIconContainer.eventMode = 'static';
-        linkIconContainer.cursor = 'pointer';
+        if (hasLink) {
+          const linkIconContainer = new Container();
+          linkIconContainer.x = rightIconX;
+          linkIconContainer.y = rightIconY;
+          linkIconContainer.eventMode = 'static';
+          linkIconContainer.cursor = 'pointer';
 
-        linkIconContainer.on('pointerdown', (e) => {
-          const originalEvent = e.nativeEvent as PointerEvent | undefined;
-          if (originalEvent?.button === 2) return;
-          e.stopPropagation();
-          // Open link panel to edit the link
-          useDocumentStore.getState().toggleLinkPanel();
-        });
+          linkIconContainer.on('pointerdown', (e) => {
+            const originalEvent = e.nativeEvent as PointerEvent | undefined;
+            if (originalEvent?.button === 2) return;
+            e.stopPropagation();
+            // Open link panel to edit the link
+            useDocumentStore.getState().toggleLinkPanel();
+          });
 
-        const linkIcon = new Graphics();
-        // Draw a simple link icon (chain link shape)
-        const cx = linkIconSize / 2;
-        const cy = linkIconSize / 2;
-        const r = 4;
-        // First ring
-        linkIcon.arc(cx - 2, cy, r, Math.PI * 0.75, Math.PI * 1.75);
-        linkIcon.stroke({ width: 2, color: COLORS.linkIcon });
-        // Second ring
-        linkIcon.arc(cx + 2, cy, r, -Math.PI * 0.25, Math.PI * 0.75);
-        linkIcon.stroke({ width: 2, color: COLORS.linkIcon });
+          const linkIcon = new Graphics();
+          // Draw a simple link icon (chain link shape)
+          const cx = rightIconSize / 2;
+          const cy = rightIconSize / 2;
+          const r = 4;
+          // First ring
+          linkIcon.arc(cx - 2, cy, r, Math.PI * 0.75, Math.PI * 1.75);
+          linkIcon.stroke({ width: 2, color: COLORS.linkIcon });
+          // Second ring
+          linkIcon.arc(cx + 2, cy, r, -Math.PI * 0.25, Math.PI * 0.75);
+          linkIcon.stroke({ width: 2, color: COLORS.linkIcon });
 
-        linkIconContainer.addChild(linkIcon);
-        container.addChild(linkIconContainer);
+          linkIconContainer.addChild(linkIcon);
+          container.addChild(linkIconContainer);
+
+          rightIconX -= rightIconStep;
+        }
+
+        if (hasWorkflowyBadge) {
+          const workflowyIconContainer = new Container();
+          workflowyIconContainer.x = rightIconX;
+          workflowyIconContainer.y = rightIconY;
+          workflowyIconContainer.eventMode = 'none';
+
+          const workflowyIcon = new Graphics();
+          const workflowyColor = hasWorkflowyConflict
+            ? WORKFLOWY_CONFLICT_COLOR
+            : WORKFLOWY_BADGE_COLOR;
+          const workflowyColorHex = parseInt(workflowyColor.replace('#', ''), 16);
+          const workflowySvg = getIconSvg('workflowy', 'list');
+
+          try {
+            const coloredSvg = workflowySvg
+              .replace(/stroke="currentColor"/g, `stroke="${workflowyColor}"`)
+              .replace(/fill="none"/g, 'fill="none"')
+              .replace(/stroke-width="2"/g, 'stroke-width="2.5"');
+            workflowyIcon.svg(coloredSvg);
+            workflowyIcon.scale.set(rightIconScale);
+          } catch {
+            workflowyIcon.circle(rightIconSize / 2, rightIconSize / 2, rightIconSize / 2 - 2);
+            workflowyIcon.fill(workflowyColorHex);
+          }
+
+          workflowyIconContainer.addChild(workflowyIcon);
+
+          if (hasWorkflowyConflict) {
+            const slash = new Graphics();
+            slash.moveTo(1, rightIconSize - 1);
+            slash.lineTo(rightIconSize - 1, 1);
+            slash.stroke({ width: 2, color: workflowyColorHex });
+            workflowyIconContainer.addChild(slash);
+          }
+
+          container.addChild(workflowyIconContainer);
+        }
       }
 
       // Collapse/expand indicator for nodes with children
