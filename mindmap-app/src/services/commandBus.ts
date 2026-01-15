@@ -20,6 +20,7 @@ import {
 import { exportToPDF } from './pdfExport';
 import { buildNodesFromFolderTree } from '../core/folderMap';
 import { isTauriAvailable } from './tauri/safeTauri';
+import { importFromWorkflowy, pushToWorkflowy, pullFromWorkflowy, WorkflowyError } from './workflowy';
 
 export type CommandPayload = {
   id: string;
@@ -173,6 +174,33 @@ const registerDefaults = () => {
 
     const { nodes, rootId } = buildNodesFromFolderTree(treeResult.tree);
     useDocumentStore.getState().loadDocument(nodes, rootId, null);
+  });
+
+  registerCommandHandler('file.mapWorkflowy', async () => {
+    const state = useDocumentStore.getState();
+    if (state.isDirty) {
+      const confirmed = await confirmDiscardChanges('Importing from Workflowy');
+      if (!confirmed) return;
+    }
+
+    const settings = useSettingsStore.getState().settings;
+    const bulletId = settings.workflowy.targetBulletId.trim();
+
+    if (!bulletId) {
+      console.error('Map Workflowy failed: No target bullet ID configured');
+      return;
+    }
+
+    try {
+      const result = await importFromWorkflowy(bulletId);
+      useDocumentStore.getState().loadDocument(result.nodes, result.rootId, null);
+    } catch (error) {
+      if (error instanceof WorkflowyError) {
+        console.error('Map Workflowy failed:', error.message);
+      } else {
+        console.error('Map Workflowy failed:', error);
+      }
+    }
   });
 
   registerCommandHandler('file.save', async () => {
@@ -484,6 +512,121 @@ const registerDefaults = () => {
     }
     const nextId = getLastChildNodeId(state.nodes, state.selectedNodeId);
     selectNodeIfAvailable(nextId);
+  });
+
+  registerCommandHandler('workflowy.push', async () => {
+    const state = useDocumentStore.getState();
+    const { nodes, rootId } = state;
+
+    if (!rootId) {
+      state.showToast('Push failed: No document', 'error');
+      return;
+    }
+
+    const rootNode = nodes[rootId];
+    if (!rootNode?.workflowySync) {
+      state.showToast('Push failed: Document not synced with Workflowy', 'error');
+      return;
+    }
+
+    try {
+      // Set syncing state
+      state.setSyncStatus(true, 'push');
+
+      const result = await pushToWorkflowy(nodes, rootId);
+
+      // Update the document with modified nodes (sync metadata updated)
+      state.loadDocument(result.updatedNodes, rootId, state.currentFilePath);
+
+      // Build success message
+      const stats = [];
+      if (result.created > 0) stats.push(`${result.created} created`);
+      if (result.updated > 0) stats.push(`${result.updated} updated`);
+      if (result.deleted > 0) stats.push(`${result.deleted} deleted`);
+      if (result.moved > 0) stats.push(`${result.moved} moved`);
+
+      const summary = stats.length > 0 ? stats.join(', ') : 'No changes';
+
+      // Log warnings and errors
+      if (result.warnings.length > 0) {
+        console.warn('Push warnings:', result.warnings);
+      }
+
+      if (result.errors.length > 0) {
+        console.error('Push errors:', result.errors);
+      }
+
+      // Show appropriate toast based on result
+      if (result.errors.length > 0) {
+        // If there are errors, show error toast
+        const errorMsg = `Push completed with errors: ${summary}\n${result.errors.length} errors occurred (check console)`;
+        state.showToast(errorMsg, 'error');
+      } else if (result.warnings.length > 0) {
+        // If there are warnings but no errors, show info toast
+        const warningMsg = `Push completed with warnings: ${summary}\n${result.warnings.length} conflicts detected`;
+        state.showToast(warningMsg, 'info');
+      } else {
+        // No issues, show success toast
+        state.showToast(`Push completed: ${summary}`, 'success');
+      }
+    } catch (error) {
+      if (error instanceof WorkflowyError) {
+        state.showToast(`Push failed: ${error.message}`, 'error');
+      } else {
+        state.showToast('Push failed: Unknown error', 'error');
+        console.error('Push to Workflowy failed:', error);
+      }
+    } finally {
+      // Clear syncing state
+      state.setSyncStatus(false, null);
+    }
+  });
+
+  registerCommandHandler('workflowy.pull', async () => {
+    const state = useDocumentStore.getState();
+    const { nodes, rootId } = state;
+
+    if (!rootId) {
+      state.showToast('Pull failed: No document', 'error');
+      return;
+    }
+
+    const rootNode = nodes[rootId];
+    if (!rootNode?.workflowySync) {
+      state.showToast('Pull failed: Document not synced with Workflowy', 'error');
+      return;
+    }
+
+    const bulletId = rootNode.workflowySync.workflowyId;
+
+    try {
+      // Set syncing state
+      state.setSyncStatus(true, 'pull');
+
+      const result = await pullFromWorkflowy(bulletId, nodes);
+
+      // Update the document with merged nodes
+      state.loadDocument(result.nodes, rootId, state.currentFilePath);
+
+      // Build success message
+      let message = 'Pull completed';
+      if (result.conflicts.length > 0) {
+        message += `\n${result.conflicts.length} conflicts detected (remote version accepted)`;
+        console.warn('Pull conflicts:', result.conflicts);
+      }
+
+      state.showToast(message, result.conflicts.length > 0 ? 'info' : 'success');
+    } catch (error) {
+      if (error instanceof WorkflowyError) {
+        state.showToast(`Pull failed: ${error.message}`, 'error');
+      } else {
+        state.showToast('Pull failed: Unknown error', 'error');
+        console.error('Pull from Workflowy failed:', error);
+      }
+    } finally {
+      // Clear syncing state
+      state.setSyncStatus(false, null);
+    }
   });
 };
 

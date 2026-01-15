@@ -32,6 +32,7 @@ const shortcutSections: ShortcutSection[] = [
       { keys: [`${modKey}+N`], description: 'New Document' },
       { keys: [`${modKey}+O`], description: 'Open...' },
       { keys: [`${modKey}+${shiftKey}+O`], description: 'Map Folder...' },
+      { keys: ['—'], description: 'Map Workflowy...' },
       { keys: [`${modKey}+S`], description: 'Save' },
       { keys: [`${modKey}+${shiftKey}+S`], description: 'Save As...' },
       { keys: [`${modKey}+${shiftKey}+E`], description: 'Export as PDF' },
@@ -137,6 +138,13 @@ const shortcutSections: ShortcutSection[] = [
       { keys: [`${modKey}+${shiftKey}+.`], description: 'Focus Mode (Hide UI)', inactive: true },
       { keys: [`${modKey}+B`], description: 'Toggle Sidebar', inactive: true },
       ...(!isMac ? [{ keys: fullScreenKeys, description: 'Enter Full Screen' }] : []),
+    ],
+  },
+  {
+    title: 'Workflowy',
+    shortcuts: [
+      { keys: ['—'], description: 'Push to Workflowy (only for Workflowy-synced documents)' },
+      { keys: ['—'], description: 'Pull from Workflowy (only for Workflowy-synced documents)' },
     ],
   },
   ...(isMac

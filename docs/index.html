@@ -521,6 +521,7 @@
           <tr><td><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>New Document</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Open...</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd></td><td>Map Folder...</td></tr>
+          <tr><td>File → Map Workflowy...</td><td>Import from Workflowy</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Save</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Save As...</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd></td><td>Export as PDF</td></tr>
@@ -638,6 +639,39 @@
           <tr><th>Key</th><th>Action</th></tr>
           <tr><td><kbd>?</kbd> / <kbd>Ctrl</kbd>+<kbd>/</kbd></td><td>Keyboard Shortcuts</td></tr>
         </table>
+
+        <h4>Workflowy Integration</h4>
+        <p>
+          Mind the Map can sync with Workflowy, allowing you to work with your Workflowy outlines in a mind map format.
+          When a document is synced with Workflowy, Push/Pull buttons appear in the header and a "Workflowy" menu is added.
+        </p>
+
+        <table class="shortcut-table">
+          <tr><th>Action</th><th>Purpose</th><th>Conflict Behavior</th></tr>
+          <tr>
+            <td>Push to Workflowy</td>
+            <td>Upload your local changes to Workflowy (creates, updates, deletes, moves nodes)</td>
+            <td><strong>Keeps local version</strong> when both local and remote were modified. Shows warning about conflicts.</td>
+          </tr>
+          <tr>
+            <td>Pull from Workflowy</td>
+            <td>Download updates from Workflowy to your local document</td>
+            <td><strong>Accepts remote version</strong> when both local and remote were modified. Overwrites local changes.</td>
+          </tr>
+        </table>
+
+        <div class="tip-box">
+          <strong>Conflict Resolution Strategy:</strong> The Push/Pull model follows a Git-like approach:
+          <ul>
+            <li><strong>Push</strong> = "I want to save my work" → Preserves your local changes, warns about conflicts</li>
+            <li><strong>Pull</strong> = "I want the latest from remote" → Accepts remote changes, overwrites local</li>
+            <li>This prevents deadlock scenarios. <strong>Always Push before Pull if you have local changes to keep.</strong></li>
+          </ul>
+        </div>
+
+        <div class="tip-box">
+          <strong>Note:</strong> The Workflowy menu and Push/Pull buttons appear only when the current document has Workflowy sync metadata (created via File → Map Workflowy...).
+        </div>
 
         <div class="tip-box">
           <strong>Mac Users:</strong> Replace <kbd>Ctrl</kbd> with <kbd>Cmd</kbd> and <kbd>Alt</kbd> with <kbd>Option</kbd> where shown. Rows labeled (Mac) or (Win) are platform-specific.
@@ -959,6 +993,7 @@
           <tr><td>New</td><td><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>Creates a fresh map with one root node</td></tr>
           <tr><td>Open</td><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Opens a .mindmap file</td></tr>
           <tr><td>Map Folder</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd></td><td>Creates a map from a selected folder structure</td></tr>
+          <tr><td>Map Workflowy</td><td>File → Map Workflowy...</td><td>Imports a Workflowy subtree using the target bullet ID configured in Preferences → Workflowy tab. Creates a synced document that enables Push/Pull buttons in the header and the Workflowy menu.</td></tr>
           <tr><td>Save</td><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Saves to current file (or prompts if new)</td></tr>
           <tr><td>Save As</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Save with a new name</td></tr>
           <tr><td>Print...</td><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>Print the current view</td></tr>

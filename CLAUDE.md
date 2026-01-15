@@ -179,6 +179,8 @@ In-app shortcuts listing is maintained in `mindmap-app/src/components/Help/HelpD
 |-----|--------|-------|
 | Mod+N | New Document | |
 | Mod+O | Open... | |
+| Mod+Shift+O | Map Folder... | Creates document from folder structure |
+| — | Map Workflowy... | Imports from Workflowy (uses target bullet ID from settings) |
 | Mod+S | Save | |
 | Mod+Shift+S | Save As... | |
 | Mod+Shift+E | Export as PDF | |
@@ -267,6 +269,19 @@ In-app shortcuts listing is maintained in `mindmap-app/src/components/Help/HelpD
 | Mod+B | Toggle Sidebar | (planned) |
 | Mod+1 | Actual Size | (planned) |
 | Ctrl+Cmd+F / F11 | Enter Full Screen | macOS / Windows |
+
+### Workflowy
+| Key | Action | Notes |
+|-----|--------|-------|
+| — | Push to Workflowy | Upload local changes to Workflowy. **Conflict behavior**: Keeps local version when both local and remote were modified (only visible for Workflowy-synced documents) |
+| — | Pull from Workflowy | Download remote changes from Workflowy. **Conflict behavior**: Accepts remote version when both local and remote were modified (only visible for Workflowy-synced documents) |
+
+**Workflowy Sync UI**: When a document has Workflowy sync metadata, Push/Pull buttons appear in the header (left of Map/Outline buttons) and a "Workflowy" menu is added. Buttons show loading indicators during sync operations and display toast notifications with results.
+
+**Conflict Resolution Strategy**:
+- Push = "Save my work" → Preserves local changes, warns about conflicts
+- Pull = "Get latest" → Accepts remote changes, overwrites local
+- This Git-like model prevents deadlock scenarios. Always Push before Pull if you have local changes to keep.
 
 ### Help
 | Key | Action |

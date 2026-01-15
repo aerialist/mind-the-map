@@ -8,13 +8,15 @@ import { HelpDialog } from './components/Help';
 import { AboutDialog } from './components/About';
 import { LinkPanel } from './components/LinkDialog';
 import { SettingsDialog } from './components/Settings';
+import { Toast } from './components/Toast';
 import { useDocumentStore } from './store';
 import { useSettingsStore } from './store/settingsStore';
 import { useAutoSave, useInitialFileLoad } from './hooks';
 import { openDocumentByPath } from './services/tauri/fileSystem';
 import { isTauriAvailable, safeInvoke, safeListen, safeGetCurrentWindow } from './services/tauri/safeTauri';
-import { Filter, EyeOff } from 'lucide-react';
+import { Filter, EyeOff, Upload, Download, Loader2 } from 'lucide-react';
 import { dispatch, type CommandPayload } from './services/commandBus';
+import { invoke } from '@tauri-apps/api/core';
 
 const getFileNameFromPath = (filePath: string): string => {
   const normalized = filePath.replace(/\\/g, '/');
@@ -37,6 +39,10 @@ function App() {
   const clearActiveIconFilters = useDocumentStore((state) => state.clearActiveIconFilters);
   const hiddenIconFilters = useDocumentStore((state) => state.hiddenIconFilters);
   const clearHiddenIconFilters = useDocumentStore((state) => state.clearHiddenIconFilters);
+  const rootId = useDocumentStore((state) => state.rootId);
+  const nodes = useDocumentStore((state) => state.nodes);
+  const isSyncing = useDocumentStore((state) => state.isSyncing);
+  const syncOperation = useDocumentStore((state) => state.syncOperation);
 
   // Settings store
   const loadSettings = useSettingsStore((state) => state.loadSettings);
@@ -173,6 +179,25 @@ function App() {
     };
   }, []);
 
+  // Update Workflowy menu visibility based on root node sync status
+  // Only watch for the workflowySync property specifically to avoid unnecessary updates
+  // Use a boolean to avoid object reference comparison issues
+  const hasWorkflowySync = rootId ? !!nodes[rootId]?.workflowySync : false;
+
+  useEffect(() => {
+    if (!isTauriAvailable()) return;
+
+    const updateWorkflowyMenu = async () => {
+      try {
+        await invoke('update_workflowy_menu', { show: hasWorkflowySync });
+      } catch {
+        // Menu API unavailable or error occurred
+      }
+    };
+
+    updateWorkflowyMenu();
+  }, [rootId, hasWorkflowySync]);
+
   // Report window focus to Rust for active window routing
   useEffect(() => {
     let unlistenFn: (() => void) | undefined;
@@ -251,6 +276,46 @@ function App() {
 
         {/* Mode toggle and help */}
         <div className="flex items-center gap-3">
+          {/* Workflowy Push/Pull buttons (only shown when document has Workflowy sync) */}
+          {rootId && nodes[rootId]?.workflowySync && (
+            <div className="flex gap-1 border-r border-gray-300 dark:border-gray-600 pr-3">
+              <button
+                onClick={() => dispatch('workflowy.push')}
+                disabled={isSyncing}
+                className={`flex items-center gap-1.5 px-2 py-1 text-sm rounded transition-colors ${
+                  isSyncing
+                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }`}
+                title="Push changes to Workflowy"
+              >
+                {isSyncing && syncOperation === 'push' ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Upload size={14} />
+                )}
+                <span>{isSyncing && syncOperation === 'push' ? 'Pushing...' : 'Push'}</span>
+              </button>
+              <button
+                onClick={() => dispatch('workflowy.pull')}
+                disabled={isSyncing}
+                className={`flex items-center gap-1.5 px-2 py-1 text-sm rounded transition-colors ${
+                  isSyncing
+                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }`}
+                title="Pull updates from Workflowy"
+              >
+                {isSyncing && syncOperation === 'pull' ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Download size={14} />
+                )}
+                <span>{isSyncing && syncOperation === 'pull' ? 'Pulling...' : 'Pull'}</span>
+              </button>
+            </div>
+          )}
+
           {/* Mode toggle */}
           <div className="flex gap-1">
             <button
@@ -359,6 +424,9 @@ function App() {
 
       {/* Settings dialog */}
       <SettingsDialog />
+
+      {/* Toast notifications */}
+      <Toast />
     </div>
   );
 }

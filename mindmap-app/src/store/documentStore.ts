@@ -130,6 +130,13 @@ interface DocumentState {
   // Link dialog state
   isLinkDialogOpen: boolean;
 
+  // Workflowy sync state
+  isSyncing: boolean;
+  syncOperation: 'push' | 'pull' | null;
+
+  // Toast notification state
+  toast: { message: string; type: 'success' | 'error' | 'info' } | null;
+
   // Collapse all state for cycling
   collapseAllState: CollapseAllState;
 
@@ -209,6 +216,13 @@ interface DocumentState {
   closeLinkDialog: () => void;
   toggleLinkPanel: () => void;
   setNodeLink: (nodeId: string, link: string | undefined) => void;
+
+  // Sync actions
+  setSyncStatus: (isSyncing: boolean, operation: 'push' | 'pull' | null) => void;
+
+  // Toast actions
+  showToast: (message: string, type: 'success' | 'error' | 'info') => void;
+  hideToast: () => void;
 
   // Clipboard actions
   copyNodes: (nodeIds: string[]) => void;
@@ -465,6 +479,13 @@ export const useDocumentStore = create<DocumentState>()(
 
     // Link dialog state
     isLinkDialogOpen: false,
+
+    // Workflowy sync state
+    isSyncing: false,
+    syncOperation: null,
+
+    // Toast notification state
+    toast: null,
 
     // Collapse all state for cycling
     collapseAllState: 'expanded' as CollapseAllState,
@@ -1394,6 +1415,24 @@ export const useDocumentStore = create<DocumentState>()(
         }
 
         state.isDirty = true;
+      }),
+
+    // Sync actions
+    setSyncStatus: (isSyncing, operation) =>
+      set((state) => {
+        state.isSyncing = isSyncing;
+        state.syncOperation = operation;
+      }),
+
+    // Toast actions
+    showToast: (message, type) =>
+      set((state) => {
+        state.toast = { message, type };
+      }),
+
+    hideToast: () =>
+      set((state) => {
+        state.toast = null;
       }),
 
     // Clipboard actions

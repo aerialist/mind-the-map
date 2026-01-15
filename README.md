@@ -259,6 +259,8 @@ Mod = Cmd on macOS, Ctrl on Windows/Linux.
 ### File Operations
 - New/Open/Save: `Mod+N`, `Mod+O`, `Mod+S`
 - Save As: `Mod+Shift+S`
+- Map Folder: `Mod+Shift+O` to create a map from a folder structure
+- Map Workflowy: File → Map Workflowy... to import from Workflowy (requires API key)
 - Export as PDF: `Mod+Shift+E`
 - Print: `Mod+P`
 - Preferences: `Mod+,`
@@ -269,6 +271,45 @@ Mod = Cmd on macOS, Ctrl on Windows/Linux.
 - **General**: Auto-save toggle and interval, update checking (coming soon)
 - **Appearance**: Theme (Light/Dark/System), font size (not yet applied), animations (not yet implemented)
 - **API Keys**: Secure storage for OpenAI, Anthropic, and Workflowy API keys (stored in OS keychain)
+
+### Workflowy Integration
+
+Mind the Map can sync with Workflowy, allowing you to work with your Workflowy outlines in a mind map format.
+
+#### Initial Setup
+1. Configure your Workflowy API key in Preferences (`Mod+,`) → API Keys tab
+2. Set the target bullet ID in Preferences → Workflowy tab (the ID of the subtree you want to map)
+3. Use File → Map Workflowy... to import the subtree
+
+#### Sync Operations
+
+When a document is synced with Workflowy, Push/Pull buttons appear in the header and a "Workflowy" menu is added:
+
+**Push to Workflowy** (Upload local → remote):
+- Uploads your local changes to Workflowy
+- Creates new bullets, updates modified ones, deletes removed ones, and moves relocated nodes
+- **Conflict behavior**: When a node was modified both locally and remotely, Push **keeps your local version** and marks it as a conflict
+- Use Push when you want to save your work to Workflowy
+- Loading indicator shows "Pushing..." while operation is in progress
+- Toast notification shows results (created/updated/deleted/moved counts)
+- If conflicts are detected, shows info toast with warning count
+
+**Pull from Workflowy** (Download remote → local):
+- Downloads updates from Workflowy to your local document
+- Merges remote changes with local state
+- **Conflict behavior**: When a node was modified both locally and remotely, Pull **accepts the remote version** (overwrites local changes)
+- Use Pull when you want to get the latest from Workflowy
+- Loading indicator shows "Pulling..." while operation is in progress
+- Toast notification shows results
+- If conflicts are detected, shows info toast indicating remote version was accepted
+
+#### Conflict Resolution Strategy
+
+The Push/Pull model follows a Git-like approach:
+- **Push** = "I want to save my work" → Preserves local changes, warns about conflicts
+- **Pull** = "I want the latest from remote" → Accepts remote changes, overwrites local
+
+This prevents deadlock scenarios where neither operation can succeed. If you have local changes you want to keep, always Push before Pull.
 
 ### History
 - Undo/Redo: `Mod+Z`, `Mod+Shift+Z` (or `Mod+Y`)

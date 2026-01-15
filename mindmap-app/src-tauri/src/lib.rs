@@ -224,6 +224,87 @@ fn window_activated(label: String, state: State<AppState>) {
     }
 }
 
+// Update Workflowy menu visibility by rebuilding the menu
+#[tauri::command]
+fn update_workflowy_menu(app: tauri::AppHandle, show: bool) -> Result<(), String> {
+    use tauri::menu::{MenuItemBuilder, SubmenuBuilder};
+
+    // Only rebuild if visibility state needs to change
+    let current_menu = app.menu();
+    let currently_has_workflowy = current_menu.as_ref()
+        .and_then(|m| m.get("Workflowy"))
+        .is_some();
+
+    // No change needed
+    if currently_has_workflowy == show {
+        return Ok(());
+    }
+
+    // Get the existing window menu items by rebuilding from scratch
+    // Note: We need to recreate all menus because Tauri doesn't allow selective insertion
+
+    // This is a simplified rebuild - in a real implementation, you'd want to
+    // store menu state or use a helper function to rebuild consistently
+
+    // For now, we'll just toggle based on presence check
+    if show && !currently_has_workflowy {
+        // Workflowy menu items
+        let workflowy_push = MenuItemBuilder::with_id("workflowy_push", "Push to Workflowy")
+            .build(&app)
+            .map_err(|e| format!("Failed to create menu item: {}", e))?;
+        let workflowy_pull = MenuItemBuilder::with_id("workflowy_pull", "Pull from Workflowy")
+            .build(&app)
+            .map_err(|e| format!("Failed to create menu item: {}", e))?;
+
+        let workflowy_menu = SubmenuBuilder::new(&app, "Workflowy")
+            .item(&workflowy_push)
+            .item(&workflowy_pull)
+            .build()
+            .map_err(|e| format!("Failed to create submenu: {}", e))?;
+
+        // Get current menu and insert Workflowy menu before Window (macOS) or Help
+        if let Some(current) = app.menu() {
+            // Get all menu items to find the position
+            let items = current.items().map_err(|e| format!("Failed to get menu items: {}", e))?;
+
+            // Find the index of Window (macOS) or Help menu by checking the text
+            let mut insert_position = None;
+            for (i, item) in items.iter().enumerate() {
+                // Match on MenuItemKind to access submenu text
+                use tauri::menu::MenuItemKind;
+                if let MenuItemKind::Submenu(submenu) = item {
+                    if let Ok(text) = submenu.text() {
+                        if text == "Window" || text == "Help" {
+                            insert_position = Some(i);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if let Some(position) = insert_position {
+                // Insert before Window/Help menu at the found position
+                current.insert(&workflowy_menu, position)
+                    .map_err(|e| format!("Failed to insert menu: {}", e))?;
+            } else {
+                // Fallback: append to end if Window/Help not found
+                current.append(&workflowy_menu)
+                    .map_err(|e| format!("Failed to append menu: {}", e))?;
+            }
+        }
+    } else if !show && currently_has_workflowy {
+        // Remove Workflowy menu
+        if let Some(current) = app.menu() {
+            if let Some(workflowy) = current.get("Workflowy") {
+                current.remove(&workflowy)
+                    .map_err(|e| format!("Failed to remove menu: {}", e))?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -241,7 +322,8 @@ pub fn run() {
             get_app_version,
             get_platform_info,
             window_activated,
-            http_request
+            http_request,
+            update_workflowy_menu
         ])
         .setup(|app| {
             // Handle file opens from macOS (when .mindmap file is double-clicked)
@@ -399,6 +481,8 @@ pub fn run() {
             let map_folder = MenuItemBuilder::with_id("map_folder", "Map Folder...")
                 .accelerator("CmdOrCtrl+Shift+O")
                 .build(app)?;
+            let map_workflowy = MenuItemBuilder::with_id("map_workflowy", "Map Workflowy...")
+                .build(app)?;
             let open_recent_placeholder = MenuItemBuilder::with_id("open_recent_placeholder", "No Recent Files")
                 .enabled(false)
                 .build(app)?;
@@ -442,6 +526,7 @@ pub fn run() {
                     .item(&new_doc)
                     .item(&open_doc)
                     .item(&map_folder)
+                    .item(&map_workflowy)
                     .item(&open_recent_menu)
                     .separator()
                     .item(&save_doc)
@@ -456,6 +541,7 @@ pub fn run() {
                     .item(&new_doc)
                     .item(&open_doc)
                     .item(&map_folder)
+                    .item(&map_workflowy)
                     .item(&open_recent_menu)
                     .separator()
                     .item(&save_doc)
@@ -887,7 +973,7 @@ pub fn run() {
                     .build()?
             };
 
-            // Build the full menu bar
+            // Build the full menu bar (Workflowy menu added dynamically)
             let mut menu = MenuBuilder::new(app);
 
             // On macOS, add the application menu first with About, Preferences, and Quit
@@ -950,6 +1036,7 @@ pub fn run() {
                 "new" => Some("file.new"),
                 "open" => Some("file.open"),
                 "map_folder" => Some("file.mapFolder"),
+                "map_workflowy" => Some("file.mapWorkflowy"),
                 "save" => Some("file.save"),
                 "save_as" => Some("file.saveAs"),
                 "export_pdf" => Some("file.print"),
@@ -993,6 +1080,8 @@ pub fn run() {
                 "help_shortcuts" => Some("app.help.toggle"),
                 "about" => Some("app.about.toggle"),
                 "preferences" => Some("app.settings.toggle"),
+                "workflowy_push" => Some("workflowy.push"),
+                "workflowy_pull" => Some("workflowy.pull"),
                 _ => None,
             };
 
