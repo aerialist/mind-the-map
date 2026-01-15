@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Eye, EyeOff, Check, Trash2, AlertCircle, RefreshCw, Download, Upload, ArrowDownUp } from 'lucide-react';
+import { Eye, EyeOff, Check, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
-import { useDocumentStore } from '../../store/documentStore';
 import {
   getApiKey,
   setApiKey,
@@ -11,17 +10,12 @@ import {
 } from '../../services/settings';
 import {
   testWorkflowyConnection,
-  importFromWorkflowy,
-  pushToWorkflowy,
-  pullFromWorkflowy,
   WorkflowyError,
 } from '../../services/workflowy';
 
 export function WorkflowyTab() {
   const settings = useSettingsStore((s) => s.settings);
   const updateWorkflowySettings = useSettingsStore((s) => s.updateWorkflowySettings);
-  const closeSettings = useSettingsStore((s) => s.closeSettings);
-  const loadDocument = useDocumentStore((s) => s.loadDocument);
 
   const [keyringAvailable, setKeyringAvailable] = useState<boolean | null>(null);
 
@@ -39,16 +33,6 @@ export function WorkflowyTab() {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [connectionError, setConnectionError] = useState<string | null>(null);
-
-  // Import state
-  const [isImporting, setIsImporting] = useState(false);
-  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [importMessage, setImportMessage] = useState<string | null>(null);
-
-  // Sync state
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   useEffect(() => {
     isKeyringAvailable().then(setKeyringAvailable);
@@ -121,150 +105,6 @@ export function WorkflowyTab() {
       }
     } finally {
       setIsTestingConnection(false);
-    }
-  };
-
-  const handleImport = async () => {
-    // Ensure target bullet ID is saved first
-    handleTargetBulletIdBlur();
-
-    const bulletId = targetBulletId.trim().replace(/^#/, '');
-    if (!bulletId) {
-      setImportStatus('error');
-      setImportMessage('Please enter a target bullet ID');
-      return;
-    }
-
-    setIsImporting(true);
-    setImportStatus('idle');
-    setImportMessage(null);
-
-    try {
-      const result = await importFromWorkflowy(bulletId);
-
-      // Load the imported data as a new document (no file path = unsaved)
-      loadDocument(result.nodes, result.rootId, null);
-
-      setImportStatus('success');
-      setImportMessage(`Imported ${result.nodeCount} nodes: "${result.rootText}"`);
-
-      // Close settings dialog after a short delay to show success message
-      setTimeout(() => {
-        closeSettings();
-      }, 1000);
-    } catch (error) {
-      setImportStatus('error');
-      if (error instanceof WorkflowyError) {
-        setImportMessage(error.message);
-      } else {
-        setImportMessage('Failed to import from Workflowy');
-      }
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
-  const handlePushToWorkflowy = async () => {
-    const nodes = useDocumentStore.getState().nodes;
-    const rootId = useDocumentStore.getState().rootId;
-
-    if (!rootId) {
-      setSyncStatus('error');
-      setSyncMessage('No document to sync');
-      return;
-    }
-
-    // Check if document has Workflowy sync metadata
-    const rootNode = nodes[rootId];
-    if (!rootNode?.workflowySync) {
-      setSyncStatus('error');
-      setSyncMessage('This document was not imported from Workflowy. Use Import first.');
-      return;
-    }
-
-    setIsSyncing(true);
-    setSyncStatus('idle');
-    setSyncMessage(null);
-
-    try {
-      const result = await pushToWorkflowy(nodes, rootId);
-
-      // Always update the document store with modified nodes (sync metadata may have been updated)
-      useDocumentStore.getState().loadDocument(result.updatedNodes, rootId, useDocumentStore.getState().currentFilePath);
-
-      const summary = `${result.updated} updated, ${result.created} created, ${result.deleted} deleted, ${result.moved} moved.`;
-      const warningDetails = result.warnings.length > 0
-        ? ` ${result.warnings.length} warnings. First: ${result.warnings[0].warning}`
-        : '';
-
-      if (result.errors.length > 0) {
-        setSyncStatus('error');
-        // Show the first error for debugging
-        const firstError = result.errors[0];
-        console.error('Push errors:', result.errors);
-        setSyncMessage(`Pushed with errors: ${summary} ${result.errors.length} errors. First: ${firstError.error}${warningDetails}`);
-      } else {
-        setSyncStatus('success');
-        setSyncMessage(`Pushed successfully: ${summary}${warningDetails}`);
-      }
-    } catch (error) {
-      setSyncStatus('error');
-      if (error instanceof WorkflowyError) {
-        setSyncMessage(error.message);
-      } else {
-        setSyncMessage('Failed to push to Workflowy');
-      }
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  const handlePullFromWorkflowy = async () => {
-    const nodes = useDocumentStore.getState().nodes;
-    const rootId = useDocumentStore.getState().rootId;
-
-    if (!rootId) {
-      setSyncStatus('error');
-      setSyncMessage('No document to sync');
-      return;
-    }
-
-    // Check if document has Workflowy sync metadata
-    const rootNode = nodes[rootId];
-    if (!rootNode?.workflowySync) {
-      setSyncStatus('error');
-      setSyncMessage('This document was not imported from Workflowy. Use Import first.');
-      return;
-    }
-
-    const bulletId = rootNode.workflowySync.workflowyId;
-
-    setIsSyncing(true);
-    setSyncStatus('idle');
-    setSyncMessage(null);
-
-    try {
-      const result = await pullFromWorkflowy(bulletId, nodes);
-
-      if (result.conflicts.length > 0) {
-        setSyncStatus('error');
-        setSyncMessage(`Pulled with conflicts: ${result.conflicts.length} nodes have both local and remote changes.`);
-      } else {
-        setSyncStatus('success');
-        setSyncMessage('Pulled successfully from Workflowy.');
-      }
-
-      // Update the document with merged nodes
-      useDocumentStore.getState().loadDocument(result.nodes, rootId, useDocumentStore.getState().currentFilePath);
-    } catch (error) {
-      setSyncStatus('error');
-      if (error instanceof WorkflowyError) {
-        setSyncMessage(error.message);
-      } else {
-        setSyncMessage('Failed to pull from Workflowy');
-      }
-    } finally {
-      setIsSyncing(false);
     }
   };
 
@@ -426,7 +266,8 @@ export function WorkflowyTab() {
             Target Bullet ID
           </h4>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            The Workflowy bullet (projectid) to sync with. Find this in the URL when viewing a bullet.
+            The Workflowy bullet (projectid) to sync with. The URL does not show the full ID.
+            Inspect the bullet item in DevTools and copy the projectid from the div with class "project".
           </p>
         </div>
 
@@ -447,125 +288,10 @@ export function WorkflowyTab() {
         />
 
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Example URL: <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">workflowy.com/#/8371678f-2aa6-1d44-8073-50274ebb91fa</code>
+          Example DOM: <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">{'<div class="project" projectid="8371678f-2aa6-1d44-8073-50274ebb91fa">'}...</code>
         </p>
       </div>
 
-      {/* Import Section */}
-      {isApiKeySet && keyringAvailable && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3">
-          <div>
-            <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-              Import from Workflowy
-            </h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Import the target bullet and all its children as a new document.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleImport}
-              disabled={isImporting || !targetBulletId.trim()}
-              className="
-                flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md
-                bg-blue-500 hover:bg-blue-600 text-white
-                disabled:opacity-50 disabled:cursor-not-allowed
-                transition-colors
-              "
-            >
-              <Download className={`w-4 h-4 ${isImporting ? 'animate-pulse' : ''}`} />
-              {isImporting ? 'Importing...' : 'Import'}
-            </button>
-
-            {importStatus === 'success' && (
-              <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
-                <Check className="w-4 h-4" />
-                {importMessage}
-              </span>
-            )}
-
-            {importStatus === 'error' && (
-              <span className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
-                <AlertCircle className="w-4 h-4" />
-                {importMessage}
-              </span>
-            )}
-          </div>
-
-          {!targetBulletId.trim() && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              Enter a target bullet ID above to enable import.
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Sync Section */}
-      {isApiKeySet && keyringAvailable && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3">
-          <div>
-            <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-              Sync with Workflowy
-            </h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Push local changes to Workflowy or pull remote changes to your document.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={handlePushToWorkflowy}
-              disabled={isSyncing}
-              className="
-                flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md
-                border border-gray-300 dark:border-gray-600
-                text-gray-700 dark:text-gray-300
-                hover:bg-gray-100 dark:hover:bg-gray-700
-                disabled:opacity-50 disabled:cursor-not-allowed
-                transition-colors
-              "
-            >
-              <Upload className={`w-4 h-4 ${isSyncing ? 'animate-pulse' : ''}`} />
-              Push to Workflowy
-            </button>
-
-            <button
-              onClick={handlePullFromWorkflowy}
-              disabled={isSyncing}
-              className="
-                flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md
-                border border-gray-300 dark:border-gray-600
-                text-gray-700 dark:text-gray-300
-                hover:bg-gray-100 dark:hover:bg-gray-700
-                disabled:opacity-50 disabled:cursor-not-allowed
-                transition-colors
-              "
-            >
-              <ArrowDownUp className={`w-4 h-4 ${isSyncing ? 'animate-pulse' : ''}`} />
-              Pull from Workflowy
-            </button>
-
-            {syncStatus === 'success' && (
-              <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
-                <Check className="w-4 h-4" />
-                {syncMessage}
-              </span>
-            )}
-
-            {syncStatus === 'error' && (
-              <span className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
-                <AlertCircle className="w-4 h-4" />
-                {syncMessage}
-              </span>
-            )}
-          </div>
-
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Note: Only documents imported from Workflowy can be synced.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
