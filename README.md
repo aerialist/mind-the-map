@@ -303,6 +303,16 @@ When a document is synced with Workflowy, Push/Pull buttons appear in the header
 - Toast notification shows results
 - If conflicts are detected, shows info toast indicating remote version was accepted
 
+#### Sync Status Indicators
+
+Nodes in Workflowy-synced documents show a small list icon badge to indicate their sync status:
+- **Gray list icon** - Node is synced with Workflowy, no local changes
+- **Red list icon** - Node has been modified locally since last sync (needs push)
+- **Red list icon with diagonal bar** - Conflict detected (both local and remote have changes)
+- **No badge** - New node created locally, not yet synced to Workflowy
+
+These visual indicators help you see at a glance which nodes need to be pushed to Workflowy.
+
 #### Conflict Resolution Strategy
 
 The Push/Pull model follows a Git-like approach:

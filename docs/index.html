@@ -661,6 +661,17 @@
         </table>
 
         <div class="tip-box">
+          <strong>Sync Status Indicators:</strong> Nodes in Workflowy-synced documents show a small list icon badge to indicate their sync status:
+          <ul style="margin-left: 20px; margin-top: 8px;">
+            <li><strong>Gray list icon</strong> - Node is synced with Workflowy, no local changes</li>
+            <li><strong>Red list icon</strong> - Node has been modified locally since last sync (needs push)</li>
+            <li><strong>Red list icon with diagonal bar</strong> - Conflict detected (both local and remote have changes)</li>
+            <li><strong>No badge</strong> - New node created locally, not yet synced to Workflowy</li>
+          </ul>
+          These indicators help you see at a glance which nodes need to be pushed to Workflowy.
+        </div>
+
+        <div class="tip-box">
           <strong>Conflict Resolution Strategy:</strong> The Push/Pull model follows a Git-like approach:
           <ul>
             <li><strong>Push</strong> = "I want to save my work" → Preserves your local changes, warns about conflicts</li>

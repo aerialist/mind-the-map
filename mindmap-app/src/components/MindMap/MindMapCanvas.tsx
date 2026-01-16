@@ -1011,6 +1011,7 @@ function MindMapCanvas() {
       const hasWorkflowyBadge = !!node.workflowySync || !!node.workflowyConflict;
       const hasWorkflowyConflict =
         !!node.workflowySync?.conflict || !!node.workflowyConflict;
+      const hasWorkflowyModified = !!node.workflowyModified;
       const textStyle = new TextStyle({
         fontSize: 14,
         fill: hasLink ? COLORS.textLink : COLORS.text,
@@ -1090,6 +1091,8 @@ function MindMapCanvas() {
 
           const workflowyIcon = new Graphics();
           const workflowyColor = hasWorkflowyConflict
+            ? WORKFLOWY_CONFLICT_COLOR
+            : hasWorkflowyModified
             ? WORKFLOWY_CONFLICT_COLOR
             : WORKFLOWY_BADGE_COLOR;
           const workflowyColorHex = parseInt(workflowyColor.replace('#', ''), 16);

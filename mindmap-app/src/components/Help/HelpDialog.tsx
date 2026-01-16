@@ -145,6 +145,7 @@ const shortcutSections: ShortcutSection[] = [
     shortcuts: [
       { keys: ['—'], description: 'Push to Workflowy (only for Workflowy-synced documents)' },
       { keys: ['—'], description: 'Pull from Workflowy (only for Workflowy-synced documents)' },
+      { keys: ['—'], description: 'Sync Status: Gray icon = synced, Red = modified (needs push), Red + bar = conflict' },
     ],
   },
   ...(isMac

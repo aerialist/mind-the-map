@@ -214,6 +214,69 @@ export function parseWorkflowyDates(text: string): Date[] {
 }
 
 // ============================================================================
+// Modification Detection
+// ============================================================================
+
+/**
+ * Check if a node has been modified locally since last sync
+ *
+ * @param node - Node to check
+ * @returns true if node has local modifications that need to be pushed
+ */
+export function isNodeModifiedLocally(node: Node): boolean {
+  // New nodes without sync metadata are not "modified" - they're just new
+  if (!node.workflowySync) {
+    return false;
+  }
+
+  // Nodes with conflict markers are not marked as "modified"
+  if (node.workflowySync.conflict || node.workflowyConflict) {
+    return false;
+  }
+
+  // Check if explicitly marked as modified
+  if (node.workflowyModified) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Mark a node as modified locally (needs push)
+ *
+ * @param node - Node to mark
+ * @returns Updated node with modification flag
+ */
+export function markNodeAsModified(node: Node): Node {
+  // Only mark if it has Workflowy sync metadata
+  if (!node.workflowySync) {
+    return node;
+  }
+
+  return {
+    ...node,
+    workflowyModified: true,
+  };
+}
+
+/**
+ * Clear the modified flag from a node
+ *
+ * @param node - Node to clear
+ * @returns Updated node without modification flag
+ */
+export function clearNodeModified(node: Node): Node {
+  if (!node.workflowyModified) {
+    return node;
+  }
+
+  const updated = { ...node };
+  delete updated.workflowyModified;
+  return updated;
+}
+
+// ============================================================================
 // Sync Functions
 // ============================================================================
 
@@ -259,6 +322,9 @@ export async function pushToWorkflowy(
     }
     if (node.workflowyConflict) {
       delete node.workflowyConflict;
+    }
+    if (node.workflowyModified) {
+      delete node.workflowyModified;
     }
   };
 
@@ -652,15 +718,7 @@ export async function pullFromWorkflowy(
     if (localNode.workflowySync) continue;
     localOnlyNodeIds.add(nodeId);
     if (!mergedNodes[nodeId]) {
-      mergedNodes[nodeId] = {
-        ...localNode,
-        workflowyConflict: true,
-      };
-    } else if (!mergedNodes[nodeId].workflowyConflict) {
-      mergedNodes[nodeId] = {
-        ...mergedNodes[nodeId],
-        workflowyConflict: true,
-      };
+      mergedNodes[nodeId] = localNode;
     }
   }
 

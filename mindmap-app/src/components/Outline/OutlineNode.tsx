@@ -43,6 +43,7 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   const isRoot = !node?.parentId;
   const hasWorkflowyBadge = !!node?.workflowySync || !!node?.workflowyConflict;
   const hasWorkflowyConflict = !!node?.workflowySync?.conflict || !!node?.workflowyConflict;
+  const hasWorkflowyModified = !!node?.workflowyModified;
 
   // Initialize edit text and focus when starting to edit
   useEffect(() => {
@@ -279,9 +280,17 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
             className={`ml-1 relative inline-flex items-center justify-center ${
               hasWorkflowyConflict
                 ? 'text-red-500 dark:text-red-400'
+                : hasWorkflowyModified
+                ? 'text-red-500 dark:text-red-400'
                 : 'text-gray-400 dark:text-gray-500'
             }`}
-            title={hasWorkflowyConflict ? 'Workflowy conflict detected' : 'Synced with Workflowy'}
+            title={
+              hasWorkflowyConflict
+                ? 'Workflowy conflict detected'
+                : hasWorkflowyModified
+                ? 'Modified locally - needs push'
+                : 'Synced with Workflowy'
+            }
           >
             <List className="w-4 h-4" />
             {hasWorkflowyConflict && (

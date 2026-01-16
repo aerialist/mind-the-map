@@ -33,6 +33,7 @@ export interface Node {
   link?: string; // Optional link (URL or file path)
   workflowySync?: WorkflowySyncMetadata; // Workflowy sync metadata (if imported from Workflowy)
   workflowyConflict?: boolean; // Local-only Workflowy conflict marker
+  workflowyModified?: boolean; // Node modified locally since last sync (needs push)
 }
 
 export type NodeMap = Record<string, Node>;

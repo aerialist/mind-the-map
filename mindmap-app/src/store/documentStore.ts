@@ -30,6 +30,13 @@ const generateId = (): string => {
   return `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
+// Mark a node as modified if it has Workflowy sync metadata
+const markModifiedIfSynced = (node: Node): void => {
+  if (node.workflowySync && !node.workflowySync.conflict && !node.workflowyConflict) {
+    node.workflowyModified = true;
+  }
+};
+
 // Create initial root node
 const createRootNode = (): Node => ({
   id: 'root',
@@ -589,6 +596,7 @@ export const useDocumentStore = create<DocumentState>()(
           // Save to history before making changes
           saveToHistory(state);
           node.content.text = text;
+          markModifiedIfSynced(node);
           state.isDirty = true;
         }
       }),
@@ -978,6 +986,9 @@ export const useDocumentStore = create<DocumentState>()(
         // Update node's parent reference
         node.parentId = newParentId;
 
+        // Mark node as modified if it's synced with Workflowy
+        markModifiedIfSynced(node);
+
         // Expand new parent if collapsed
         newParent.isCollapsed = false;
 
@@ -1015,6 +1026,9 @@ export const useDocumentStore = create<DocumentState>()(
 
         // Update node's parent reference
         node.parentId = newParentId;
+
+        // Mark node as modified if it's synced with Workflowy
+        markModifiedIfSynced(node);
 
         // Expand new parent if collapsed
         newParent.isCollapsed = false;
@@ -1056,6 +1070,9 @@ export const useDocumentStore = create<DocumentState>()(
 
         // Update node's parent reference
         node.parentId = parent.parentId;
+
+        // Mark node as modified if it's synced with Workflowy
+        markModifiedIfSynced(node);
 
         state.isDirty = true;
       }),
@@ -1321,6 +1338,8 @@ export const useDocumentStore = create<DocumentState>()(
           node.icons = [];
         }
 
+        markModifiedIfSynced(node);
+
         // Check if icon of same type already exists
         const existingIndex = node.icons.findIndex((i) => i.type === icon.type);
         if (existingIndex >= 0) {
@@ -1343,6 +1362,7 @@ export const useDocumentStore = create<DocumentState>()(
         saveToHistory(state);
 
         node.icons.splice(iconIndex, 1);
+        markModifiedIfSynced(node);
 
         // Clean up empty array
         if (node.icons.length === 0) {
@@ -1363,6 +1383,8 @@ export const useDocumentStore = create<DocumentState>()(
         // Get the next icon in the same category
         const currentIcon = node.icons[iconIndex];
         const nextIcon = getNextIconInCategory(currentIcon);
+
+        markModifiedIfSynced(node);
         node.icons[iconIndex] = nextIcon;
 
         state.isDirty = true;
@@ -1414,6 +1436,7 @@ export const useDocumentStore = create<DocumentState>()(
           delete node.link;
         }
 
+        markModifiedIfSynced(node);
         state.isDirty = true;
       }),
 
@@ -1587,11 +1610,13 @@ export const useDocumentStore = create<DocumentState>()(
         // Deep clone clipboard data to avoid mutation issues with Immer
         const clipboardNodes: NodeMap = JSON.parse(JSON.stringify(state.clipboard.nodes));
         const clipboardRootIds: string[] = [...state.clipboard.rootIds];
+        const isCutMode = state.clipboard.mode === 'cut';
 
-        // Generate new IDs for all nodes to avoid conflicts
+        // For cut mode (first paste): reuse original IDs to preserve Workflowy sync metadata
+        // For copy mode: generate new IDs
         const idMapping: Record<string, string> = {};
         for (const oldId of Object.keys(clipboardNodes)) {
-          idMapping[oldId] = generateId();
+          idMapping[oldId] = isCutMode ? oldId : generateId();
         }
 
         // Create new nodes with updated IDs and references
@@ -1601,7 +1626,7 @@ export const useDocumentStore = create<DocumentState>()(
           newRootIds.push(newRootId);
         }
 
-        // Add all nodes with new IDs
+        // Add all nodes with updated IDs and references
         for (const [oldId, oldNode] of Object.entries(clipboardNodes)) {
           const newId = idMapping[oldId];
           const newNode: Node = {
@@ -1620,6 +1645,12 @@ export const useDocumentStore = create<DocumentState>()(
             newNode.parentId = targetParentId;
           }
 
+          // For copy mode, clear Workflowy metadata (new local nodes)
+          if (!isCutMode) {
+            delete newNode.workflowySync;
+            delete newNode.workflowyConflict;
+          }
+
           state.nodes[newId] = newNode;
         }
 
@@ -1629,12 +1660,24 @@ export const useDocumentStore = create<DocumentState>()(
         // Expand target parent if collapsed
         targetParent.isCollapsed = false;
 
-        // After cut-paste, convert to copy mode so subsequent pastes work
-        // (the original nodes were already removed during cut)
-        if (state.clipboard.mode === 'cut') {
+        // After cut-paste (first paste), convert to copy mode for subsequent pastes
+        // This matches Workflowy behavior: first paste = move, subsequent = copy
+        if (isCutMode) {
+          // Clone the clipboard nodes and clear Workflowy metadata for future pastes
+          const copyModeNodes: NodeMap = {};
+          for (const [nodeId, node] of Object.entries(clipboardNodes)) {
+            copyModeNodes[nodeId] = {
+              ...node,
+              workflowySync: undefined,
+              workflowyConflict: undefined,
+            };
+          }
+
           state.clipboard = {
-            ...state.clipboard,
+            nodes: copyModeNodes,
+            rootIds: clipboardRootIds,
             mode: 'copy',
+            sourceNodeIds: state.clipboard.sourceNodeIds,
           };
         }
 

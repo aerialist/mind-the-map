@@ -114,6 +114,10 @@ interface Node {
   icons: NodeIcon[];           // Multiple icons allowed (one per category)
   position: Position;
   isCollapsed: boolean;
+  link?: string;               // Optional URL or file path
+  workflowySync?: WorkflowySyncMetadata;  // Workflowy sync metadata
+  workflowyConflict?: boolean; // Conflict marker (local-only nodes after pull)
+  workflowyModified?: boolean; // Modified locally since last sync (needs push)
 }
 
 interface Position {
@@ -125,6 +129,16 @@ interface Position {
 interface NodeIcon {
   type: 'priority' | 'status' | 'flag' | 'mood' | 'time' | 'people' | 'communication' | 'document' | 'symbol' | 'notice';
   value: string | number;      // e.g., 1, 'done', 'red', 'positive'
+}
+
+interface WorkflowySyncMetadata {
+  workflowyId: string;         // Original Workflowy node ID
+  lastSyncedAt: number;        // Unix timestamp of last sync
+  lastModifiedAt: number;      // Workflowy's modifiedAt timestamp
+  conflict?: boolean;          // Conflict detected during push/pull
+  lastSyncedParentId?: string | null;     // Workflowy parent ID at last sync
+  lastSyncedPosition?: 'top' | 'bottom';  // Position at last sync
+  lastSyncedSiblingIndex?: number;        // Index among synced siblings
 }
 ```
 
@@ -278,6 +292,12 @@ In-app shortcuts listing is maintained in `mindmap-app/src/components/Help/HelpD
 
 **Workflowy Sync UI**: When a document has Workflowy sync metadata, Push/Pull buttons appear in the header (left of Map/Outline buttons) and a "Workflowy" menu is added. Buttons show loading indicators during sync operations and display toast notifications with results.
 
+**Sync Status Indicators** (badge icons shown on nodes):
+- **Gray list icon**: Node is synced with Workflowy, no local changes
+- **Red list icon**: Node modified locally since last sync (needs push)
+- **Red list icon with diagonal bar**: Conflict detected (both local and remote changes)
+- **No badge**: New node created locally, not yet synced to Workflowy
+
 **Conflict Resolution Strategy**:
 - Push = "Save my work" → Preserves local changes, warns about conflicts
 - Pull = "Get latest" → Accepts remote changes, overwrites local
@@ -388,6 +408,30 @@ The Settings dialog provides persistent app configuration with three tabs:
 - `src/services/settings/` - Persistence layer
 - `src/store/settingsStore.ts` - Zustand state
 - `src/components/Settings/` - Dialog UI components
+
+### Workflowy Sync & Modification Tracking
+
+**Sync Metadata**:
+- Nodes imported from Workflowy have `workflowySync` metadata tracking the original Workflowy node ID, last sync timestamp, and last modified timestamp
+- This metadata enables bidirectional sync and conflict detection
+
+**Modification Detection**:
+- When a synced node is modified locally (text, icons, structure, links), it's automatically marked with `workflowyModified: true`
+- Modified nodes show a red list icon (without crossing bar) to indicate they need to be pushed
+- Modification tracking happens in `documentStore.ts` via the `markModifiedIfSynced()` helper
+- Tracked operations: `updateNodeText`, `addIcon`, `removeIcon`, `cycleIcon`, `moveNode`, `indentNode`, `outdentNode`, `setNodeLink`
+
+**Conflict Handling**:
+- During Push: If remote was modified since last sync AND local has changes, mark as conflict (`workflowySync.conflict`)
+- During Pull: Local-only nodes (without `workflowySync`) are preserved without conflict markers (they can be pushed later)
+- Conflict nodes show red list icon with diagonal crossing bar
+- Modified flag is cleared after successful push
+
+**Visual Indicators**:
+- Gray list icon: Synced, no changes
+- Red list icon: Modified locally, needs push
+- Red list icon + crossing bar: Conflict detected
+- No icon: New local node, not yet synced
 
 ### Search & Filter Panel (Ctrl+F)
 The Search & Filter panel is a right sidebar with three distinct sections:
@@ -612,6 +656,9 @@ test('should do something', async ({ page }) => {
 | Settings dialog | `src/components/Settings/SettingsDialog.tsx` |
 | Settings persistence | `src/services/settings/` |
 | Settings state | `src/store/settingsStore.ts` |
+| Workflowy sync logic | `src/services/workflowy/utils.ts` |
+| Workflowy client | `src/services/workflowy/client.ts` |
+| Workflowy types | `src/services/workflowy/types.ts` |
 | Test setup | `src/test/setup.ts` |
 | E2E tests | `e2e/*.spec.ts` |
 | Playwright config | `playwright.config.ts` |
