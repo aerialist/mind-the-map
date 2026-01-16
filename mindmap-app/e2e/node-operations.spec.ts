@@ -188,7 +188,7 @@ test.describe("Node Operations - Outline View", () => {
     await page.waitForTimeout(300);
 
     // Clear and type new text
-    const input = page.locator("input, textarea").first();
+    const input = page.locator("input[type='text'].border-blue-400");
     await input.clear();
     await input.fill("Updated Root Text");
 
@@ -196,8 +196,8 @@ test.describe("Node Operations - Outline View", () => {
     await page.keyboard.press("Escape");
     await page.waitForTimeout(300);
 
-    // The input should no longer be visible
-    await expect(page.locator("input, textarea")).not.toBeVisible();
+    // The editing input should no longer be visible
+    await expect(page.locator("input[type='text'].border-blue-400")).not.toBeVisible();
 
     // Node text should be updated
     await expect(page.getByText("Updated Root Text")).toBeVisible();
