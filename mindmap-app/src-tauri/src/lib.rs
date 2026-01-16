@@ -666,14 +666,15 @@ pub fn run() {
                 .build()?;
 
             // === Insert menu items ===
-            let insert_sibling_below = MenuItemBuilder::with_id("insert_sibling_below", "New Sibling Node Below")
-                .accelerator("Enter")
+            // Note: Enter and Tab accelerators are omitted here because they need conditional behavior
+            // (e.g., Enter should insert newlines in edit mode, not create nodes). The JavaScript side
+            // handles these shortcuts with proper context awareness.
+            let insert_sibling_below = MenuItemBuilder::with_id("insert_sibling_below", "New Sibling Node Below (Enter)")
                 .build(app)?;
             let insert_sibling_above = MenuItemBuilder::with_id("insert_sibling_above", "New Sibling Node Above")
                 .accelerator("CmdOrCtrl+Shift+Enter")
                 .build(app)?;
-            let insert_child = MenuItemBuilder::with_id("insert_child", "New Child Node")
-                .accelerator("Tab")
+            let insert_child = MenuItemBuilder::with_id("insert_child", "New Child Node (Tab)")
                 .build(app)?;
             let line_break = MenuItemBuilder::with_id("line_break", "Line Break (in node)")
                 .accelerator("Shift+Enter")
@@ -773,11 +774,12 @@ pub fn run() {
             let node_move_right = MenuItemBuilder::with_id("node_move_right", "Move Node Right (Indent)")
                 .accelerator("CmdOrCtrl+Shift+Right")
                 .build(app)?;
-            let node_toggle_collapse = MenuItemBuilder::with_id("node_toggle_collapse", "Expand/Collapse")
-                .accelerator("Space")
+            // Note: Space key accelerators are omitted here because they need conditional behavior
+            // (e.g., Space should type a space character in edit mode, not toggle collapse). The
+            // JavaScript side handles these shortcuts with proper context awareness.
+            let node_toggle_collapse = MenuItemBuilder::with_id("node_toggle_collapse", "Expand/Collapse (Space)")
                 .build(app)?;
-            let node_toggle_collapse_all = MenuItemBuilder::with_id("node_toggle_collapse_all", "Expand/Collapse All Children")
-                .accelerator("Shift+Space")
+            let node_toggle_collapse_all = MenuItemBuilder::with_id("node_toggle_collapse_all", "Expand/Collapse All Children (Shift+Space)")
                 .build(app)?;
             let node_expand_all = MenuItemBuilder::with_id("node_expand_all", "Expand All Children")
                 .accelerator("CmdOrCtrl+Alt+Right")
@@ -818,26 +820,26 @@ pub fn run() {
                 .build()?;
 
             // === Navigate menu items ===
-            let nav_sibling_up = MenuItemBuilder::with_id("nav_sibling_up", "Move to Sibling Above")
-                .accelerator("Up")
+            // Note: Arrow key accelerators are omitted here because they need conditional behavior
+            // (e.g., they should not navigate when editing text). The JavaScript side handles these
+            // shortcuts with proper context awareness.
+            let nav_sibling_up = MenuItemBuilder::with_id("nav_sibling_up", "Move to Sibling Above (↑)")
                 .build(app)?;
-            let nav_sibling_down = MenuItemBuilder::with_id("nav_sibling_down", "Move to Sibling Below")
-                .accelerator("Down")
+            let nav_sibling_down = MenuItemBuilder::with_id("nav_sibling_down", "Move to Sibling Below (↓)")
                 .build(app)?;
-            let nav_first_child = MenuItemBuilder::with_id("nav_first_child", "Move to First Child")
-                .accelerator("Right")
+            let nav_first_child = MenuItemBuilder::with_id("nav_first_child", "Move to First Child (→)")
                 .build(app)?;
-            let nav_parent = MenuItemBuilder::with_id("nav_parent", "Move to Parent")
-                .accelerator("Left")
+            let nav_parent = MenuItemBuilder::with_id("nav_parent", "Move to Parent (←)")
                 .build(app)?;
+            // Note: Cmd+Arrow accelerators are omitted here because they conflict with standard
+            // text editing shortcuts on macOS (Cmd+Left/Right = move to start/end of line,
+            // Cmd+Up/Down = move to start/end of document). These navigation commands are still
+            // accessible via the menu, and can be handled by JavaScript when not editing if needed.
             let nav_first_sibling = MenuItemBuilder::with_id("nav_first_sibling", "Jump to First Sibling")
-                .accelerator("CmdOrCtrl+Up")
                 .build(app)?;
             let nav_last_sibling = MenuItemBuilder::with_id("nav_last_sibling", "Jump to Last Sibling")
-                .accelerator("CmdOrCtrl+Down")
                 .build(app)?;
             let nav_last_child = MenuItemBuilder::with_id("nav_last_child", "Jump to Last Child")
-                .accelerator("CmdOrCtrl+Right")
                 .build(app)?;
 
             let navigate_menu = SubmenuBuilder::new(app, "Navigate")

@@ -24,6 +24,18 @@ export const handleNodeInputKeyDown = (
   event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
   options: NodeInputKeyOptions
 ) => {
+  // For arrow keys, stop propagation to prevent navigation handlers from interfering
+  // with text editing (the browser handles cursor movement natively)
+  if (
+    event.key === 'ArrowLeft' ||
+    event.key === 'ArrowRight' ||
+    event.key === 'ArrowUp' ||
+    event.key === 'ArrowDown'
+  ) {
+    event.stopPropagation();
+    return;
+  }
+
   if (event.key === 'Enter') {
     if (event.shiftKey) return;
     if (isImeComposing(event, options.isComposing)) return;

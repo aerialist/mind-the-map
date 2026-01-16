@@ -6,6 +6,7 @@ import { getIconDefinition, getIconSvg, sortIconsByDisplayOrder } from '../../ty
 import { openLink } from '../../services/tauri';
 import { dispatch, registerCommandHandler } from '../../services/commandBus';
 import { handleNodeInputKeyDown } from '../../utils/nodeInputHandlers';
+import { parseFormattedText, getPlainText } from '../../utils/textFormatting';
 
 // Editing state for overlay input
 interface EditingState {
@@ -80,23 +81,27 @@ interface NodeLayout {
 const textWidthCache = new Map<string, number>();
 
 // Measure text width using PixiJS Text object
+// For formatted text, we measure the plain text (without tags)
 const measureTextWidth = (text: string): number => {
-  if (textWidthCache.has(text)) {
-    return textWidthCache.get(text)!;
+  // Strip formatting tags for measurement
+  const plainText = getPlainText(text);
+
+  if (textWidthCache.has(plainText)) {
+    return textWidthCache.get(plainText)!;
   }
 
   const textStyle = new TextStyle({
     fontSize: 14,
     fontFamily: 'system-ui, -apple-system, sans-serif',
   });
-  const textObj = new Text({ text: text || '(empty)', style: textStyle });
+  const textObj = new Text({ text: plainText || '(empty)', style: textStyle });
   const width = textObj.width;
 
   // Cache the result (limit cache size to prevent memory issues)
   if (textWidthCache.size > 1000) {
     textWidthCache.clear();
   }
-  textWidthCache.set(text, width);
+  textWidthCache.set(plainText, width);
 
   // Clean up
   textObj.destroy();
@@ -436,6 +441,12 @@ function MindMapCanvas() {
       app.stage.addChild(edgesContainer);
       app.stage.addChild(nodesContainer);
 
+      // Make stage interactive for background clicks
+      app.stage.eventMode = 'static';
+      app.stage.hitArea = {
+        contains: () => true, // Always hit - allows background clicks
+      };
+
       appRef.current = app;
       nodesContainerRef.current = nodesContainer;
       edgesContainerRef.current = edgesContainer;
@@ -548,6 +559,36 @@ function MindMapCanvas() {
       setIsReady(false);
     };
   }, []);
+
+  // Handle background clicks to exit editing mode
+  useEffect(() => {
+    const app = appRef.current;
+    if (!app || !isReady) return;
+
+    const handleStageClick = (e: any) => {
+      // Only handle left clicks on the background (not on nodes)
+      const originalEvent = e.nativeEvent as PointerEvent | undefined;
+      if (originalEvent?.button !== 0 && originalEvent?.button !== undefined) return;
+
+      // If we're editing, stop editing when clicking on background
+      if (editing) {
+        const editingNode = nodes[editing.nodeId];
+        if (editingNode && editingNode.content.type === 'text') {
+          updateNodeText(editing.nodeId, editing.text);
+        }
+        setEditing(null);
+        stopEditing();
+      }
+    };
+
+    app.stage.on('pointerdown', handleStageClick);
+
+    return () => {
+      if (app && app.stage) {
+        app.stage.off('pointerdown', handleStageClick);
+      }
+    };
+  }, [editing, nodes, updateNodeText, stopEditing, isReady]);
 
   // Start editing a node in-place
   const startEditingNode = useCallback((nodeId: string, retryCount = 0) => {
@@ -1012,35 +1053,57 @@ function MindMapCanvas() {
       const hasWorkflowyConflict =
         !!node.workflowySync?.conflict || !!node.workflowyConflict;
       const hasWorkflowyModified = !!node.workflowyModified;
-      const textStyle = new TextStyle({
-        fontSize: 14,
-        fill: hasLink ? COLORS.textLink : COLORS.text,
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-      });
-      const textObj = new Text({ text: text || '(empty)', style: textStyle });
-      textObj.x = iconOffset;
-      textObj.y = (layout.height - textObj.height) / 2;
 
-      // If linked, make text clickable and add underline
-      if (hasLink) {
-        textObj.eventMode = 'static';
-        textObj.cursor = 'pointer';
-        textObj.on('pointerdown', (e) => {
-          const originalEvent = e.nativeEvent as PointerEvent | undefined;
-          if (originalEvent?.button === 2) return;
-          e.stopPropagation();
-          openLink(node.link!);
+      // Parse formatted text into segments
+      const segments = parseFormattedText(text || '(empty)');
+      let currentX = iconOffset;
+      let maxSegmentHeight = 0;
+
+      // Render each text segment with its own style
+      segments.forEach((segment) => {
+        const segmentStyle = new TextStyle({
+          fontSize: 14,
+          fill: hasLink ? COLORS.textLink : COLORS.text,
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          fontWeight: segment.bold ? 'bold' : 'normal',
+          fontStyle: segment.italic ? 'italic' : 'normal',
+          // Note: PixiJS doesn't support textDecoration
+          // Underline and strikethrough will need to be drawn manually if needed
         });
 
-        // Add underline
+        const segmentTextObj = new Text({ text: segment.text, style: segmentStyle });
+        segmentTextObj.x = currentX;
+        segmentTextObj.y = (layout.height - segmentTextObj.height) / 2;
+
+        if (segmentTextObj.height > maxSegmentHeight) {
+          maxSegmentHeight = segmentTextObj.height;
+        }
+
+        // If linked, make text clickable
+        if (hasLink) {
+          segmentTextObj.eventMode = 'static';
+          segmentTextObj.cursor = 'pointer';
+          segmentTextObj.on('pointerdown', (e) => {
+            const originalEvent = e.nativeEvent as PointerEvent | undefined;
+            if (originalEvent?.button === 2) return;
+            e.stopPropagation();
+            openLink(node.link!);
+          });
+        }
+
+        container.addChild(segmentTextObj);
+        currentX += segmentTextObj.width;
+      });
+
+      // If linked, add underline for the entire text
+      if (hasLink) {
         const underline = new Graphics();
-        underline.moveTo(iconOffset, textObj.y + textObj.height - 2);
-        underline.lineTo(iconOffset + textObj.width, textObj.y + textObj.height - 2);
+        const underlineY = (layout.height + maxSegmentHeight) / 2 - 2;
+        underline.moveTo(iconOffset, underlineY);
+        underline.lineTo(currentX, underlineY);
         underline.stroke({ width: 1, color: COLORS.textLink });
         container.addChild(underline);
       }
-
-      container.addChild(textObj);
 
       // Right-side badges/icons (Workflowy sync + link)
       if (hasLink || hasWorkflowyBadge) {
@@ -1185,6 +1248,17 @@ function MindMapCanvas() {
         }
 
         e.stopPropagation();
+
+        // If we're editing a different node, save and stop editing
+        if (editing && editing.nodeId !== nodeId) {
+          const editingNode = nodes[editing.nodeId];
+          if (editingNode && editingNode.content.type === 'text') {
+            updateNodeText(editing.nodeId, editing.text);
+          }
+          setEditing(null);
+          stopEditing();
+        }
+
         const now = Date.now();
         const lastClickTime = clickTimesRef.current.get(nodeId) || 0;
         const timeDiff = now - lastClickTime;

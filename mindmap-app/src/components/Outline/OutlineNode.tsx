@@ -6,6 +6,7 @@ import { Tags, Link, List } from 'lucide-react';
 import { openLink } from '../../services/tauri';
 import { dispatch } from '../../services/commandBus';
 import { handleNodeInputKeyDown } from '../../utils/nodeInputHandlers';
+import FormattedText from './FormattedText';
 
 interface OutlineNodeProps {
   nodeId: string;
@@ -75,6 +76,11 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   };
 
   const handleClick = (e: React.MouseEvent) => {
+    // If we're currently editing a different node, save and stop editing
+    if (editingNodeId && editingNodeId !== nodeId) {
+      stopEditing();
+    }
+
     if (e.ctrlKey || e.metaKey) {
       // Ctrl+click (or Cmd+click on Mac): Toggle this node in multi-selection
       toggleNodeSelection(nodeId);
@@ -261,16 +267,18 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
             className="flex-1 bg-white dark:bg-gray-800 border border-blue-400 rounded px-1 py-0 outline-none"
           />
         ) : (
-          <span className="flex-1">
-            <span
-              className={node.link ? 'text-purple-600 dark:text-purple-400 underline cursor-pointer hover:text-purple-700 dark:hover:text-purple-300' : ''}
-              onClick={node.link ? (e) => {
-                e.stopPropagation();
-                openLink(node.link!);
-              } : undefined}
-            >
-              {text}
-            </span>
+          <span
+            className="flex-1"
+            onClick={node.link ? (e: React.MouseEvent) => {
+              e.stopPropagation();
+              openLink(node.link!);
+            } : undefined}
+            style={node.link ? { cursor: 'pointer' } : undefined}
+          >
+            <FormattedText
+              text={text}
+              className={node.link ? 'text-purple-600 dark:text-purple-400 underline hover:text-purple-700 dark:hover:text-purple-300' : ''}
+            />
           </span>
         )}
 
