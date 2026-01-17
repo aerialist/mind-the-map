@@ -38,10 +38,10 @@ interface DropTargetState {
 // Node dimensions
 const NODE_PADDING_X = 16;
 const NODE_MIN_WIDTH = 80;
-const NODE_HEIGHT = 32;
+const NODE_HEIGHT = 40; // Increased from 32 to accommodate 24px icons
 const NODE_RADIUS = 6;
-const RIGHT_ICON_SIZE = 14;
-const RIGHT_ICON_SLOT = 20;
+const RIGHT_ICON_SIZE = 20; // Increased for better icon quality
+const RIGHT_ICON_SLOT = 24;
 
 // Layout constants
 const HORIZONTAL_GAP = 60;
@@ -93,10 +93,14 @@ const measureTextWidth = (text: string): number => {
   }
 
   const textStyle = new TextStyle({
-    fontSize: 14,
+    fontSize: 16, // Increased from 14 for better readability
     fontFamily: 'system-ui, -apple-system, sans-serif',
   });
-  const textObj = new Text({ text: plainText || '(empty)', style: textStyle });
+  const textObj = new Text({
+    text: plainText || '(empty)',
+    style: textStyle,
+    resolution: 2, // Higher resolution for text rendering
+  });
   const width = textObj.width;
 
   // Cache the result (limit cache size to prevent memory issues)
@@ -132,8 +136,8 @@ const calculateLayout = (
     // Account for icons width
     let iconsWidth = 0;
     if (node.icons && node.icons.length > 0) {
-      // Approximate width per icon emoji (12px font + 2px gap)
-      iconsWidth = node.icons.length * 16 + 4;
+      // Approximate width per icon (24px icon + 4px gap)
+      iconsWidth = node.icons.length * 28 + 4;
     }
 
     const rightIconCount =
@@ -322,11 +326,15 @@ function MindMapCanvas() {
     // Ghost text
     const text = node.content.type === 'text' ? node.content.text : '[image]';
     const textStyle = new TextStyle({
-      fontSize: 14,
+      fontSize: 16, // Increased from 14 for consistency
       fill: COLORS.text,
       fontFamily: 'system-ui, -apple-system, sans-serif',
     });
-    const textObj = new Text({ text: text || '(empty)', style: textStyle });
+    const textObj = new Text({
+      text: text || '(empty)',
+      style: textStyle,
+      resolution: 2,
+    });
     textObj.x = NODE_PADDING_X;
     textObj.y = (layout.height - textObj.height) / 2;
     ghost.addChild(textObj);
@@ -423,11 +431,15 @@ function MindMapCanvas() {
 
     const initApp = async () => {
       const app = new Application();
+      // Use higher resolution for better quality on high-DPI displays
+      const pixelRatio = window.devicePixelRatio || 1;
+      const resolution = Math.max(2, pixelRatio); // Minimum 2x for crisp rendering
+
       await app.init({
         background: COLORS.background,
         resizeTo: containerRef.current!,
         antialias: true,
-        resolution: window.devicePixelRatio || 1,
+        resolution: resolution,
         autoDensity: true,
         preserveDrawingBuffer: true, // Required for canvas export to PDF
       });
@@ -972,9 +984,9 @@ function MindMapCanvas() {
       });
       
       let iconOffset = NODE_PADDING_X;
-      const ICON_SIZE = 14;
+      const ICON_SIZE = 24; // Use native Lucide size for maximum quality
       const LUCIDE_SIZE = 24; // Lucide icons are 24x24 by default
-      const ICON_SCALE = ICON_SIZE / LUCIDE_SIZE;
+      const ICON_SCALE = 1.0; // No scaling needed - use native size
 
       if (sortedIcons.length > 0) {
         sortedIcons.forEach((icon: NodeIcon, iconIndex: number) => {
@@ -1014,12 +1026,16 @@ function MindMapCanvas() {
             iconGraphics.fill(iconColorHex);
             // Add number text
             const numStyle = new TextStyle({
-              fontSize: 9,
+              fontSize: 11, // Increased from 9 for better readability
               fill: 0xffffff,
               fontWeight: 'bold',
               fontFamily: 'system-ui, -apple-system, sans-serif',
             });
-            const numText = new Text({ text: String(icon.value), style: numStyle });
+            const numText = new Text({
+              text: String(icon.value),
+              style: numStyle,
+              resolution: 2,
+            });
             numText.x = (ICON_SIZE - numText.width) / 2;
             numText.y = (ICON_SIZE - numText.height) / 2;
             iconContainer.addChild(iconGraphics);
@@ -1028,11 +1044,88 @@ function MindMapCanvas() {
             // For all other icons, render the Lucide SVG
             try {
               // Create a colored version of the SVG by replacing stroke color
-              const coloredSvg = svgString
+              // IMPORTANT: Make tiny 0.01-unit lines/paths longer so they're visible
+              // These tiny marks are used for dots (eyes in smile icons, dot in 'i', etc.)
+              let coloredSvg = svgString
                 .replace(/stroke="currentColor"/g, `stroke="${iconColor}"`)
                 .replace(/fill="none"/g, 'fill="none"')
-                .replace(/stroke-width="2"/g, 'stroke-width="2.5"'); // Slightly thicker for visibility at small size
-              
+                .replace(/stroke-width="2"/g, 'stroke-width="3"') // Thicker stroke for better visibility of all lines
+                .replace(/stroke-linecap="round"/g, 'stroke-linecap="square"'); // Square line caps for sharper, more visible lines
+
+              // Replace tiny 0.01-unit elements with 2-unit elements, centered
+              // Pattern 1: Line elements like <line x1="9" x2="9.01" />
+              // Need to also adjust x1/y1 to center the extended line
+              // Use more specific patterns to avoid consuming multiple line elements
+              coloredSvg = coloredSvg
+                .replace(/<line\s+([^>]*?)x1="(\d+(?:\.\d+)?)"([^>]*?)x2="\2\.01"([^>]*?)\/>/g, (_match, before, x1, middle, after) => {
+                  const base = parseFloat(x1);
+                  return `<line ${before}x1="${base - 1}"${middle}x2="${base + 1}"${after}/>`;
+                })
+                .replace(/<line\s+([^>]*?)y1="(\d+(?:\.\d+)?)"([^>]*?)y2="\2\.01"([^>]*?)\/>/g, (_match, before, y1, middle, after) => {
+                  const base = parseFloat(y1);
+                  return `<line ${before}y1="${base - 1}"${middle}y2="${base + 1}"${after}/>`;
+                });
+
+              // Pattern 1b: Extend short vertical/horizontal lines (e.g., alert-circle's exclamation line)
+              // For alert-circle: <line x1="12" x2="12" y1="8" y2="12" /> (4-unit vertical line)
+              // Use a more flexible approach to handle different attribute orderings
+              coloredSvg = coloredSvg.replace(/<line\s+([^>]+)\/>/g, (match) => {
+                console.log(`Checking line: ${match}`);
+                const x1Match = match.match(/x1="(\d+(?:\.\d+)?)"/);
+                const x2Match = match.match(/x2="(\d+(?:\.\d+)?)"/);
+                const y1Match = match.match(/y1="(\d+(?:\.\d+)?)"/);
+                const y2Match = match.match(/y2="(\d+(?:\.\d+)?)"/);
+
+                if (!x1Match || !x2Match || !y1Match || !y2Match) {
+                  console.log(`  Missing attributes, skipping`);
+                  return match;
+                }
+
+                const x1 = parseFloat(x1Match[1]);
+                const x2 = parseFloat(x2Match[1]);
+                const y1 = parseFloat(y1Match[1]);
+                const y2 = parseFloat(y2Match[1]);
+
+                // Check if it's a vertical line (x1 == x2, ignoring .01 differences)
+                if (Math.abs(x1 - x2) < 0.1) {
+                  const length = Math.abs(y2 - y1);
+                  // Only extend if it's a short line (4 units = alert-circle exclamation)
+                  if (length > 0.1 && length < 6) {
+                    const center = (y1 + y2) / 2;
+                    const newY1 = center - 3;
+                    const newY2 = center + 3;
+                    console.log(`Extending vertical line: ${match} -> y1="${newY1}" y2="${newY2}"`);
+                    return match
+                      .replace(/y1="[^"]+"/g, `y1="${newY1}"`)
+                      .replace(/y2="[^"]+"/g, `y2="${newY2}"`);
+                  }
+                }
+
+                // Check if it's a horizontal line (y1 == y2, ignoring .01 differences)
+                if (Math.abs(y1 - y2) < 0.1) {
+                  const length = Math.abs(x2 - x1);
+                  // Skip 2-unit lines (already extended by Pattern 1 for .01 dots)
+                  // Only extend lines that are longer than 2.1 units but less than 6 units
+                  if (length > 2.1 && length < 6) {
+                    const center = (x1 + x2) / 2;
+                    const newX1 = center - 3;
+                    const newX2 = center + 3;
+                    console.log(`Extending horizontal line: ${match} -> x1="${newX1}" x2="${newX2}"`);
+                    return match
+                      .replace(/x1="[^"]+"/g, `x1="${newX1}"`)
+                      .replace(/x2="[^"]+"/g, `x2="${newX2}"`);
+                  }
+                }
+
+                return match;
+              });
+
+              // Pattern 2: Path elements like "h.01" (horizontal) or "v.01" (vertical)
+              // These are relative moves, so we need to go back 1 unit first, then forward 2
+              coloredSvg = coloredSvg
+                .replace(/h\.01\b/g, 'h-1 h2')   // Move back 1, then forward 2 (net: centered 2-unit line)
+                .replace(/v\.01\b/g, 'v-1 v2');  // Move back 1, then forward 2 (net: centered 2-unit line)
+
               iconGraphics.svg(coloredSvg);
               iconGraphics.scale.set(ICON_SCALE);
               iconContainer.addChild(iconGraphics);
@@ -1045,9 +1138,9 @@ function MindMapCanvas() {
           }
 
           container.addChild(iconContainer);
-          iconOffset += ICON_SIZE + 3;
+          iconOffset += ICON_SIZE + 4; // 24px icon + 4px gap
         });
-        iconOffset += 2; // Extra space after icons
+        iconOffset += 4; // Extra space after icons
       }
 
       // Node text
@@ -1094,7 +1187,7 @@ function MindMapCanvas() {
         }
 
         const segmentStyle = new TextStyle({
-          fontSize: 14,
+          fontSize: 16, // Increased from 14 for better readability
           fill: textColor,
           fontFamily: segment.code ? 'Monaco, monospace' : 'system-ui, -apple-system, sans-serif',
           fontWeight: segment.bold ? 'bold' : 'normal',
@@ -1103,7 +1196,11 @@ function MindMapCanvas() {
           // Underline and strikethrough will need to be drawn manually
         });
 
-        const segmentTextObj = new Text({ text: segment.text, style: segmentStyle });
+        const segmentTextObj = new Text({
+          text: segment.text,
+          style: segmentStyle,
+          resolution: 2, // Higher resolution for crisp text
+        });
         const segmentY = (layout.height - segmentTextObj.height) / 2;
         segmentTextObj.x = currentX;
         segmentTextObj.y = segmentY;
@@ -1223,16 +1320,16 @@ function MindMapCanvas() {
           });
 
           const linkIcon = new Graphics();
-          // Draw a simple link icon (chain link shape)
+          // Draw a simple link icon (chain link shape) - increased size for better visibility
           const cx = rightIconSize / 2;
           const cy = rightIconSize / 2;
-          const r = 4;
+          const r = 5; // Increased from 4
           // First ring
-          linkIcon.arc(cx - 2, cy, r, Math.PI * 0.75, Math.PI * 1.75);
-          linkIcon.stroke({ width: 2, color: COLORS.linkIcon });
+          linkIcon.arc(cx - 2.5, cy, r, Math.PI * 0.75, Math.PI * 1.75);
+          linkIcon.stroke({ width: 2.5, color: COLORS.linkIcon }); // Increased stroke width
           // Second ring
-          linkIcon.arc(cx + 2, cy, r, -Math.PI * 0.25, Math.PI * 0.75);
-          linkIcon.stroke({ width: 2, color: COLORS.linkIcon });
+          linkIcon.arc(cx + 2.5, cy, r, -Math.PI * 0.25, Math.PI * 0.75);
+          linkIcon.stroke({ width: 2.5, color: COLORS.linkIcon });
 
           linkIconContainer.addChild(linkIcon);
           container.addChild(linkIconContainer);
@@ -1256,9 +1353,9 @@ function MindMapCanvas() {
           });
 
           const noteIcon = new Graphics();
-          // Draw a simple note icon (document/file shape)
-          const iconWidth = rightIconSize * 0.7;
-          const iconHeight = rightIconSize * 0.8;
+          // Draw a simple note icon (document/file shape) - increased size for better visibility
+          const iconWidth = rightIconSize * 0.75; // Increased from 0.7
+          const iconHeight = rightIconSize * 0.85; // Increased from 0.8
           const offsetX = (rightIconSize - iconWidth) / 2;
           const offsetY = (rightIconSize - iconHeight) / 2;
           const cornerSize = iconWidth * 0.25;
@@ -1276,7 +1373,7 @@ function MindMapCanvas() {
           noteIcon.lineTo(offsetX + iconWidth - cornerSize, offsetY + cornerSize);
           noteIcon.lineTo(offsetX + iconWidth, offsetY + cornerSize);
 
-          noteIcon.stroke({ width: 2, color: COLORS.noteIcon });
+          noteIcon.stroke({ width: 2.5, color: COLORS.noteIcon }); // Increased stroke width
 
           noteIconContainer.addChild(noteIcon);
           container.addChild(noteIconContainer);
@@ -1771,7 +1868,7 @@ function MindMapCanvas() {
             top: editing.y,
             width: Math.max(editing.width, 100),
             height: editing.height,
-            fontSize: `${14 * (appRef.current?.stage.scale.x || 1)}px`,
+            fontSize: `${16 * (appRef.current?.stage.scale.x || 1)}px`, // Increased from 14 to match rendered text
             fontFamily: 'system-ui, -apple-system, sans-serif',
           }}
         />
