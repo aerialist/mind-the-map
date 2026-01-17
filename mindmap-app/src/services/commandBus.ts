@@ -451,6 +451,12 @@ const registerDefaults = () => {
     state.toggleLinkPanel();
   });
 
+  registerCommandHandler('node.addNote', (args) => {
+    const state = useDocumentStore.getState();
+    if (state.editingNodeId && !getNodeIdArg(args)) return;
+    state.toggleNotePanel();
+  });
+
   registerCommandHandler('navigate.siblingUp', () => {
     const state = getNavigableState();
     if (!state) return;

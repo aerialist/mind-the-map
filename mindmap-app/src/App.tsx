@@ -7,6 +7,7 @@ import { IconPicker } from './components/IconPicker';
 import { HelpDialog } from './components/Help';
 import { AboutDialog } from './components/About';
 import { LinkPanel } from './components/LinkDialog';
+import { NotePanel } from './components/NotePanel';
 import { SettingsDialog } from './components/Settings';
 import { Toast } from './components/Toast';
 import { useDocumentStore } from './store';
@@ -35,6 +36,7 @@ function App() {
   const currentFilePath = useDocumentStore((state) => state.currentFilePath);
   const isDirty = useDocumentStore((state) => state.isDirty);
   const isLinkDialogOpen = useDocumentStore((state) => state.isLinkDialogOpen);
+  const isNotePanelOpen = useDocumentStore((state) => state.isNotePanelOpen);
   const activeIconFilters = useDocumentStore((state) => state.activeIconFilters);
   const clearActiveIconFilters = useDocumentStore((state) => state.clearActiveIconFilters);
   const hiddenIconFilters = useDocumentStore((state) => state.hiddenIconFilters);
@@ -407,11 +409,12 @@ function App() {
           {viewMode === 'mindmap' ? <MindMapView /> : <OutlineView />}
         </div>
         {/* Right sidebar panels - stacked vertically */}
-        {(isIconPickerOpen || isSearchOpen || isLinkDialogOpen) && (
+        {(isIconPickerOpen || isSearchOpen || isLinkDialogOpen || isNotePanelOpen) && (
           <div className="w-80 flex flex-col border-l border-gray-200 dark:border-gray-700">
             {isIconPickerOpen && <IconPicker />}
             {isSearchOpen && <SearchPanel />}
             {isLinkDialogOpen && <LinkPanel />}
+            {isNotePanelOpen && <NotePanel />}
           </div>
         )}
       </main>

@@ -689,7 +689,6 @@ pub fn run() {
                 .build(app)?;
             let insert_note = MenuItemBuilder::with_id("insert_note", "Note")
                 .accelerator("CmdOrCtrl+Shift+N")
-                .enabled(false)
                 .build(app)?;
             let insert_icon = MenuItemBuilder::with_id("insert_icon", "Icon...")
                 .accelerator("CmdOrCtrl+Shift+I")
@@ -1056,6 +1055,7 @@ pub fn run() {
                 "insert_sibling_above" => Some("node.createSiblingAbove"),
                 "insert_child" => Some("node.createChild"),
                 "insert_link" => Some("node.addLink"),
+                "insert_note" => Some("node.addNote"),
                 "insert_icon" => Some("node.openIconPicker"),
                 "node_indent" => Some("node.indent"),
                 "node_outdent" => Some("node.outdent"),

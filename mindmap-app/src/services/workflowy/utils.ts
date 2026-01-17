@@ -78,12 +78,12 @@ export function workflowyNodeToMtmNode(
     },
     isCollapsed: false,
     icons: icons.length > 0 ? icons : undefined,
+    note: wfNode.note || undefined,
     workflowySync: {
       workflowyId: wfNode.id,
       lastSyncedAt: Date.now(),
       lastModifiedAt: wfNode.modifiedAt,
     },
-    // Note: wfNode.note is not currently mapped (MTM doesn't have notes)
     // Note: wfNode.data.layoutMode is not currently mapped
   };
 }
@@ -146,7 +146,7 @@ export function workflowyTreeToMtmNodes(
  */
 export function mtmNodeToWorkflowyUpdate(
   mtmNode: Node
-): { name: string; completed: boolean } {
+): { name: string; note?: string; completed: boolean } {
   const text =
     mtmNode.content.type === 'text' ? mtmNode.content.text : '[Image]';
 
@@ -158,6 +158,7 @@ export function mtmNodeToWorkflowyUpdate(
 
   return {
     name: text,
+    note: mtmNode.note,
     completed: isCompleted,
   };
 }
@@ -415,7 +416,10 @@ export async function pushToWorkflowy(
         }
 
         // Create the node in Workflowy at the determined position
-        const newNodeId = await client.createNode(parentWfId, text, { position });
+        const newNodeId = await client.createNode(parentWfId, text, {
+          position,
+          ...(node.note && { note: node.note })
+        });
 
         // Set completion status if needed
         const isDone = node.icons?.some(icon => icon.type === 'status' && icon.value === 'done');
@@ -473,6 +477,7 @@ export async function pushToWorkflowy(
         const wfNode = await client.getNode(wfId);
 
         const textNeedsUpdate = wfNode.name !== text;
+        const noteNeedsUpdate = (wfNode.note || undefined) !== node.note;
         const wasDone = wfNode.completedAt !== null;
         const completionNeedsUpdate = isDone !== wasDone;
         const lastSyncedParentId = node.workflowySync.lastSyncedParentId ?? wfNode.parent_id ?? null;
@@ -495,7 +500,7 @@ export async function pushToWorkflowy(
         let contentUpdated = false;
 
         // If nothing needs to change locally, skip this node entirely
-        if (!textNeedsUpdate && !completionNeedsUpdate && !parentChanged && !orderChanged) {
+        if (!textNeedsUpdate && !noteNeedsUpdate && !completionNeedsUpdate && !parentChanged && !orderChanged) {
           // Just sync metadata - no actual update needed
           node.workflowySync.lastModifiedAt = wfNode.modifiedAt;
           node.workflowySync.lastSyncedAt = Date.now();
@@ -520,11 +525,11 @@ export async function pushToWorkflowy(
         }
 
         // There are local content changes - check for conflicts with remote
-        if ((textNeedsUpdate || completionNeedsUpdate)
+        if ((textNeedsUpdate || noteNeedsUpdate || completionNeedsUpdate)
           && wfNode.modifiedAt > node.workflowySync.lastModifiedAt) {
           // Remote was modified since our last sync - potential conflict
           // Check if remote content is different from what we have
-          const remoteHasChanges = wfNode.name !== text || wasDone !== isDone;
+          const remoteHasChanges = wfNode.name !== text || (wfNode.note || undefined) !== node.note || wasDone !== isDone;
 
           if (remoteHasChanges) {
             // True conflict - both sides have different content
@@ -550,8 +555,11 @@ export async function pushToWorkflowy(
         }
 
         // Apply local changes to Workflowy
-        if (textNeedsUpdate) {
-          await client.updateNode(wfId, { name: text });
+        if (textNeedsUpdate || noteNeedsUpdate) {
+          await client.updateNode(wfId, {
+            ...(textNeedsUpdate && { name: text }),
+            ...(noteNeedsUpdate && { note: node.note })
+          });
           contentUpdated = true;
         }
 

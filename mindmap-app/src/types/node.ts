@@ -31,6 +31,7 @@ export interface Node {
   isCollapsed: boolean;
   icons?: NodeIcon[]; // Optional array of icons for the node
   link?: string; // Optional link (URL or file path)
+  note?: string; // Optional extended note/description (supports inline formatting)
   workflowySync?: WorkflowySyncMetadata; // Workflowy sync metadata (if imported from Workflowy)
   workflowyConflict?: boolean; // Local-only Workflowy conflict marker
   workflowyModified?: boolean; // Node modified locally since last sync (needs push)

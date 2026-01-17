@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import { useDocumentStore } from '../../store';
 import { useDragContext, useVisibleNodes } from './OutlineView';
 import { getIconDefinition, sortIconsByDisplayOrder, type NodeIcon } from '../../types';
-import { Tags, Link, List } from 'lucide-react';
+import { Link, List, FileText } from 'lucide-react';
 import { openLink } from '../../services/tauri';
 import { dispatch } from '../../services/commandBus';
 import { handleNodeInputKeyDown } from '../../utils/nodeInputHandlers';
@@ -25,7 +25,6 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   const stopEditing = useDocumentStore((state) => state.stopEditing);
   const updateNodeText = useDocumentStore((state) => state.updateNodeText);
   const toggleCollapse = useDocumentStore((state) => state.toggleCollapse);
-  const openIconPicker = useDocumentStore((state) => state.openIconPicker);
   const cycleIcon = useDocumentStore((state) => state.cycleIcon);
   const toggleLinkPanel = useDocumentStore((state) => state.toggleLinkPanel);
 
@@ -69,11 +68,6 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
   const text = node.content.type === 'text' ? node.content.text : '[image]';
   const hasChildren = node.childIds.length > 0;
   const nodeIcons = node.icons || [];
-
-  const handleIconClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    openIconPicker();
-  };
 
   const handleClick = (e: React.MouseEvent) => {
     // If we're currently editing a different node, save and stop editing
@@ -324,14 +318,17 @@ function OutlineNode({ nodeId, depth }: OutlineNodeProps) {
           </button>
         )}
 
-        {/* Icon picker button (visible on hover when selected) */}
-        {isSelected && !isEditing && (
+        {/* Note icon (shown when node has a note) */}
+        {node.note && !isEditing && (
           <button
-            onClick={handleIconClick}
-            className="ml-1 px-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
-            title="Add icon (I)"
+            onClick={(e) => {
+              e.stopPropagation();
+              useDocumentStore.getState().toggleNotePanel();
+            }}
+            className="ml-1 px-1 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+            title="Edit note"
           >
-            <Tags className="w-4 h-4" />
+            <FileText className="w-4 h-4" />
           </button>
         )}
       </div>

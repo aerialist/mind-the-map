@@ -137,6 +137,9 @@ interface DocumentState {
   // Link dialog state
   isLinkDialogOpen: boolean;
 
+  // Note panel state
+  isNotePanelOpen: boolean;
+
   // Workflowy sync state
   isSyncing: boolean;
   syncOperation: 'push' | 'pull' | null;
@@ -223,6 +226,12 @@ interface DocumentState {
   closeLinkDialog: () => void;
   toggleLinkPanel: () => void;
   setNodeLink: (nodeId: string, link: string | undefined) => void;
+
+  // Note actions
+  openNotePanel: () => void;
+  closeNotePanel: () => void;
+  toggleNotePanel: () => void;
+  setNodeNote: (nodeId: string, note: string | undefined) => void;
 
   // Sync actions
   setSyncStatus: (isSyncing: boolean, operation: 'push' | 'pull' | null) => void;
@@ -486,6 +495,9 @@ export const useDocumentStore = create<DocumentState>()(
 
     // Link dialog state
     isLinkDialogOpen: false,
+
+    // Note panel state
+    isNotePanelOpen: false,
 
     // Workflowy sync state
     isSyncing: false,
@@ -1434,6 +1446,44 @@ export const useDocumentStore = create<DocumentState>()(
           node.link = link.trim();
         } else {
           delete node.link;
+        }
+
+        markModifiedIfSynced(node);
+        state.isDirty = true;
+      }),
+
+    // Note actions
+    openNotePanel: () =>
+      set((state) => {
+        state.isNotePanelOpen = true;
+        state.editingNodeId = null;
+      }),
+
+    closeNotePanel: () =>
+      set((state) => {
+        state.isNotePanelOpen = false;
+      }),
+
+    toggleNotePanel: () =>
+      set((state) => {
+        state.isNotePanelOpen = !state.isNotePanelOpen;
+        if (state.isNotePanelOpen) {
+          state.editingNodeId = null;
+        }
+      }),
+
+    setNodeNote: (nodeId, note) =>
+      set((state) => {
+        const node = state.nodes[nodeId];
+        if (!node) return;
+
+        // Save to history before making changes
+        saveToHistory(state);
+
+        if (note && note.trim()) {
+          node.note = note.trim();
+        } else {
+          delete node.note;
         }
 
         markModifiedIfSynced(node);

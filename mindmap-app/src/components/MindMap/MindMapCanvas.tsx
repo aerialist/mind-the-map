@@ -62,6 +62,7 @@ const COLORS = {
   collapseIndicator: 0x63b3ed,
   collapseIndicatorBg: 0x16213e,
   linkIcon: 0xa855f7, // Purple color for link icon
+  noteIcon: 0x3b82f6, // Blue color for note icon
   codeBg: 0x2d3748, // Dark gray background for inline code
 };
 
@@ -136,7 +137,9 @@ const calculateLayout = (
     }
 
     const rightIconCount =
-      (node.link ? 1 : 0) + (node.workflowySync || node.workflowyConflict ? 1 : 0);
+      (node.link ? 1 : 0) +
+      (node.note ? 1 : 0) +
+      (node.workflowySync || node.workflowyConflict ? 1 : 0);
     const rightIconsWidth = rightIconCount * RIGHT_ICON_SLOT;
 
     return Math.max(textWidth + iconsWidth + rightIconsWidth + NODE_PADDING_X * 2, NODE_MIN_WIDTH);
@@ -1050,6 +1053,7 @@ function MindMapCanvas() {
       // Node text
       const text = node.content.type === 'text' ? node.content.text : '[image]';
       const hasLink = !!node.link;
+      const hasNote = !!node.note;
       const hasWorkflowyBadge = !!node.workflowySync || !!node.workflowyConflict;
       const hasWorkflowyConflict =
         !!node.workflowySync?.conflict || !!node.workflowyConflict;
@@ -1195,8 +1199,8 @@ function MindMapCanvas() {
         container.addChild(underline);
       }
 
-      // Right-side badges/icons (Workflowy sync + link)
-      if (hasLink || hasWorkflowyBadge) {
+      // Right-side badges/icons (Workflowy sync + link + note)
+      if (hasLink || hasNote || hasWorkflowyBadge) {
         const rightIconSize = RIGHT_ICON_SIZE;
         const rightIconStep = RIGHT_ICON_SLOT;
         const rightIconScale = rightIconSize / LUCIDE_SIZE;
@@ -1232,6 +1236,50 @@ function MindMapCanvas() {
 
           linkIconContainer.addChild(linkIcon);
           container.addChild(linkIconContainer);
+
+          rightIconX -= rightIconStep;
+        }
+
+        if (hasNote) {
+          const noteIconContainer = new Container();
+          noteIconContainer.x = rightIconX;
+          noteIconContainer.y = rightIconY;
+          noteIconContainer.eventMode = 'static';
+          noteIconContainer.cursor = 'pointer';
+
+          noteIconContainer.on('pointerdown', (e) => {
+            const originalEvent = e.nativeEvent as PointerEvent | undefined;
+            if (originalEvent?.button === 2) return;
+            e.stopPropagation();
+            // Open note panel to edit the note
+            useDocumentStore.getState().toggleNotePanel();
+          });
+
+          const noteIcon = new Graphics();
+          // Draw a simple note icon (document/file shape)
+          const iconWidth = rightIconSize * 0.7;
+          const iconHeight = rightIconSize * 0.8;
+          const offsetX = (rightIconSize - iconWidth) / 2;
+          const offsetY = (rightIconSize - iconHeight) / 2;
+          const cornerSize = iconWidth * 0.25;
+
+          // Document outline with folded corner
+          noteIcon.moveTo(offsetX, offsetY);
+          noteIcon.lineTo(offsetX + iconWidth - cornerSize, offsetY);
+          noteIcon.lineTo(offsetX + iconWidth, offsetY + cornerSize);
+          noteIcon.lineTo(offsetX + iconWidth, offsetY + iconHeight);
+          noteIcon.lineTo(offsetX, offsetY + iconHeight);
+          noteIcon.lineTo(offsetX, offsetY);
+
+          // Folded corner detail
+          noteIcon.moveTo(offsetX + iconWidth - cornerSize, offsetY);
+          noteIcon.lineTo(offsetX + iconWidth - cornerSize, offsetY + cornerSize);
+          noteIcon.lineTo(offsetX + iconWidth, offsetY + cornerSize);
+
+          noteIcon.stroke({ width: 2, color: COLORS.noteIcon });
+
+          noteIconContainer.addChild(noteIcon);
+          container.addChild(noteIconContainer);
 
           rightIconX -= rightIconStep;
         }
