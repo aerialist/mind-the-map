@@ -16,11 +16,89 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+
+  /* Workflowy-compatible text colors (light mode) */
+  --wf-tag-text-red: #dc2626;
+  --wf-tag-text-orange: #ea580c;
+  --wf-tag-text-yellow: #ca8a04;
+  --wf-tag-text-green: #16a34a;
+  --wf-tag-text-teal: #0d9488;
+  --wf-tag-text-sky: #0284c7;
+  --wf-tag-text-blue: #2563eb;
+  --wf-tag-text-purple: #9333ea;
+  --wf-tag-text-pink: #db2777;
+  --wf-tag-text-gray: #6b7280;
+
+  /* Workflowy-compatible background colors (light mode) */
+  --wf-tag-background-red: #fee2e2;
+  --wf-tag-background-orange: #ffedd5;
+  --wf-tag-background-yellow: #fef3c7;
+  --wf-tag-background-green: #dcfce7;
+  --wf-tag-background-teal: #ccfbf1;
+  --wf-tag-background-sky: #e0f2fe;
+  --wf-tag-background-blue: #dbeafe;
+  --wf-tag-background-purple: #f3e8ff;
+  --wf-tag-background-pink: #fce7f3;
+  --wf-tag-background-gray: #f3f4f6;
+
+  /* Text color for highlighted text */
+  --wf-tag-text: #0f0f0f;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;
     background-color: #1a1a1a;
+
+    /* Workflowy-compatible text colors (dark mode) */
+    --wf-tag-text-red: #f87171;
+    --wf-tag-text-orange: #fb923c;
+    --wf-tag-text-yellow: #fbbf24;
+    --wf-tag-text-green: #4ade80;
+    --wf-tag-text-teal: #2dd4bf;
+    --wf-tag-text-sky: #38bdf8;
+    --wf-tag-text-blue: #60a5fa;
+    --wf-tag-text-purple: #a78bfa;
+    --wf-tag-text-pink: #f472b6;
+    --wf-tag-text-gray: #9ca3af;
+
+    /* Workflowy-compatible background colors (dark mode) */
+    --wf-tag-background-red: #7f1d1d;
+    --wf-tag-background-orange: #7c2d12;
+    --wf-tag-background-yellow: #713f12;
+    --wf-tag-background-green: #14532d;
+    --wf-tag-background-teal: #134e4a;
+    --wf-tag-background-sky: #082f49;
+    --wf-tag-background-blue: #1e3a8a;
+    --wf-tag-background-purple: #581c87;
+    --wf-tag-background-pink: #831843;
+    --wf-tag-background-gray: #374151;
+
+    /* Text color for highlighted text */
+    --wf-tag-text: #f6f6f6;
   }
 }
+
+/* Workflowy-compatible color classes for text color */
+.c-red { color: var(--wf-tag-text-red); text-decoration-line: inherit; text-decoration-thickness: inherit; text-decoration-style: inherit; text-decoration-color: var(--wf-tag-text-red); }
+.c-orange { color: var(--wf-tag-text-orange); text-decoration-line: inherit; text-decoration-thickness: inherit; text-decoration-style: inherit; text-decoration-color: var(--wf-tag-text-orange); }
+.c-yellow { color: var(--wf-tag-text-yellow); text-decoration-line: inherit; text-decoration-thickness: inherit; text-decoration-style: inherit; text-decoration-color: var(--wf-tag-text-yellow); }
+.c-green { color: var(--wf-tag-text-green); text-decoration-line: inherit; text-decoration-thickness: inherit; text-decoration-style: inherit; text-decoration-color: var(--wf-tag-text-green); }
+.c-teal { color: var(--wf-tag-text-teal); text-decoration-line: inherit; text-decoration-thickness: inherit; text-decoration-style: inherit; text-decoration-color: var(--wf-tag-text-teal); }
+.c-sky { color: var(--wf-tag-text-sky); text-decoration-line: inherit; text-decoration-thickness: inherit; text-decoration-style: inherit; text-decoration-color: var(--wf-tag-text-sky); }
+.c-blue { color: var(--wf-tag-text-blue); text-decoration-line: inherit; text-decoration-thickness: inherit; text-decoration-style: inherit; text-decoration-color: var(--wf-tag-text-blue); }
+.c-purple { color: var(--wf-tag-text-purple); text-decoration-line: inherit; text-decoration-thickness: inherit; text-decoration-style: inherit; text-decoration-color: var(--wf-tag-text-purple); }
+.c-pink { color: var(--wf-tag-text-pink); text-decoration-line: inherit; text-decoration-thickness: inherit; text-decoration-style: inherit; text-decoration-color: var(--wf-tag-text-pink); }
+.c-gray { color: var(--wf-tag-text-gray); text-decoration-line: inherit; text-decoration-thickness: inherit; text-decoration-style: inherit; text-decoration-color: var(--wf-tag-text-gray); }
+
+/* Workflowy-compatible color classes for background highlight */
+.bc-red.bc-red { background-color: var(--wf-tag-background-red); color: var(--wf-tag-text); padding: 2px 0px; }
+.bc-orange.bc-orange { background-color: var(--wf-tag-background-orange); color: var(--wf-tag-text); padding: 2px 0px; }
+.bc-yellow.bc-yellow { background-color: var(--wf-tag-background-yellow); color: var(--wf-tag-text); padding: 2px 0px; }
+.bc-green.bc-green { background-color: var(--wf-tag-background-green); color: var(--wf-tag-text); padding: 2px 0px; }
+.bc-teal.bc-teal { background-color: var(--wf-tag-background-teal); color: var(--wf-tag-text); padding: 2px 0px; }
+.bc-sky.bc-sky { background-color: var(--wf-tag-background-sky); color: var(--wf-tag-text); padding: 2px 0px; }
+.bc-blue.bc-blue { background-color: var(--wf-tag-background-blue); color: var(--wf-tag-text); padding: 2px 0px; }
+.bc-purple.bc-purple { background-color: var(--wf-tag-background-purple); color: var(--wf-tag-text); padding: 2px 0px; }
+.bc-pink.bc-pink { background-color: var(--wf-tag-background-pink); color: var(--wf-tag-text); padding: 2px 0px; }
+.bc-gray.bc-gray { background-color: var(--wf-tag-background-gray); color: var(--wf-tag-text); padding: 2px 0px; }

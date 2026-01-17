@@ -8,7 +8,7 @@ interface FormattedTextProps {
 
 /**
  * Render text with inline formatting.
- * Supports: <b>, <i>, <u>, <s>, <code>, <a href="url">
+ * Supports: <b>, <i>, <u>, <s>, <code>, <a href="url">, <span class="colored c-*">, <span class="colored bc-*">
  *
  * Note: Text segments use pointer-events-none to allow clicks to bubble up,
  * but links are clickable with pointer-events-auto
@@ -28,6 +28,13 @@ function FormattedText({ text, className }: FormattedTextProps) {
         if (segment.strikethrough) classes.push('line-through');
         if (segment.code) {
           classes.push('font-mono', 'bg-gray-100', 'dark:bg-gray-800', 'px-1', 'py-0.5', 'rounded', 'text-sm');
+        }
+        // Add color and highlight classes
+        if (segment.color) {
+          classes.push('colored', `c-${segment.color}`);
+        }
+        if (segment.highlight) {
+          classes.push('colored', `bc-${segment.highlight}`);
         }
 
         if (segment.link) {

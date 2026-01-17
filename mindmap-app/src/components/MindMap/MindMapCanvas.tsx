@@ -1062,9 +1062,36 @@ function MindMapCanvas() {
 
       // Render each text segment with its own style
       segments.forEach((segment) => {
+        // Determine text color based on segment.color, highlight, or link state
+        let textColor = COLORS.text;
+        if (segment.highlight) {
+          // When highlighted, use dark text color for contrast (light backgrounds)
+          textColor = 0x0f0f0f;
+        } else if (segment.color) {
+          // Map color name to hex value
+          const colorMap: Record<string, number> = {
+            red: 0xdc2626, orange: 0xea580c, yellow: 0xca8a04, green: 0x16a34a,
+            teal: 0x0d9488, sky: 0x0284c7, blue: 0x2563eb, purple: 0x9333ea,
+            pink: 0xdb2777, gray: 0x6b7280
+          };
+          textColor = colorMap[segment.color] || COLORS.text;
+        } else if (segment.link || hasLink) {
+          textColor = COLORS.textLink;
+        }
+
+        // If both color and highlight are present, use the color
+        if (segment.color && segment.highlight) {
+          const colorMap: Record<string, number> = {
+            red: 0xdc2626, orange: 0xea580c, yellow: 0xca8a04, green: 0x16a34a,
+            teal: 0x0d9488, sky: 0x0284c7, blue: 0x2563eb, purple: 0x9333ea,
+            pink: 0xdb2777, gray: 0x6b7280
+          };
+          textColor = colorMap[segment.color] || 0x0f0f0f;
+        }
+
         const segmentStyle = new TextStyle({
           fontSize: 14,
-          fill: segment.link ? COLORS.textLink : hasLink ? COLORS.textLink : COLORS.text,
+          fill: textColor,
           fontFamily: segment.code ? 'Monaco, monospace' : 'system-ui, -apple-system, sans-serif',
           fontWeight: segment.bold ? 'bold' : 'normal',
           fontStyle: segment.italic ? 'italic' : 'normal',
@@ -1079,6 +1106,27 @@ function MindMapCanvas() {
 
         if (segmentTextObj.height > maxSegmentHeight) {
           maxSegmentHeight = segmentTextObj.height;
+        }
+
+        // Draw highlight background if needed
+        if (segment.highlight) {
+          const highlightBg = new Graphics();
+          const padding = 2;
+          // Map highlight color name to hex value
+          const highlightColorMap: Record<string, number> = {
+            red: 0xfee2e2, orange: 0xffedd5, yellow: 0xfef3c7, green: 0xdcfce7,
+            teal: 0xccfbf1, sky: 0xe0f2fe, blue: 0xdbeafe, purple: 0xf3e8ff,
+            pink: 0xfce7f3, gray: 0xf3f4f6
+          };
+          const highlightColor = highlightColorMap[segment.highlight] || 0xf3f4f6;
+          highlightBg.rect(
+            currentX,
+            segmentY - padding,
+            segmentTextObj.width,
+            segmentTextObj.height + padding * 2
+          );
+          highlightBg.fill(highlightColor);
+          container.addChild(highlightBg);
         }
 
         // Draw code background if needed
@@ -1118,7 +1166,7 @@ function MindMapCanvas() {
           underline.lineTo(currentX + segmentTextObj.width, underlineY);
           underline.stroke({
             width: 1,
-            color: segment.link ? COLORS.textLink : COLORS.text
+            color: textColor // Use the same color as the text
           });
           container.addChild(underline);
         }
@@ -1129,7 +1177,7 @@ function MindMapCanvas() {
           const strikethroughY = segmentY + segmentTextObj.height / 2;
           strikethrough.moveTo(currentX, strikethroughY);
           strikethrough.lineTo(currentX + segmentTextObj.width, strikethroughY);
-          strikethrough.stroke({ width: 1, color: COLORS.text });
+          strikethrough.stroke({ width: 1, color: textColor }); // Use the same color as the text
           container.addChild(strikethrough);
         }
 
