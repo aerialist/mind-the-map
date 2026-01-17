@@ -62,6 +62,7 @@ const COLORS = {
   collapseIndicator: 0x63b3ed,
   collapseIndicatorBg: 0x16213e,
   linkIcon: 0xa855f7, // Purple color for link icon
+  codeBg: 0x2d3748, // Dark gray background for inline code
 };
 
 const WORKFLOWY_BADGE_COLOR = '#94a3b8';
@@ -1063,40 +1064,81 @@ function MindMapCanvas() {
       segments.forEach((segment) => {
         const segmentStyle = new TextStyle({
           fontSize: 14,
-          fill: hasLink ? COLORS.textLink : COLORS.text,
-          fontFamily: 'system-ui, -apple-system, sans-serif',
+          fill: segment.link ? COLORS.textLink : hasLink ? COLORS.textLink : COLORS.text,
+          fontFamily: segment.code ? 'Monaco, monospace' : 'system-ui, -apple-system, sans-serif',
           fontWeight: segment.bold ? 'bold' : 'normal',
           fontStyle: segment.italic ? 'italic' : 'normal',
           // Note: PixiJS doesn't support textDecoration
-          // Underline and strikethrough will need to be drawn manually if needed
+          // Underline and strikethrough will need to be drawn manually
         });
 
         const segmentTextObj = new Text({ text: segment.text, style: segmentStyle });
+        const segmentY = (layout.height - segmentTextObj.height) / 2;
         segmentTextObj.x = currentX;
-        segmentTextObj.y = (layout.height - segmentTextObj.height) / 2;
+        segmentTextObj.y = segmentY;
 
         if (segmentTextObj.height > maxSegmentHeight) {
           maxSegmentHeight = segmentTextObj.height;
         }
 
-        // If linked, make text clickable
-        if (hasLink) {
+        // Draw code background if needed
+        if (segment.code) {
+          const codeBg = new Graphics();
+          const padding = 2;
+          codeBg.rect(
+            currentX - padding,
+            segmentY - padding,
+            segmentTextObj.width + padding * 2,
+            segmentTextObj.height + padding * 2
+          );
+          codeBg.fill(COLORS.codeBg);
+          container.addChild(codeBg);
+        }
+
+        // If linked (either segment.link or node.link), make text clickable
+        const isLinked = segment.link || hasLink;
+        if (isLinked) {
           segmentTextObj.eventMode = 'static';
           segmentTextObj.cursor = 'pointer';
           segmentTextObj.on('pointerdown', (e) => {
             const originalEvent = e.nativeEvent as PointerEvent | undefined;
             if (originalEvent?.button === 2) return;
             e.stopPropagation();
-            openLink(node.link!);
+            openLink(segment.link || node.link!);
           });
         }
 
         container.addChild(segmentTextObj);
+
+        // Draw underline for segment.underline or segment.link
+        if (segment.underline || segment.link) {
+          const underline = new Graphics();
+          const underlineY = segmentY + segmentTextObj.height - 2;
+          underline.moveTo(currentX, underlineY);
+          underline.lineTo(currentX + segmentTextObj.width, underlineY);
+          underline.stroke({
+            width: 1,
+            color: segment.link ? COLORS.textLink : COLORS.text
+          });
+          container.addChild(underline);
+        }
+
+        // Draw strikethrough if needed
+        if (segment.strikethrough) {
+          const strikethrough = new Graphics();
+          const strikethroughY = segmentY + segmentTextObj.height / 2;
+          strikethrough.moveTo(currentX, strikethroughY);
+          strikethrough.lineTo(currentX + segmentTextObj.width, strikethroughY);
+          strikethrough.stroke({ width: 1, color: COLORS.text });
+          container.addChild(strikethrough);
+        }
+
         currentX += segmentTextObj.width;
       });
 
-      // If linked, add underline for the entire text
-      if (hasLink) {
+      // If the entire node is linked (node.link), add underline for the entire text
+      // (This is separate from segment.link which is per-segment inline links)
+      if (hasLink && !segments.some(seg => seg.link)) {
         const underline = new Graphics();
         const underlineY = (layout.height + maxSegmentHeight) / 2 - 2;
         underline.moveTo(iconOffset, underlineY);
