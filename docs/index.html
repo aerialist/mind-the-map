@@ -395,6 +395,8 @@
         <a href="#features">Features</a>
         <a href="#getting-started">Guide</a>
         <a href="#shortcuts">Shortcuts</a>
+        <a href="#formatting">Formatting</a>
+        <a href="#notes">Notes</a>
         <a href="#search-filter">Search & Filter</a>
         <a href="#settings">Settings</a>
         <a href="https://github.com/aerialist/mind-the-map" target="_blank">GitHub</a>
@@ -563,7 +565,7 @@
           <tr class="shortcut-inactive"><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>Line Break (in node)</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>Link...</td></tr>
           <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>T</kbd></td><td>Tag</td></tr>
-          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd></td><td>Note</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd></td><td>Toggle Note Panel</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd></td><td>Icon...</td></tr>
           <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd></td><td>Color/Style...</td></tr>
           <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd></td><td>Priority</td></tr>
@@ -572,13 +574,17 @@
         <h4>Format</h4>
         <table class="shortcut-table">
           <tr><th>Key</th><th>Action</th></tr>
-          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td>Bold</td></tr>
-          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>I</kbd></td><td>Italic</td></tr>
-          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>U</kbd></td><td>Underline</td></tr>
-          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd></td><td>Strikethrough</td></tr>
-          <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td>Code</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td>Bold</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>I</kbd></td><td>Italic</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>U</kbd></td><td>Underline</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd></td><td>Strikethrough</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td>Code</td></tr>
           <tr class="shortcut-inactive"><td><kbd>Ctrl</kbd>+<kbd>\\</kbd></td><td>Clear Formatting</td></tr>
         </table>
+
+        <div class="tip-box" style="margin-top: 16px;">
+          <strong>Note:</strong> Formatting shortcuts work in both node text and notes. Select text while editing and press the shortcut to apply formatting.
+        </div>
 
         <h4>Node</h4>
         <table class="shortcut-table">
@@ -871,6 +877,67 @@
         </div>
       </div>
 
+      <div class="guide-section" id="formatting">
+        <h3>Inline Text Formatting</h3>
+        <p>Node text and notes support rich inline formatting for emphasis, structure, and visual organization.</p>
+
+        <h4>Available Formatting</h4>
+        <table class="shortcut-table">
+          <tr><th>Format</th><th>Shortcut</th><th>HTML Tag</th><th>Example</th></tr>
+          <tr><td>Bold</td><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td><code>&lt;b&gt;text&lt;/b&gt;</code></td><td><strong>Bold text</strong></td></tr>
+          <tr><td>Italic</td><td><kbd>Ctrl</kbd>+<kbd>I</kbd></td><td><code>&lt;i&gt;text&lt;/i&gt;</code></td><td><em>Italic text</em></td></tr>
+          <tr><td>Underline</td><td><kbd>Ctrl</kbd>+<kbd>U</kbd></td><td><code>&lt;u&gt;text&lt;/u&gt;</code></td><td><u>Underlined text</u></td></tr>
+          <tr><td>Strikethrough</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd></td><td><code>&lt;s&gt;text&lt;/s&gt;</code></td><td><s>Strikethrough text</s></td></tr>
+          <tr><td>Inline Code</td><td><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td><code>&lt;code&gt;text&lt;/code&gt;</code></td><td><code>code</code></td></tr>
+          <tr><td>Hyperlink</td><td>—</td><td><code>&lt;a href="url"&gt;text&lt;/a&gt;</code></td><td><a href="#">Link</a></td></tr>
+          <tr><td>Text Color</td><td>—</td><td><code>&lt;span class="colored c-red"&gt;text&lt;/span&gt;</code></td><td><span style="color: red;">Red text</span></td></tr>
+          <tr><td>Highlight</td><td>—</td><td><code>&lt;span class="colored bc-yellow"&gt;text&lt;/span&gt;</code></td><td><span style="background-color: yellow;">Highlighted</span></td></tr>
+        </table>
+
+        <h4>How to Apply Formatting</h4>
+        <ol>
+          <li>While editing a node or note, select the text you want to format</li>
+          <li>Press the keyboard shortcut (e.g., <kbd>Ctrl</kbd>+<kbd>B</kbd> for bold)</li>
+          <li>The formatting is applied immediately and visible in both views</li>
+        </ol>
+
+        <div class="tip-box">
+          <strong>Supported Colors:</strong> Text color and highlights support 10 colors: red, orange, yellow, green, teal, sky, blue, purple, pink, and gray. Use Workflowy-compatible class names for import/export compatibility.
+        </div>
+
+        <div class="tip-box">
+          <strong>Nested Formatting:</strong> You can combine multiple formats on the same text (e.g., <strong><em>bold and italic</em></strong>). Tags can be nested in any order.
+        </div>
+      </div>
+
+      <div class="guide-section" id="notes">
+        <h3>Node Notes</h3>
+        <p>Add extended notes to nodes for detailed descriptions, context, or longer-form content.</p>
+
+        <h4>Opening the Note Panel</h4>
+        <ul>
+          <li>Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> to toggle the Note Panel</li>
+          <li>The panel appears in the right sidebar below other panels</li>
+          <li>Select any node to view or edit its note</li>
+        </ul>
+
+        <h4>Editing Notes</h4>
+        <ul>
+          <li>Click "Add Note" or "Edit Note" button to start editing</li>
+          <li>Type your note content in the text area</li>
+          <li>Apply inline formatting using keyboard shortcuts (Ctrl+B, Ctrl+I, etc.)</li>
+          <li>Press <kbd>Cmd/Ctrl</kbd>+<kbd>Enter</kbd> to save, or <kbd>Escape</kbd> to cancel</li>
+        </ul>
+
+        <div class="tip-box">
+          <strong>Formatting Support:</strong> Notes support all inline formatting options including bold, italic, underline, strikethrough, code, colors, and highlights. Use the same keyboard shortcuts as you would for node text.
+        </div>
+
+        <div class="tip-box">
+          <strong>Note:</strong> Notes are independent of the node's main text. They're perfect for adding implementation details, rationale, or reference information without cluttering the visual map.
+        </div>
+      </div>
+
       <div class="guide-section" id="links">
         <h3>Node Links</h3>
         <p>Add hyperlinks to nodes to reference external resources or other .mindmap files.</p>
@@ -1071,6 +1138,8 @@
 
         <ul>
           <li><strong>Quick capture:</strong> Press <kbd>Tab</kbd> or <kbd>Enter</kbd> while editing to create new nodes without stopping to save first</li>
+          <li><strong>Rich formatting:</strong> Use <kbd>Ctrl</kbd>+<kbd>B</kbd>, <kbd>Ctrl</kbd>+<kbd>I</kbd>, and other shortcuts to format node text and notes</li>
+          <li><strong>Detailed notes:</strong> Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> to add extended notes with formatting to any node</li>
           <li><strong>Cycle icons quickly:</strong> Click directly on any icon on a node to cycle through variants (e.g., Priority 1 → 2 → 3 → 4 → 5, or Status Todo → In Progress → Done) without opening the Icons panel</li>
           <li><strong>Bulk icons:</strong> Multi-select nodes, then open the Icons panel to apply icons to all at once</li>
           <li><strong>Focus mode:</strong> Use Smart Collapse (<kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd>) to hide completed work</li>

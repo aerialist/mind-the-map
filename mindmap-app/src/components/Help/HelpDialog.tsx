@@ -74,7 +74,7 @@ const shortcutSections: ShortcutSection[] = [
       { keys: [`${shiftKey}+Enter`], description: 'Line Break (in node)', inactive: true },
       { keys: [`${modKey}+K`], description: 'Link...' },
       { keys: [`${modKey}+T`], description: 'Tag', inactive: true },
-      { keys: [`${modKey}+${shiftKey}+N`], description: 'Note', inactive: true },
+      { keys: [`${modKey}+${shiftKey}+N`], description: 'Toggle Note Panel' },
       { keys: [`${modKey}+${shiftKey}+I`], description: 'Icon...' },
       { keys: [`${modKey}+${shiftKey}+K`], description: 'Color/Style...', inactive: true },
       { keys: [`${modKey}+${shiftKey}+P`], description: 'Priority', inactive: true },
@@ -83,11 +83,11 @@ const shortcutSections: ShortcutSection[] = [
   {
     title: 'Format',
     shortcuts: [
-      { keys: [`${modKey}+B`], description: 'Bold', inactive: true },
-      { keys: [`${modKey}+I`], description: 'Italic', inactive: true },
-      { keys: [`${modKey}+U`], description: 'Underline', inactive: true },
-      { keys: [`${modKey}+${shiftKey}+X`], description: 'Strikethrough', inactive: true },
-      { keys: [`${modKey}+E`], description: 'Code', inactive: true },
+      { keys: [`${modKey}+B`], description: 'Bold' },
+      { keys: [`${modKey}+I`], description: 'Italic' },
+      { keys: [`${modKey}+U`], description: 'Underline' },
+      { keys: [`${modKey}+${shiftKey}+X`], description: 'Strikethrough' },
+      { keys: [`${modKey}+E`], description: 'Code' },
       { keys: [`${modKey}+\\`], description: 'Clear Formatting', inactive: true },
     ],
   },
@@ -169,6 +169,8 @@ const shortcutSections: ShortcutSection[] = [
 
 const tips = [
   'Press Tab or Enter while editing to create new nodes without stopping',
+  'Use formatting shortcuts (Ctrl+B, Ctrl+I, etc.) in node text and notes',
+  'Open Note Panel with Ctrl+Shift+N to add detailed descriptions with formatting',
   'Right-click and drag to pan the mind map canvas',
   'Use mouse wheel to zoom, Ctrl+wheel to pan vertically, Shift+wheel to pan horizontally',
   'Paste indented text or HTML lists to create structured nodes',

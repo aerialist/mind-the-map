@@ -8,6 +8,8 @@ Mind the Map is a desktop application built with Tauri 2.0 that provides a snapp
 
 - **Keyboard-first interaction** - Core workflows are shortcut-driven (planned actions may appear in menus but remain inactive)
 - **Dual view modes** - Switch seamlessly between mind map and outline views
+- **Rich text formatting** - Bold, italic, underline, strikethrough, code, colors, and highlights in node text and notes
+- **Extended notes** - Add detailed descriptions to nodes with full formatting support
 - **Smart layout** - Automatic tree layout with manual positioning support
 - **Node icons** - Mark nodes with priority, task progress, flags, arrows, and symbols
 - **Smart clipboard** - Paste indented text or HTML lists as structured nodes
@@ -206,12 +208,14 @@ mind-the-map/
     │   │   ├── Outline/         # Outline view components
     │   │   ├── IconPicker/      # Icons panel (right sidebar)
     │   │   ├── LinkDialog/      # Node link editor
+    │   │   ├── NotePanel/       # Note panel (right sidebar)
     │   │   ├── Search/          # Search & Filter panel
     │   │   └── Settings/        # Preferences dialog
     │   ├── store/               # Zustand state management
     │   ├── core/                # Core logic (UI-independent)
     │   ├── hooks/               # Custom React hooks
     │   ├── services/            # Tauri API integration
+    │   ├── utils/               # Utilities (text formatting, etc.)
     │   └── test/                # Test setup and utilities
     │
     ├── e2e/                     # Playwright E2E tests
@@ -237,6 +241,11 @@ Mod = Cmd on macOS, Ctrl on Windows/Linux.
 - Mind Map view: 2D canvas with tree layout, pan & zoom
 - Outline view: Hierarchical list with inline editing
 - Fit to screen (mind map): `Mod+Shift+F`
+
+### Formatting & Notes
+- Inline formatting: `Mod+B` (bold), `Mod+I` (italic), `Mod+U` (underline), `Mod+Shift+X` (strikethrough), `Mod+E` (code)
+- Text colors and highlights: HTML-like tags for colored text and background highlights (10 colors supported)
+- Node notes: `Mod+Shift+N` to toggle Note Panel for extended descriptions with full formatting support
 
 ### Organization
 - Collapse/Expand: `Space` for single node

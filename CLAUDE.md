@@ -110,14 +110,21 @@ interface Node {
   id: string;
   parentId: string | null;
   childIds: string[];
-  text: string;
+  content: NodeContent;        // Node content (text or image)
   icons: NodeIcon[];           // Multiple icons allowed (one per category)
   position: Position;
   isCollapsed: boolean;
   link?: string;               // Optional URL or file path
+  note?: string;               // Optional extended note/description (supports inline formatting)
   workflowySync?: WorkflowySyncMetadata;  // Workflowy sync metadata
   workflowyConflict?: boolean; // Conflict marker (local-only nodes after pull)
   workflowyModified?: boolean; // Modified locally since last sync (needs push)
+}
+
+interface NodeContent {
+  type: 'text' | 'image';
+  text?: string;               // For type: 'text' - supports inline formatting
+  url?: string;                // For type: 'image' (future feature)
 }
 
 interface Position {
@@ -233,7 +240,7 @@ In-app shortcuts listing is maintained in `mindmap-app/src/components/Help/HelpD
 | Shift+Enter | Line Break (in node) | (planned) |
 | Mod+K | Link... | |
 | Mod+T | Tag | (planned) |
-| Mod+Shift+N | Note | (planned) |
+| Mod+Shift+N | Toggle Note Panel | |
 | Mod+Shift+I | Icon... | |
 | Mod+Shift+K | Color/Style... | (planned) |
 | Mod+Shift+P | Priority | (planned) |
@@ -241,11 +248,11 @@ In-app shortcuts listing is maintained in `mindmap-app/src/components/Help/HelpD
 ### Format
 | Key | Action | Notes |
 |-----|--------|-------|
-| Mod+B | Bold | (planned) |
-| Mod+I | Italic | (planned) |
-| Mod+U | Underline | (planned) |
-| Mod+Shift+X | Strikethrough | (planned) |
-| Mod+E | Code | (planned) |
+| Mod+B | Bold | Applies to node text and notes |
+| Mod+I | Italic | Applies to node text and notes |
+| Mod+U | Underline | Applies to node text and notes |
+| Mod+Shift+X | Strikethrough | Applies to node text and notes |
+| Mod+E | Code | Applies to node text and notes |
 | Mod+\ | Clear Formatting | (planned) |
 
 ### Node
@@ -358,6 +365,33 @@ When pasting from external apps:
 1. Check for HTML format (ul/li lists from Workflowy, etc.)
 2. Parse indented plain text (tabs/spaces → hierarchy)
 3. Fall back to flat text (each line = sibling node)
+
+### Inline Text Formatting
+Node text and notes support rich inline formatting using HTML-like tags:
+- **Bold**: `<b>text</b>` - Makes text bold (keyboard: Mod+B)
+- **Italic**: `<i>text</i>` - Makes text italic (keyboard: Mod+I)
+- **Underline**: `<u>text</u>` - Underlines text (keyboard: Mod+U)
+- **Strikethrough**: `<s>text</s>` - Strikes through text (keyboard: Mod+Shift+X)
+- **Code**: `<code>text</code>` - Inline code style (keyboard: Mod+E)
+- **Hyperlinks**: `<a href="url">text</a>` - Clickable links
+- **Text Color**: `<span class="colored c-red">text</span>` - Colored text (red, orange, yellow, green, teal, sky, blue, purple, pink, gray)
+- **Highlight**: `<span class="colored bc-yellow">text</span>` - Background highlight (same color options as text color)
+
+**Implementation**:
+- Formatting tags can be nested (e.g., `<b><i>bold italic</i></b>`)
+- Rendered in both Mind Map and Outline views via `FormattedText` component
+- Stored in `content.text` field or `note` field as HTML-like markup
+- Parsed at display time using `parseFormattedText()` from `src/utils/textFormatting.ts`
+- Supports Workflowy-compatible color classes for import/export
+
+### Node Notes
+Nodes can have an optional extended note/description field (`note` property):
+- **Access**: Toggle Note Panel with Mod+Shift+N or via button in right sidebar
+- **Formatting**: Supports full inline formatting (bold, italic, underline, strikethrough, code, colors, highlights)
+- **Use cases**: Additional context, detailed descriptions, longer-form content
+- **Independence**: Notes are separate from the node's main text and can be edited independently
+- **Storage**: Empty notes are not stored in the file (only nodes with content have the `note` property)
+- **Component**: `src/components/NotePanel/NotePanel.tsx` provides the editing interface
 
 ### Miro Export (Ctrl+Shift+C)
 Copies as TSV + HTML table format:
@@ -653,6 +687,9 @@ test('should do something', async ({ page }) => {
 | Safe Tauri wrappers | `src/services/tauri/safeTauri.ts` |
 | Help dialog (cheat sheet) | `src/components/Help/HelpDialog.tsx` |
 | Link dialog | `src/components/LinkDialog/LinkPanel.tsx` |
+| Note panel | `src/components/NotePanel/NotePanel.tsx` |
+| Formatted text rendering | `src/components/Outline/FormattedText.tsx` |
+| Text formatting utilities | `src/utils/textFormatting.ts` |
 | Settings dialog | `src/components/Settings/SettingsDialog.tsx` |
 | Settings persistence | `src/services/settings/` |
 | Settings state | `src/store/settingsStore.ts` |
