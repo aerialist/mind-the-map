@@ -1070,14 +1070,12 @@ function MindMapCanvas() {
               // For alert-circle: <line x1="12" x2="12" y1="8" y2="12" /> (4-unit vertical line)
               // Use a more flexible approach to handle different attribute orderings
               coloredSvg = coloredSvg.replace(/<line\s+([^>]+)\/>/g, (match) => {
-                console.log(`Checking line: ${match}`);
                 const x1Match = match.match(/x1="(\d+(?:\.\d+)?)"/);
                 const x2Match = match.match(/x2="(\d+(?:\.\d+)?)"/);
                 const y1Match = match.match(/y1="(\d+(?:\.\d+)?)"/);
                 const y2Match = match.match(/y2="(\d+(?:\.\d+)?)"/);
 
                 if (!x1Match || !x2Match || !y1Match || !y2Match) {
-                  console.log(`  Missing attributes, skipping`);
                   return match;
                 }
 
@@ -1094,7 +1092,6 @@ function MindMapCanvas() {
                     const center = (y1 + y2) / 2;
                     const newY1 = center - 3;
                     const newY2 = center + 3;
-                    console.log(`Extending vertical line: ${match} -> y1="${newY1}" y2="${newY2}"`);
                     return match
                       .replace(/y1="[^"]+"/g, `y1="${newY1}"`)
                       .replace(/y2="[^"]+"/g, `y2="${newY2}"`);
@@ -1110,7 +1107,6 @@ function MindMapCanvas() {
                     const center = (x1 + x2) / 2;
                     const newX1 = center - 3;
                     const newX2 = center + 3;
-                    console.log(`Extending horizontal line: ${match} -> x1="${newX1}" x2="${newX2}"`);
                     return match
                       .replace(/x1="[^"]+"/g, `x1="${newX1}"`)
                       .replace(/x2="[^"]+"/g, `x2="${newX2}"`);
